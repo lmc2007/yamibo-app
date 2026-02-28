@@ -1,0 +1,44 @@
+package me.thenano.yamibo.yamibo_app.repository
+
+import io.github.littlesurvival.YamiboClient
+import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.ForumPage
+import io.github.littlesurvival.dto.page.HomePage
+import io.github.littlesurvival.dto.value.ForumId
+import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
+
+class AndroidForumRepository(
+        private val cookieStore: CookieStore,
+        private val yamiboClient: YamiboClient
+) : ForumRepository {
+
+    /** in-memory cache */
+    private var cachedHomePage: HomePage? = null
+
+    /** forum page cache — keyed by fid, stores the last fetched page */
+    private val cachedForumPages = mutableMapOf<Int, ForumPage>()
+
+    override suspend fun fetchHomePage(): YamiboResult<HomePage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchHomePage()
+
+        if (result is YamiboResult.Success) {
+            cachedHomePage = result.value
+        }
+        return result
+    }
+
+    override suspend fun fetchForum(fid: ForumId, page: Int): YamiboResult<ForumPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchForumById(fid, page)
+
+        if (result is YamiboResult.Success) {
+            cachedForumPages[fid.value] = result.value
+        }
+        return result
+    }
+
+    override fun getCachedHomePage(): HomePage? = cachedHomePage
+
+    override fun getCachedForumPage(fid: ForumId): ForumPage? = cachedForumPages[fid.value]
+}
