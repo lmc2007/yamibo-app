@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import me.thenano.yamibo.yamibo_app.component.BottomNavItem
 import me.thenano.yamibo.yamibo_app.component.HomePageBottomBar
-import me.thenano.yamibo.yamibo_app.component.YamiboIcons
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme

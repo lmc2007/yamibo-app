@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -27,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -172,7 +174,11 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     if (showSearch) {
         SearchModal(
             fid = fid,
-            onDismiss = { showSearch = false },
+            onDismiss = {
+                /** Just for making ide ignore this issue, the code works well */
+                @Suppress("AssignedValueIsNeverRead")
+                showSearch = false
+            },
             onThreadClick = { /* TODO: navigate to thread */ }
         )
     }
@@ -197,12 +203,12 @@ private fun ForumTopBar(title: String, onBack: () -> Unit, onSearch: () -> Unit)
             IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
         },
         actions = {
-            IconButton(onClick = onSearch, modifier = Modifier.offset(y = 2.dp)) {
+            IconButton(onClick = onSearch, modifier = Modifier.offset(y = 6.dp)) {
                 Icon(
                     imageVector = YamiboIcons.Search,
                     contentDescription = "搜尋",
                     tint = Color.White,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
         },

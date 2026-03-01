@@ -99,8 +99,7 @@ fun HomePageScreen() {
                     onRefresh = {
                         isRefreshing = true
                         scope.launch {
-                            val result = forumRepository.fetchHomePage()
-                            when (result) {
+                            when (val result = forumRepository.fetchHomePage()) {
                                 is YamiboResult.Success ->
                                     state = HomeState.Success(result.value)
 
