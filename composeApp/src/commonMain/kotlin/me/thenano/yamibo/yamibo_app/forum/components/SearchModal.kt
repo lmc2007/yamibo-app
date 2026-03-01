@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,9 +33,6 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.ic_search
 
 /** Search result state */
 private sealed interface SearchState {
@@ -67,74 +66,73 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
         scope.launch {
             val result = forumRepository.fetchSearch(trimmed, fid, formHash)
             state =
-                when (result) {
-                    is YamiboResult.Success -> {
-                        if (result.value.threads.isEmpty()) {
-                            SearchState.Error("沒有找到相關主題")
-                        } else {
-                            SearchState.Success(result.value)
+                    when (result) {
+                        is YamiboResult.Success -> {
+                            if (result.value.threads.isEmpty()) {
+                                SearchState.Error("沒有找到相關主題")
+                            } else {
+                                SearchState.Success(result.value)
+                            }
                         }
+                        is YamiboResult.Failure -> SearchState.Error(result.reason)
+                        is YamiboResult.Maintenance -> SearchState.Error("伺服器維護中")
+                        is YamiboResult.NotLoggedIn -> SearchState.Error("未登入，請先登入後再搜尋")
                     }
-
-                    is YamiboResult.Failure -> SearchState.Error(result.reason)
-                    is YamiboResult.Maintenance -> SearchState.Error("伺服器維護中")
-                    is YamiboResult.NotLoggedIn -> SearchState.Error("未登入，請先登入後再搜尋")
-                }
         }
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()
+            modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()
     ) {
         /** Search top bar */
         Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onDismiss) { Text("◀", color = Color.White, fontSize = 20.sp) }
 
                 OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
-                    placeholder = {
-                        Text(
-                            text = "搜尋主題...",
-                            color = Color.White.copy(alpha = 0.5f),
-                            fontSize = 15.sp
-                        )
-                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { doSearch() }),
-                    colors =
-                        OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
-                            cursorColor = colors.orangeAccent,
-                            focusedBorderColor = colors.orangeAccent,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                            focusedContainerColor = Color.White.copy(alpha = 0.08f),
-                            unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
-                        ),
-                    shape = RoundedCornerShape(12.dp),
-                    textStyle = LocalTextStyle.current.copy(fontSize = 15.sp)
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                        placeholder = {
+                            Text(
+                                    text = "搜尋主題...",
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontSize = 15.sp
+                            )
+                        },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { doSearch() }),
+                        colors =
+                                OutlinedTextFieldDefaults.colors(
+                                        focusedTextColor = Color.White,
+                                        unfocusedTextColor = Color.White,
+                                        cursorColor = colors.orangeAccent,
+                                        focusedBorderColor = colors.orangeAccent,
+                                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
+                                        focusedContainerColor = Color.White.copy(alpha = 0.08f),
+                                        unfocusedContainerColor = Color.White.copy(alpha = 0.05f)
+                                ),
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 15.sp)
                 )
 
                 Spacer(Modifier.width(6.dp))
 
                 Surface(
-                    onClick = { doSearch() },
-                    shape = RoundedCornerShape(12.dp),
-                    color = colors.orangeAccent
+                        onClick = { doSearch() },
+                        shape = RoundedCornerShape(12.dp),
+                        color = colors.orangeAccent
                 ) {
                     Text(
-                        text = "搜尋",
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
+                            text = "搜尋",
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -142,19 +140,19 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
 
         /** Search body */
         AnimatedContent(
-            targetState = state,
-            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
-            label = "search_content"
+                targetState = state,
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(150)) },
+                label = "search_content"
         ) { currentState ->
             when (currentState) {
                 is SearchState.Idle -> SearchIdleContent()
                 is SearchState.Loading -> SearchLoadingContent()
                 is SearchState.Error -> SearchErrorContent(currentState.message)
                 is SearchState.Success ->
-                    SearchResultContent(
-                        searchPage = currentState.page,
-                        onThreadClick = onThreadClick
-                    )
+                        SearchResultContent(
+                                searchPage = currentState.page,
+                                onThreadClick = onThreadClick
+                        )
             }
         }
     }
@@ -167,16 +165,16 @@ private fun SearchIdleContent() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                painter = painterResource(Res.drawable.ic_search),
-                contentDescription = null,
-                tint = colors.brownPrimary.copy(alpha = 0.4f),
-                modifier = Modifier.size(48.dp)
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = colors.brownPrimary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(64.dp)
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "輸入關鍵字搜尋主題",
-                color = colors.brownPrimary.copy(alpha = 0.6f),
-                fontSize = 15.sp
+                    text = "輸入關鍵字搜尋主題",
+                    color = colors.brownPrimary.copy(alpha = 0.6f),
+                    fontSize = 15.sp
             )
         }
     }
@@ -189,9 +187,9 @@ private fun SearchLoadingContent() {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             CircularProgressIndicator(
-                color = colors.brownDeep,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(36.dp)
+                    color = colors.brownDeep,
+                    strokeWidth = 3.dp,
+                    modifier = Modifier.size(36.dp)
             )
             Spacer(Modifier.height(12.dp))
             Text(text = "搜尋中...", color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
@@ -205,19 +203,19 @@ private fun SearchErrorContent(message: String) {
     val colors = YamiboTheme.colors
     Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Card(
-            shape = RoundedCornerShape(20.dp),
-            elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(4.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    modifier = Modifier.padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "!",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.brownDeep.copy(alpha = 0.6f)
+                        text = "!",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.brownDeep.copy(alpha = 0.6f)
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(text = message, color = colors.brownDeep, fontSize = 14.sp, lineHeight = 20.sp)
@@ -231,17 +229,17 @@ private fun SearchErrorContent(message: String) {
 private fun SearchResultContent(searchPage: SearchPage, onThreadClick: (ThreadSummary) -> Unit) {
     val colors = YamiboTheme.colors
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
     ) {
         /** result count header */
         item {
             Text(
-                text = "找到 ${searchPage.totalCount} 個相關內容",
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                color = colors.brownPrimary.copy(alpha = 0.7f),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold
+                    text = "找到 ${searchPage.totalCount} 個相關內容",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = colors.brownPrimary.copy(alpha = 0.7f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
             )
         }
 

@@ -4,7 +4,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -25,17 +24,9 @@ import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.value.ForumId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
-import me.thenano.yamibo.yamibo_app.forum.components.ForumStatsBar
-import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
-import me.thenano.yamibo.yamibo_app.forum.components.PinnedSection
-import me.thenano.yamibo.yamibo_app.forum.components.SearchModal
-import me.thenano.yamibo.yamibo_app.forum.components.SubForumRow
-import me.thenano.yamibo.yamibo_app.forum.components.ThreadCard
+import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.ic_search
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -206,12 +197,12 @@ private fun ForumTopBar(title: String, onBack: () -> Unit, onSearch: () -> Unit)
             IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
         },
         actions = {
-            IconButton(onClick = onSearch) {
+            IconButton(onClick = onSearch, modifier = Modifier.offset(y = 2.dp)) {
                 Icon(
-                    painter = painterResource(Res.drawable.ic_search),
+                    imageVector = YamiboIcons.Search,
                     contentDescription = "搜尋",
                     tint = Color.White,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
         },
