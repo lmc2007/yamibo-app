@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
             val userStore = remember { AndroidUserStore(context) }
 
             /** Repository Logic */
-            val yamiboClient = remember { YamiboClient() }
+            val yamiboClient = remember { YamiboClient(timeoutMillis = 60_000L) }
             val authRepository = remember {
                 AndroidAuthRepository(cookieStore, userStore, yamiboClient)
             }
