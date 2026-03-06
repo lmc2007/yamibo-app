@@ -13,8 +13,8 @@ class AndroidThreadRepository(
         private val yamiboClient: YamiboClient
 ) : ThreadRepository {
 
-    /** thread page cache — keyed by tid, stores the last fetched page */
-    private val cachedThreadPages = mutableMapOf<Int, ThreadPage>()
+    /** Thread pages cache — keyed by ThreadCacheKey */
+    private val cachedThreadPages = mutableMapOf<ThreadRepository.ThreadCacheKey, ThreadPage>()
 
     override suspend fun fetchThread(
             tid: ThreadId,
@@ -25,7 +25,7 @@ class AndroidThreadRepository(
         val result = yamiboClient.fetchThreadById(tid, authorId, page)
 
         if (result is YamiboResult.Success) {
-            cachedThreadPages[tid.value] = result.value
+            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)] = result.value
         }
         return result
     }
@@ -35,5 +35,10 @@ class AndroidThreadRepository(
         return yamiboClient.fetchAddFavorite(tid, formHash)
     }
 
-    override fun getCachedThread(tid: ThreadId): ThreadPage? = cachedThreadPages[tid.value]
+    override fun getCachedThread(tid: ThreadId, page: Int): ThreadPage? =
+            cachedThreadPages[ThreadRepository.ThreadCacheKey(tid.value, page)]
+
+    override fun clearCachedThread(tid: ThreadId) {
+        cachedThreadPages.keys.removeAll { it.tid == tid.value }
+    }
 }

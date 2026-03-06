@@ -40,7 +40,7 @@ internal fun FirstFloorPreview(post: Post) {
                 .replace("&gt;", ">")
                 .replace("&quot;", "\"")
                 /** Collapse 2+ consecutive newlines into 1 (no blank lines) */
-                .replace(Regex("\\n{2,}"), "\n")
+                .replace(Regex("(\r?\n){2,}"), "\n")
                 .trim()
         }
 

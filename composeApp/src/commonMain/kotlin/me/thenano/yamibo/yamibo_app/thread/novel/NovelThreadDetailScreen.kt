@@ -66,7 +66,16 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             }
     }
 
-    LaunchedEffect(tid) { loadThread() }
+    /** initial load — use cache if available, only fetch on cold start */
+    LaunchedEffect(tid) {
+        val cached = threadRepository.getCachedThread(tid)
+        if (cached != null) {
+            pagePostsCache[1] = cached.posts
+            state = ThreadState.Success(cached)
+            return@LaunchedEffect
+        }
+        loadThread()
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize().systemBarsPadding(),
@@ -117,6 +126,8 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                         isRefreshing = isRefreshing,
                         onRefresh = {
                             isRefreshing = true
+                            threadRepository.clearCachedThread(tid)
+                            pagePostsCache.clear() // Clear local cache as well
                             scope.launch {
                                 when (val result =
                                     threadRepository.fetchThread(tid, authorId)

@@ -18,8 +18,8 @@ class AndroidForumRepository(
     /** in-memory cache */
     private var cachedHomePage: HomePage? = null
 
-    /** forum page cache — keyed by fid, stores the last fetched page */
-    private val cachedForumPages = mutableMapOf<Int, ForumPage>()
+    /** forum page cache — keyed by ForumCacheKey */
+    private val cachedForumPages = mutableMapOf<ForumRepository.ForumCacheKey, ForumPage>()
 
     override suspend fun fetchHomePage(): YamiboResult<HomePage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
@@ -36,7 +36,7 @@ class AndroidForumRepository(
         val result = yamiboClient.fetchForumById(fid, page)
 
         if (result is YamiboResult.Success) {
-            cachedForumPages[fid.value] = result.value
+            cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)] = result.value
         }
         return result
     }
@@ -61,5 +61,10 @@ class AndroidForumRepository(
 
     override fun getCachedHomePage(): HomePage? = cachedHomePage
 
-    override fun getCachedForumPage(fid: ForumId): ForumPage? = cachedForumPages[fid.value]
+    override fun getCachedForumPage(fid: ForumId, page: Int): ForumPage? =
+            cachedForumPages[ForumRepository.ForumCacheKey(fid.value, page)]
+
+    override fun clearCachedForum(fid: ForumId) {
+        cachedForumPages.keys.removeAll { it.fid == fid.value }
+    }
 }
