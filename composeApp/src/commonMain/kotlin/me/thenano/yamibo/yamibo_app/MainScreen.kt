@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -18,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import me.thenano.yamibo.yamibo_app.component.BottomNavItem
 import me.thenano.yamibo.yamibo_app.component.HomePageBottomBar
+import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -30,7 +33,7 @@ enum class MainTab(val title: String, val icon: ImageVector) {
 }
 
 class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable {
-    override val id = "MainScreen"
+    override val id = "MainScreen_${Any().hashCode()}"
 
     @Composable
     override fun Content() {
@@ -41,7 +44,22 @@ class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable 
 @Composable
 fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
+
+    DisposableEffect(currentTab) {
+        val handler = {
+            if (navigator.currentScreen is IMainScreen && currentTab != MainTab.Home) {
+                currentTab = MainTab.Home
+                true
+            } else {
+                false
+            }
+        }
+        navigator.backHandlers.add(handler)
+        onDispose { navigator.backHandlers.remove(handler) }
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize().systemBarsPadding(),
         containerColor = colors.creamBackground,
@@ -64,7 +82,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
             when (currentTab) {
                 MainTab.Home -> HomeScreenContent()
                 MainTab.Message -> PlaceholderScreen("Message")
-                MainTab.Favorite -> me.thenano.yamibo.yamibo_app.favorite.FavoritePage()
+                MainTab.Favorite -> FavoritePage()
                 MainTab.Profile -> ProfilePage()
             }
         }

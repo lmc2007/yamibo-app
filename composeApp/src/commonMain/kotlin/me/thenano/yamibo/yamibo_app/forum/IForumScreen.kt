@@ -5,8 +5,11 @@ import io.github.littlesurvival.dto.value.ForumId
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 
 /** Navigatable screen for a specific forum page. */
-class IForumScreen(private val fid: ForumId, private val name: String) : Navigatable {
-    override val id = "ForumScreen_${fid.value}"
+class IForumScreen(
+    private val fid: ForumId,
+    private val name: String
+) : Navigatable {
+    override val id = "ForumScreen_${fid.value}_${Any().hashCode()}"
 
     @Composable
     override fun Content() {

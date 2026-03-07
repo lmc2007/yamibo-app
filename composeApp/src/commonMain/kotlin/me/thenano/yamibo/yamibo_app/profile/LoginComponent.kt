@@ -38,7 +38,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 class ILoginWebView : Navigatable {
-    override val id: String = "LoginScreen"
+    override val id: String = "LoginScreen_${Any().hashCode()}"
 
     @Composable
     override fun Content() {
@@ -46,8 +46,7 @@ class ILoginWebView : Navigatable {
     }
 }
 
-@Composable
-expect fun LoginWebView(onLoadingChanged: (Boolean) -> Unit = {})
+@Composable expect fun LoginWebView(onLoadingChanged: (Boolean) -> Unit = {})
 
 @Composable
 @Preview
@@ -58,7 +57,7 @@ fun LoginScreen() {
         LoginWebView(onLoadingChanged = { loading = it })
         ReturnButtonTopBar(title = "登入頁面", onBackClick = { navigator.pop() })
         LoadingOverlay(
-            visible = loading,
+                visible = loading,
         )
     }
 }
@@ -66,33 +65,33 @@ fun LoginScreen() {
 @Composable
 @Preview
 fun UserProfileCard(
-    userInfo: ProfilePage? = UserStore.Preview,
-    isLoading: Boolean = false,
-    onRefresh: suspend () -> Unit = {},
-    onLogout: suspend () -> Unit = {},
-    modifier: Modifier = Modifier,
+        userInfo: ProfilePage? = UserStore.Preview,
+        isLoading: Boolean = false,
+        onRefresh: suspend () -> Unit = {},
+        onLogout: suspend () -> Unit = {},
+        modifier: Modifier = Modifier,
 ) {
     val colors = YamiboTheme.colors
     Card(
-        modifier = modifier.fillMaxWidth().padding(16.dp),
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(8.dp),
-        colors =
-            CardDefaults.cardColors(
-                containerColor = colors.creamSurface,
-                contentColor = colors.textDark
-            ),
-        border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.1f))
+            modifier = modifier.fillMaxWidth().padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(8.dp),
+            colors =
+                    CardDefaults.cardColors(
+                            containerColor = colors.creamSurface,
+                            contentColor = colors.textDark
+                    ),
+            border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.1f))
     ) {
         Box {
             AnimatedContent(
-                targetState = userInfo,
-                transitionSpec = {
-                    (fadeIn(tween(400)) +
-                        scaleIn(initialScale = 0.92f, animationSpec = tween(400)))
-                        .togetherWith(fadeOut(tween(200)) + scaleOut(targetScale = 1.05f))
-                },
-                label = "user_profile_transition"
+                    targetState = userInfo,
+                    transitionSpec = {
+                        (fadeIn(tween(400)) +
+                                        scaleIn(initialScale = 0.92f, animationSpec = tween(400)))
+                                .togetherWith(fadeOut(tween(200)) + scaleOut(targetScale = 1.05f))
+                    },
+                    label = "user_profile_transition"
             ) { state ->
                 if (state == null) {
                     LoginContent()
@@ -110,21 +109,21 @@ fun UserProfileCard(
              * @suppress Do NOT clean up this path.
              */
             androidx.compose.animation.AnimatedVisibility(
-                visible = isLoading,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.matchParentSize()
+                    visible = isLoading,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.matchParentSize()
             ) {
                 Box(
-                    modifier =
-                        Modifier.fillMaxSize()
-                            .background(colors.creamSurface.copy(alpha = 0.6f)),
-                    contentAlignment = Alignment.Center
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .background(colors.creamSurface.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
-                        color = colors.orangeAccent,
-                        strokeWidth = 3.dp,
-                        modifier = Modifier.size(36.dp)
+                            color = colors.orangeAccent,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier.size(36.dp)
                     )
                 }
             }
@@ -138,9 +137,9 @@ private fun LoginContent() {
     val navigator = LocalNavigator.current
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         AnimatedYamiboButton(
-            text = "登入",
-            onClick = { navigator.navigate(ILoginWebView()) },
-            modifier = Modifier.fillMaxWidth(0.6f)
+                text = "登入",
+                onClick = { navigator.navigate(ILoginWebView()) },
+                modifier = Modifier.fillMaxWidth(0.6f)
         )
     }
 }
@@ -148,30 +147,30 @@ private fun LoginContent() {
 /** Logged In */
 @Composable
 private fun UserInfoContent(
-    user: ProfilePage,
-    onRefresh: suspend () -> Unit,
-    onLogout: suspend () -> Unit,
+        user: ProfilePage,
+        onRefresh: suspend () -> Unit,
+        onLogout: suspend () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
         /* top actions */
         /* top actions */
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedYamiboChip(
-                label = "刷新",
-                onClick = { onRefresh() },
-                containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = YamiboTheme.colors.brownDeep
+                    label = "刷新",
+                    onClick = { onRefresh() },
+                    containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
+                    contentColor = YamiboTheme.colors.brownDeep
             )
             Spacer(Modifier.width(12.dp))
             AnimatedYamiboChip(
-                label = "登出",
-                onClick = { onLogout() },
-                containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
-                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                    label = "登出",
+                    onClick = { onLogout() },
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
             )
         }
 
@@ -185,19 +184,19 @@ private fun UserInfoContent(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = user.username,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                        text = user.username,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(Modifier.height(4.dp))
 
                 Text(
-                    text = "UID: ${user.uid.value}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = YamiboTheme.colors.brownPrimary
+                        text = "UID: ${user.uid.value}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = YamiboTheme.colors.brownPrimary
                 )
 
                 Spacer(Modifier.height(8.dp))
@@ -215,43 +214,43 @@ private fun UserInfoContent(
 /** Avatar */
 @Composable
 private fun AvatarPlaceholder(
-    avatarUrl: String,
+        avatarUrl: String,
 ) {
     KamelImage(
-        resource = asyncPainterResource(avatarUrl),
-        contentDescription = null,
-        modifier = Modifier.size(72.dp).clip(CircleShape),
-        contentScale = ContentScale.Crop,
-        onLoading = {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-            )
-        },
-        onFailure = {
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-            )
-        }
+            resource = asyncPainterResource(avatarUrl),
+            contentDescription = null,
+            modifier = Modifier.size(72.dp).clip(CircleShape),
+            contentScale = ContentScale.Crop,
+            onLoading = {
+                Box(
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+            },
+            onFailure = {
+                Box(
+                        modifier =
+                                Modifier.fillMaxSize()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                )
+            }
     )
 }
 
 @Composable
 private fun InfoChip(label: String) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = YamiboTheme.colors.orangeAccent.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, YamiboTheme.colors.orangeAccent.copy(alpha = 0.3f))
+            shape = RoundedCornerShape(12.dp),
+            color = YamiboTheme.colors.orangeAccent.copy(alpha = 0.15f),
+            border = BorderStroke(1.dp, YamiboTheme.colors.orangeAccent.copy(alpha = 0.3f))
     ) {
         Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.labelMedium,
-            color = YamiboTheme.colors.brownDeep,
-            fontWeight = FontWeight.Medium
+                text = label,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                style = MaterialTheme.typography.labelMedium,
+                color = YamiboTheme.colors.brownDeep,
+                fontWeight = FontWeight.Medium
         )
     }
 }
@@ -263,36 +262,36 @@ private fun AnimatedYamiboButton(text: String, onClick: () -> Unit, modifier: Mo
     val isHovered by interactionSource.collectIsHoveredAsState()
 
     val scale by
-    animateFloatAsState(
-        targetValue = if (isPressed) 0.94f else if (isHovered) 1.02f else 1f,
-        animationSpec = tween(durationMillis = 150)
-    )
+            animateFloatAsState(
+                    targetValue = if (isPressed) 0.94f else if (isHovered) 1.02f else 1f,
+                    animationSpec = tween(durationMillis = 150)
+            )
 
     val backgroundColor = YamiboTheme.colors.brownDeep
     val contentColor = Color.White
 
     Surface(
-        onClick = onClick,
-        modifier =
-            modifier.scale(scale).graphicsLayer {
-                shadowElevation = if (isHovered) 8.dp.toPx() else 4.dp.toPx()
-                shape = RoundedCornerShape(50)
-                clip = true
-            },
-        shape = RoundedCornerShape(50),
-        color = backgroundColor,
-        contentColor = contentColor,
-        interactionSource = interactionSource
+            onClick = onClick,
+            modifier =
+                    modifier.scale(scale).graphicsLayer {
+                        shadowElevation = if (isHovered) 8.dp.toPx() else 4.dp.toPx()
+                        shape = RoundedCornerShape(50)
+                        clip = true
+                    },
+            shape = RoundedCornerShape(50),
+            color = backgroundColor,
+            contentColor = contentColor,
+            interactionSource = interactionSource
     ) {
         Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp)
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.padding(horizontal = 32.dp, vertical = 14.dp)
         ) {
             Text(
-                text = text,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 1.sp
+                    text = text,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
             )
         }
     }
@@ -300,10 +299,10 @@ private fun AnimatedYamiboButton(text: String, onClick: () -> Unit, modifier: Mo
 
 @Composable
 private fun AnimatedYamiboChip(
-    label: String,
-    onClick: suspend () -> Unit,
-    containerColor: Color,
-    contentColor: Color
+        label: String,
+        onClick: suspend () -> Unit,
+        containerColor: Color,
+        contentColor: Color
 ) {
     val scope = rememberCoroutineScope()
     val interactionSource = remember { MutableInteractionSource() }
@@ -311,26 +310,26 @@ private fun AnimatedYamiboChip(
     val isHovered by interactionSource.collectIsHoveredAsState()
 
     val scale by
-    animateFloatAsState(
-        targetValue = if (isPressed) 0.92f else if (isHovered) 1.05f else 1f,
-        animationSpec = tween(durationMillis = 150)
-    )
+            animateFloatAsState(
+                    targetValue = if (isPressed) 0.92f else if (isHovered) 1.05f else 1f,
+                    animationSpec = tween(durationMillis = 150)
+            )
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = containerColor,
-        contentColor = contentColor,
-        modifier =
-            Modifier.scale(scale).clickable(
-                interactionSource = interactionSource,
-                indication = null
-            ) { scope.launch { onClick() } }
+            shape = RoundedCornerShape(16.dp),
+            color = containerColor,
+            contentColor = contentColor,
+            modifier =
+                    Modifier.scale(scale).clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null
+                            ) { scope.launch { onClick() } }
     ) {
         Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold
+                text = label,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold
         )
     }
 }

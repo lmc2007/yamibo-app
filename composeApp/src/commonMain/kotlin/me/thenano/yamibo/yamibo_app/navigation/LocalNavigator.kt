@@ -13,10 +13,12 @@ enum class NavAction {
     Replace
 }
 
-class ComposableNavigator(val start: Navigatable = IMainScreen()) {
+class ComposableNavigator(start: Navigatable = IMainScreen()) {
     val stack = mutableStateListOf(start)
     var lastAction = NavAction.Push
     lateinit var stateHolder: SaveableStateHolder
+    val backHandlers = mutableListOf<() -> Boolean>()
+
     val currentScreen: Navigatable
         get() = stack.last()
 
@@ -31,6 +33,9 @@ class ComposableNavigator(val start: Navigatable = IMainScreen()) {
     }
 
     fun pop(): Boolean {
+        for (handler in backHandlers.reversed()) {
+            if (handler()) return true
+        }
         if (stack.size <= 1) return false
         lastAction = NavAction.Pop
         stack.removeAt(stack.lastIndex)
