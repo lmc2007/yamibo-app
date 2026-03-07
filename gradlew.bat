@@ -70,6 +70,10 @@ goto fail
 :execute
 @rem Setup the command line
 
+@rem --- Auto-Unlock Build Jars ---
+powershell.exe -ExecutionPolicy Bypass -NoProfile -File "%APP_HOME%\unlock_build.ps1"
+@rem ------------------------------
+
 set CLASSPATH=
 
 
