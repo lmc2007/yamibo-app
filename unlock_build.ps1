@@ -58,31 +58,32 @@ public class FileLockUtil {
 }
 "@
 
-if ([System.Management.Automation.PSTypeName]'FileLockUtil' -as [type]) {
-    # Type exists
-} else {
+if (-not ([System.Management.Automation.PSTypeName]'FileLockUtil' -as [type])) {
     Add-Type -TypeDefinition $code -IgnoreWarnings
 }
 
-$buildDirs = Get-ChildItem -Path $TargetDir -Directory -Recurse | Where-Object { $_.Name -eq "build" }
+$buildDirs = Get-ChildItem -Path $TargetDir -Directory -Recurse | Where-Object { $_.FullName -match "\\build(\\|\$)" }
 $jars = @()
 foreach ($dir in $buildDirs) {
-    # Scan for jars only inside build directories
-    $jars += Get-ChildItem -Path $dir.FullName -Recurse -Filter *.jar -ErrorAction SilentlyContinue
+    # Scan for ANY files in build dirs that Android usually locks (.jar, .apk, .dex)
+    $jars += Get-ChildItem -Path $dir.FullName -Recurse -Include *.jar, *.apk, *.dex, *.lock -ErrorAction SilentlyContinue
 }
 
 $killedPids = @()
+$ignoredProcs = @("explorer", "studio64", "powershell", "cmd", "pwsh", "idea64")
 
 foreach ($jar in $jars) {
     try {
         $stream = [System.IO.File]::Open($jar.FullName, 'Open', 'Write', 'None')
         $stream.Close()
-    } catch {
+    }
+    catch {
+        # File is locked!
         $pids = [FileLockUtil]::GetLockingPids($jar.FullName)
         foreach ($p in $pids) {
             if ($p -notin $killedPids) {
                 $proc = Get-Process -Id $p -ErrorAction SilentlyContinue
-                if ($proc -and $proc.Name -match "java") {
+                if ($proc -and ($proc.Name -notin $ignoredProcs)) {
                     Write-Host "[Auto-Unlock] Killing PID $p ($($proc.Name)) locking $($jar.Name)" -ForegroundColor Yellow
                     Stop-Process -Id $p -Force -ErrorAction SilentlyContinue
                     $killedPids += $p
