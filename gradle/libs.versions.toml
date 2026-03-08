@@ -23,7 +23,7 @@ ktorClientCore = "3.4.0"
 logback = "1.5.20"
 mediaKamelImageDefault = "1.0.8"
 securityCrypto = "1.1.0"
-yamiboApi = "1.0.7"
+yamiboApi = "1.0.9"
 
 [libraries]
 androidx-security-crypto = { module = "androidx.security:security-crypto", version.ref = "securityCrypto" }

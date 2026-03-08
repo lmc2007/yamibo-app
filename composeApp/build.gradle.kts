@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.media.kamel.kamel.image.default)
             implementation(libs.yamibo.api)
+            implementation(libs.ksoup)
             implementation(projects.shared)
         }
         commonTest.dependencies { implementation(libs.kotlin.test) }
