@@ -1,7 +1,9 @@
 package me.thenano.yamibo.yamibo_app.thread.novel.components
 
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.*
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -15,7 +17,8 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 internal fun ThreadTopBar(
     title: String, 
     onBack: () -> Unit,
-    actions: @Composable RowScope.() -> Unit = {}
+    actions: @Composable RowScope.() -> Unit = {},
+    windowInsets: WindowInsets = TopAppBarDefaults.windowInsets
 ) {
     val colors = YamiboTheme.colors
     TopAppBar(
@@ -33,6 +36,7 @@ internal fun ThreadTopBar(
             IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
         },
         actions = actions,
+        windowInsets = windowInsets,
         colors =
             TopAppBarDefaults.topAppBarColors(
                 containerColor = colors.brownDeep,

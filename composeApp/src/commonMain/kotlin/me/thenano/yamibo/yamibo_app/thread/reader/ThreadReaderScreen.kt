@@ -8,6 +8,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -17,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,6 +29,7 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.value.FormHash
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
@@ -52,7 +56,7 @@ internal fun ThreadReaderScreen(
     title: String,
     authorId: UserId? = null,
     initialPage: Int = 1,
-    targetPid: io.github.littlesurvival.dto.value.PostId? = null
+    targetPid: PostId? = null
 ) {
     val colors = YamiboTheme.colors
     val threadRepository = LocalThreadRepository.current
@@ -168,24 +172,33 @@ internal fun ThreadReaderScreen(
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = colors.creamBackground,
-                modifier = Modifier.fillMaxWidth(0.85f)
+                modifier = Modifier.fillMaxWidth(0.7f)
             ) {
                 ThreadCatalogPanel(
                     totalPages = totalPages,
                     loadedPostsByPage = loadedPostsByPage,
                     onPageOrPostClick = { page, post ->
                         scope.launch {
-                            drawerState.close()
-                            if (page !in loadedPages) {
-                                loadPage(page)
-                            }
-                            // Need to wait slightly for UI to recompose if posts were just loaded
                             if (post != null) {
+                                // Specific post clicked: close and scroll
+                                drawerState.close()
+                                if (page !in loadedPages) {
+                                    loadPage(page)
+                                }
                                 val targetIndex = posts.indexOfFirst { it.pid == post.pid }
                                 if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
                             } else {
-                                val targetIndex = posts.indexOfFirst { loadedPostsByPage[page]?.contains(it) == true }
-                                if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
+                                // Page toggle or navigation
+                                if (page !in loadedPages) {
+                                    // Not loaded: load it and stay in drawer
+                                    loadPage(page)
+                                } else {
+                                    // Already loaded: close and scroll to start of page
+                                    drawerState.close()
+                                    val targetIndex =
+                                        posts.indexOfFirst { loadedPostsByPage[page]?.contains(it) == true }
+                                    if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
+                                }
                             }
                         }
                     }
@@ -217,8 +230,11 @@ internal fun ThreadReaderScreen(
                 }
         ) {
             when (val currentState = state) {
-                is ReaderState.Loading -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) { ThreadLoadingSkeleton() }
-                is ReaderState.Error -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) { 
+                is ReaderState.Loading -> Box(
+                    modifier = Modifier.systemBarsPadding().fillMaxSize()
+                ) { ThreadLoadingSkeleton() }
+
+                is ReaderState.Error -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) {
                     ThreadErrorContent(
                         message = currentState.message,
                         onRetry = {
@@ -230,101 +246,101 @@ internal fun ThreadReaderScreen(
 
                 is ReaderState.Success -> {
                     LazyColumn(
-                            state = listState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
-                            )
-                        ) {
-                            itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
-                                PostRenderer(
-                                    post = post,
-                                    onVote = { optionIds ->
-                                        val formHash = getFormHash()
-                                        val fId = threadInfo?.forum?.fid
-                                        if (formHash == null || fId == null) {
-                                            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                            return@PostRenderer
-                                        }
-                                        scope.launch {
-                                            when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar("投票成功")
-                                                else -> snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
-                                            }
-                                        }
-                                    },
-                                    onRate = { score, reason ->
-                                        val formHash = getFormHash()
-                                        if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                            return@PostRenderer
-                                        }
-                                        scope.launch {
-                                            when (val res =
-                                                threadRepository.ratePost(tid, post.pid, score, reason, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar("評分成功，刷新後更新評分/點評狀態")
-                                                else -> snackbarHostState.showSnackbar("評分失敗: ${res.message()}")
-                                            }
-                                        }
-                                    },
-                                    onComment = { message ->
-                                        val formHash = getFormHash()
-                                        if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                            return@PostRenderer
-                                        }
-                                        scope.launch {
-                                            when (val res =
-                                                threadRepository.commentPost(tid, post.pid, message, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar("點評成功，刷新後更新評分/點評狀態")
-                                                else -> snackbarHostState.showSnackbar("點評失敗: ${res.message()}")
-                                            }
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
+                        )
+                    ) {
+                        itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
+                            PostRenderer(
+                                post = post,
+                                onVote = { optionIds ->
+                                    val formHash = getFormHash()
+                                    val fId = threadInfo?.forum?.fid
+                                    if (formHash == null || fId == null) {
+                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+                                        return@PostRenderer
+                                    }
+                                    scope.launch {
+                                        when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
+                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("投票成功")
+                                            else -> snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
                                         }
                                     }
-                                )
+                                },
+                                onRate = { score, reason ->
+                                    val formHash = getFormHash()
+                                    if (formHash == null) {
+                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+                                        return@PostRenderer
+                                    }
+                                    scope.launch {
+                                        when (val res =
+                                            threadRepository.ratePost(tid, post.pid, score, reason, formHash)) {
+                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("評分成功，刷新後更新評分/點評狀態")
+                                            else -> snackbarHostState.showSnackbar("評分失敗: ${res.message()}")
+                                        }
+                                    }
+                                },
+                                onComment = { message ->
+                                    val formHash = getFormHash()
+                                    if (formHash == null) {
+                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+                                        return@PostRenderer
+                                    }
+                                    scope.launch {
+                                        when (val res =
+                                            threadRepository.commentPost(tid, post.pid, message, formHash)) {
+                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("點評成功，刷新後更新評分/點評狀態")
+                                            else -> snackbarHostState.showSnackbar("點評失敗: ${res.message()}")
+                                        }
+                                    }
+                                }
+                            )
 
-                                // Separator between posts
-                                if (index < posts.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                        color = colors.brownPrimary.copy(alpha = 0.15f)
+                            // Separator between posts
+                            if (index < posts.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                    color = colors.brownPrimary.copy(alpha = 0.15f)
+                                )
+                            }
+                        }
+
+                        if (isLoadingNextPage) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = colors.brownPrimary,
+                                        modifier = Modifier.size(24.dp)
                                     )
                                 }
                             }
+                        }
 
-                            if (isLoadingNextPage) {
-                                item {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 16.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(
-                                            color = colors.brownPrimary,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
+                        if (loadedPages.size == totalPages && posts.isNotEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "- 沒有更多內容了 -",
+                                        color = colors.textDark.copy(alpha = 0.5f),
+                                        fontSize = 12.sp
+                                    )
                                 }
                             }
-
-                            if (loadedPages.size == totalPages && posts.isNotEmpty()) {
-                                item {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(vertical = 32.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "- 沒有更多內容了 -",
-                                            color = colors.textDark.copy(alpha = 0.5f),
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                            }
+                        }
                     }
                 }
             }
@@ -344,13 +360,14 @@ internal fun ThreadReaderScreen(
                 modifier = Modifier.align(Alignment.TopCenter)
             ) {
                 Surface(
-                    color = colors.brownDeep.copy(alpha = 0.95f),
+                    color = colors.brownDeep,
                     shadowElevation = 4.dp,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     ThreadTopBar(
                         title = title,
                         onBack = { navigator.pop() },
+                        windowInsets = WindowInsets.statusBars,
                         actions = {
                             IconButton(
                                 onClick = { scope.launch { drawerState.open() } },
@@ -359,8 +376,7 @@ internal fun ThreadReaderScreen(
                                 Text(
                                     text = "☰",
                                     color = Color.White,
-                                    fontSize = 20.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 24.sp
                                 )
                             }
                         }
@@ -380,7 +396,7 @@ internal fun ThreadCatalogPanel(
     val colors = YamiboTheme.colors
     var expandedPages by remember { mutableStateOf(setOf<Int>()) }
 
-    Column(modifier = Modifier.fillMaxSize().background(colors.creamBackground)) {
+    Column(modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -402,14 +418,18 @@ internal fun ThreadCatalogPanel(
                 val isExpanded = expandedPages.contains(page)
                 val isLoaded = loadedPostsByPage.containsKey(page)
 
+                val rotation by androidx.compose.animation.core.animateFloatAsState(
+                    targetValue = if (isExpanded) 180f else 0f,
+                    label = "page_chevron"
+                )
+
                 Column {
                     // Page Header
                     Surface(
                         color = if (isExpanded) colors.brownLight.copy(alpha = 0.1f) else colors.creamBackground,
                         onClick = {
-                            if (isLoaded) {
-                                expandedPages = if (isExpanded) expandedPages - page else expandedPages + page
-                            } else {
+                            expandedPages = if (isExpanded) expandedPages - page else expandedPages + page
+                            if (!isLoaded) {
                                 onPageOrPostClick(page, null)
                             }
                         },
@@ -426,45 +446,65 @@ internal fun ThreadCatalogPanel(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
-                            if (!isLoaded) {
-                                Text("點擊載入", color = colors.brownLight, fontSize = 12.sp)
-                            } else {
-                                Text(if (isExpanded) "▲" else "▼", color = colors.brownPrimary, fontSize = 12.sp)
-                            }
+                            Text(
+                                text = "▲",
+                                modifier = Modifier.graphicsLayer { rotationZ = rotation },
+                                color = colors.brownPrimary.copy(alpha = 0.6f),
+                                fontSize = 12.sp
+                            )
                         }
                     }
 
-                    // Posts List (if expanded & loaded)
-                    if (isExpanded && isLoaded) {
-                        val pagePosts = loadedPostsByPage[page] ?: emptyList()
-                        Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
-                            pagePosts.forEach { post ->
-                                Surface(
-                                    color = colors.creamSurface,
-                                    onClick = { onPageOrPostClick(page, post) },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
-                                        Text(
-                                            text = "${post.floor}#",
-                                            color = colors.brownPrimary,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            modifier = Modifier.width(40.dp)
-                                        )
-                                        Text(
-                                            text = post.title.ifEmpty { "..." },
-                                            color = colors.textDark,
-                                            fontSize = 14.sp,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
-                                HorizontalDivider(
-                                    color = colors.brownLight.copy(alpha = 0.1f),
-                                    modifier = Modifier.padding(start = 24.dp)
+                    // Content List (Expanded)
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = isExpanded,
+                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
+                    ) {
+                        if (!isLoaded) {
+                            // Loading state
+                            Box(
+                                modifier = Modifier.fillMaxWidth().height(60.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = colors.brownDeep,
+                                    strokeWidth = 2.dp
                                 )
+                            }
+                        } else {
+                            // Posts List
+                            val pagePosts = loadedPostsByPage[page] ?: emptyList()
+                            Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
+                                pagePosts.forEach { post ->
+                                    Surface(
+                                        color = colors.creamSurface,
+                                        onClick = { onPageOrPostClick(page, post) },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
+                                            Text(
+                                                text = "${post.floor}#",
+                                                color = colors.brownPrimary,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                modifier = Modifier.width(40.dp)
+                                            )
+                                            Text(
+                                                text = post.title.ifEmpty { "..." },
+                                                color = colors.textDark,
+                                                fontSize = 14.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider(
+                                        color = colors.brownLight.copy(alpha = 0.1f),
+                                        modifier = Modifier.padding(start = 24.dp)
+                                    )
+                                }
                             }
                         }
                     }

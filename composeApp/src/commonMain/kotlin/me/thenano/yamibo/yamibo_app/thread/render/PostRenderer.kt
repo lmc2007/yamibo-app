@@ -120,7 +120,7 @@ fun PostRenderer(
                 ) {
                     if (onRate != null) {
                         TextButton(onClick = { showRateDialog = true }) {
-                            Icon(imageVector = YamiboIcons.StarOutline, contentDescription = "評分", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                            Icon(imageVector = YamiboIcons.Heart, contentDescription = "評分", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("評分", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                         }
@@ -128,7 +128,7 @@ fun PostRenderer(
                     }
                     if (onComment != null) {
                         TextButton(onClick = { showCommentDialog = true }) {
-                            Icon(imageVector = YamiboIcons.Heart, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                            Icon(imageVector = YamiboIcons.Comment, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("點評", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                         }
