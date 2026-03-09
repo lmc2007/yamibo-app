@@ -7,6 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -17,11 +21,16 @@ import androidx.compose.ui.zIndex
 @Composable
 fun WebViewTopBar(
     title: String,
-    onBackClick: () -> Unit = { },
-    onForwardClick: () -> Unit = { },
-    onRefreshClick: () -> Unit = { },
+    url: String,
+    onCloseClick: () -> Unit = {},
+    onBackClick: () -> Unit = {},
+    onForwardClick: () -> Unit = {},
+    onRefreshClick: () -> Unit = {},
+    onOpenBrowserClick: () -> Unit = {},
 ) {
     val colors = YamiboTheme.colors
+    var showMenu by remember { mutableStateOf(false) }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -37,49 +46,100 @@ fun WebViewTopBar(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(horizontal = 12.dp),
+                    .height(64.dp)
+                    .padding(horizontal = 16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Close button
                 Text(
-                    text = "◀",
+                    text = "✖",
                     modifier = Modifier
-                        .padding(8.dp)
-                        .clickable { onBackClick() },
+                        .padding(end = 12.dp)
+                        .clickable { onCloseClick() },
                     style = MaterialTheme.typography.titleLarge,
-                    color = colors.brownPrimary
-                )
-                
-                Text(
-                    text = "▶",
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clickable { onForwardClick() },
-                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
                     color = colors.brownPrimary
                 )
 
-                Spacer(Modifier.width(8.dp))
-                
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Visible,
-                    modifier = Modifier.weight(1f).basicMarquee(
-                        initialDelayMillis = 1500
-                    ),
-                    color = colors.textDark
-                )
+                // Title & Subtitle column
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = colors.textDark
+                    )
+                    Text(
+                        text = url,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Visible,
+                        modifier = Modifier.basicMarquee(initialDelayMillis = 1500),
+                        color = colors.textDark.copy(alpha = 0.6f)
+                    )
+                }
 
-                Text(
-                    text = "⟳",
-                    modifier = Modifier
-                        .padding(8.dp)
-                        .clickable { onRefreshClick() },
-                    style = MaterialTheme.typography.titleLarge,
-                    color = colors.brownPrimary
-                )
+                // Action buttons group
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Back
+                    Text(
+                        text = "←",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable { onBackClick() },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                        color = colors.brownPrimary
+                    )
+                    // Forward
+                    Text(
+                        text = "→",
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .clickable { onForwardClick() },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                        color = colors.brownPrimary
+                    )
+
+                    // More menu
+                    Box {
+                        Text(
+                            text = "⋮",
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp)
+                                .clickable { showMenu = true },
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                            color = colors.brownPrimary
+                        )
+                        androidx.compose.material3.DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("重新整理", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+                                onClick = {
+                                    onRefreshClick()
+                                    showMenu = false
+                                }
+                            )
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text("在瀏覽器開啟") },
+                                onClick = {
+                                    onOpenBrowserClick()
+                                    showMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

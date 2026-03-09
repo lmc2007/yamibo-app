@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.ProfilePage
 import coil3.compose.SubcomposeAsyncImage
+import io.github.littlesurvival.YamiboRoute
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -54,7 +55,7 @@ fun LoginScreen() {
     var loading by remember { mutableStateOf(false) }
     Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         LoginWebView(onLoadingChanged = { loading = it })
-        WebViewTopBar(title = "登入頁面", onBackClick = { navigator.pop() })
+        WebViewTopBar(title = "登入頁面", url = YamiboRoute.Login.build(), onBackClick = { navigator.pop() })
         LoadingOverlay(
             visible = loading,
         )

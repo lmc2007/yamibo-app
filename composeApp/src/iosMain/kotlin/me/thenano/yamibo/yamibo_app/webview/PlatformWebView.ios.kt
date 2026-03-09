@@ -18,7 +18,9 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 @Composable
 actual fun PlatformWebView(url: String) {
     val navigator = LocalNavigator.current
+    val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
     var webView by remember { mutableStateOf<WKWebView?>(null) }
+    var currentUrl by remember { mutableStateOf(url) }
     
     // Prioritize webview back navigation
     DisposableEffect(webView) {
@@ -38,12 +40,12 @@ actual fun PlatformWebView(url: String) {
     
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         WebViewTopBar(
-            title = url,
+            title = "WebView", // iOS is trickier to get real-time title without KVO, sticking to placeholder or URL
+            url = currentUrl,
+            onCloseClick = { navigator.pop() },
             onBackClick = {
                 if (webView?.canGoBack() == true) {
                     webView?.goBack()
-                } else {
-                    navigator.pop()
                 }
             },
             onForwardClick = {
@@ -53,6 +55,11 @@ actual fun PlatformWebView(url: String) {
             },
             onRefreshClick = {
                 webView?.reload()
+            },
+            onOpenBrowserClick = {
+                try {
+                    uriHandler.openUri(currentUrl)
+                } catch (_: Exception) {}
             }
         )
         UIKitView(
@@ -65,6 +72,7 @@ actual fun PlatformWebView(url: String) {
             },
             update = {
                 webView = it
+                it.URL?.absoluteString?.let { currentUrl = it }
             }
         )
     }

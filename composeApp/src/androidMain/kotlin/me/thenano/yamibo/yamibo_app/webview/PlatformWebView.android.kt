@@ -14,15 +14,19 @@ import me.thenano.yamibo.yamibo_app.__info__tag
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 
+import androidx.compose.ui.platform.LocalUriHandler
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 actual fun PlatformWebView(url: String) {
     val navigator = LocalNavigator.current
     val authRepo = LocalAuthRepository.current
+    val uriHandler = LocalUriHandler.current
     val cookies = authRepo.cookieStore.load() ?: ""
     
     var webView by remember { mutableStateOf<WebView?>(null) }
     var currentTitle by remember { mutableStateOf("WebView") }
+    var currentUrl by remember { mutableStateOf(url) }
     
     // Prioritize webview back navigation
     DisposableEffect(webView) {
@@ -43,11 +47,11 @@ actual fun PlatformWebView(url: String) {
     Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         WebViewTopBar(
             title = currentTitle,
+            url = currentUrl,
+            onCloseClick = { navigator.pop() },
             onBackClick = {
                 if (webView?.canGoBack() == true) {
                     webView?.goBack()
-                } else {
-                    navigator.pop()
                 }
             },
             onForwardClick = {
@@ -57,6 +61,11 @@ actual fun PlatformWebView(url: String) {
             },
             onRefreshClick = {
                 webView?.reload()
+            },
+            onOpenBrowserClick = {
+                try {
+                    uriHandler.openUri(currentUrl)
+                } catch (_: Exception) {}
             }
         )
         AndroidView(
@@ -65,6 +74,11 @@ actual fun PlatformWebView(url: String) {
                 WebView(context).apply {
                     webView = this
                     webViewClient = object : WebViewClient() {
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            url?.let { currentUrl = it }
+                        }
+                        
                         override fun onReceivedError(
                             view: WebView?,
                             request: WebResourceRequest?,
