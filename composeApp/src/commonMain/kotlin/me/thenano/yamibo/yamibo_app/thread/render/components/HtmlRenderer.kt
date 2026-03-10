@@ -142,15 +142,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                     }
                                                 }
                                             } else {
-                                                // Fast tap (up before timeout)
-                                                val link =
-                                                    block.annotatedString.getStringAnnotations("URL", offset, offset)
-                                                        .firstOrNull()
-                                                if (link != null) {
-                                                    val url = link.item
-                                                    val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
-                                                    navigator.navigate(IPlatformWebView(fullUrl))
-                                                }
+                                                // Fast tap (up before timeout) - Do nothing to avoid mis-clicks
                                             }
                                         }
                                     }
@@ -161,47 +153,6 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 onTextLayout = { layoutResult.value = it }
             )
 
-            if (showLinkDialog != null) {
-                DisableSelection {
-                    val url = showLinkDialog ?: ""
-                    val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
-                    AlertDialog(
-                        onDismissRequest = {
-                            showLinkDialog = null
-                        },
-                        title = { Text("開啟連結", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
-                        text = { Text("即將開啟連結：\n${fullUrl}\n\n選擇開啟方式：") },
-                        confirmButton = {
-                            Row {
-                                TextButton(onClick = {
-                                    navigator.navigate(IPlatformWebView(fullUrl))
-                                    showLinkDialog = null
-                                }) {
-                                    Text("內部開啟", color = colors.brownPrimary)
-                                }
-                                TextButton(onClick = {
-                                    try {
-                                        uriHandler.openUri(fullUrl)
-                                    } catch (e: Exception) {
-                                        e.printStackTrace()
-                                    }
-                                    showLinkDialog = null
-                                }) {
-                                    Text("外部瀏覽器", color = colors.brownPrimary)
-                                }
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showLinkDialog = null }) {
-                                Text("取消", color = colors.textDark.copy(alpha = 0.5f))
-                            }
-                        },
-                        containerColor = colors.creamSurface,
-                        titleContentColor = colors.textDark,
-                        textContentColor = colors.textDark.copy(alpha = 0.7f)
-                    )
-                }
-            }
 
             if (showLongPressMenu != null) {
                 DisableSelection {
@@ -213,6 +164,28 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                         title = { Text("連結選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
+                                // Info Section
+                                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                                    Text(
+                                        text = linkText,
+                                        color = colors.textDark,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = fullUrl,
+                                        color = colors.textDark.copy(alpha = 0.6f),
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                                
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    color = colors.brownPrimary.copy(alpha = 0.1f)
+                                )
+
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showLongPressMenu = null
