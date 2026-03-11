@@ -11,7 +11,7 @@ class INovelThreadDetailScreen(
     private val title: String,
     private val authorId: UserId? = null
 ) : Navigatable {
-    override val id = "ThreadScreen_${tid.value}_${Any().hashCode()}"
+    override val id = "ThreadScreen_${tid.value}_${authorId?.value ?: "none"}"
 
     @Composable
     override fun Content() {

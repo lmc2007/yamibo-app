@@ -23,6 +23,7 @@ import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.novel.components.*
+import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -184,7 +185,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                             pagePostsCache[page] = result.value.posts
                                         } else {
                                             snackbarHostState.showSnackbar(
-                                                message = "載入第 $page 頁失敗",
+                                                message = "載入第 $page 頁失敗 : ${result.message()}",
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -193,12 +194,13 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                             },
                             onPostClick = { page, post ->
                                 navigator.navigate(
-                                    me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen(
+                                    IThreadReaderScreen(
                                         tid = tid,
                                         title = current.page.thread.title,
                                         authorId = authorId,
                                         initialPage = page,
-                                        targetPid = post.pid
+                                        targetPid = post.pid,
+                                        isAuthorOnly = authorId != null
                                     )
                                 )
                             },

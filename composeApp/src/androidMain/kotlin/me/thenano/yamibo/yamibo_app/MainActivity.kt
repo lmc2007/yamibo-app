@@ -19,6 +19,8 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidForumRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 
@@ -60,6 +62,8 @@ class MainActivity : ComponentActivity() {
             }
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient) }
+            val novelCacheRepository = remember { AndroidNovelThreadCacheRepository() }
+            val readHistoryRepository = remember { AndroidReadHistoryRepository() }
             val themeRepository = remember { AndroidThemeRepository() }
 
             /** Provide Repositories */
@@ -68,6 +72,8 @@ class MainActivity : ComponentActivity() {
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
+                LocalNovelThreadCacheRepository provides novelCacheRepository,
+                LocalReadHistoryRepository provides readHistoryRepository,
                 LocalThemeRepository provides themeRepository,
             ) {
                 /** Color system bars to match active theme */

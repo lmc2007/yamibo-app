@@ -10,6 +10,8 @@ import me.thenano.yamibo.yamibo_app.repository.IOSAuthRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSForumRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 
@@ -26,6 +28,8 @@ fun MainViewController() = ComposeUIViewController {
     val authRepository = remember { IOSAuthRepository(cookieStore, userStore, yamiboClient) }
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient) }
+    val novelCacheRepository = remember { IOSNovelThreadCacheRepository() }
+    val readHistoryRepository = remember { IOSReadHistoryRepository() }
     val themeRepository = remember { IOSThemeRepository() }
 
     /** Provide Repositories */
@@ -34,6 +38,8 @@ fun MainViewController() = ComposeUIViewController {
         LocalAuthRepository provides authRepository,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
+        LocalNovelThreadCacheRepository provides novelCacheRepository,
+        LocalReadHistoryRepository provides readHistoryRepository,
         LocalThemeRepository provides themeRepository,
     ) { App() }
 }

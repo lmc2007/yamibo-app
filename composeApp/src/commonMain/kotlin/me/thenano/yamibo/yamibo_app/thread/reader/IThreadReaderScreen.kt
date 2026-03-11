@@ -12,18 +12,20 @@ class IThreadReaderScreen(
     private val title: String,
     private val authorId: UserId? = null,
     private val initialPage: Int = 1,
-    private val targetPid: PostId? = null
+    private val targetPid: PostId? = null,
+    private val isAuthorOnly: Boolean = false
 ) : Navigatable {
-    override val id = "ReaderScreen_${tid.value}_${Any().hashCode()}"
+    override val id = "ReaderScreen_${tid.value}_${authorId?.value ?: "all"}"
 
     @Composable
     override fun Content() {
         ThreadReaderScreen(
-            tid = tid, 
-            title = title, 
-            authorId = authorId, 
-            initialPage = initialPage, 
-            targetPid = targetPid
+            tid = tid,
+            title = title,
+            authorId = authorId,
+            initialPage = initialPage,
+            targetPid = targetPid,
+            isAuthorOnly = isAuthorOnly
         )
     }
 }

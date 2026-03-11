@@ -4,7 +4,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.DisableSelection
 import androidx.compose.material3.*
@@ -90,8 +92,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 text = block.annotatedString,
                 style = TextStyle(
                     color = colors.textDark,
-                    fontSize = 15.sp,
-                    lineHeight = 22.sp,
+                    fontSize = 17.sp,
+                    lineHeight = 26.sp,
                     textAlign = block.textAlign
                 ),
                 modifier = Modifier
@@ -414,6 +416,90 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     modifier = Modifier.padding(12.dp),
                     style = TextStyle(fontFamily = FontFamily.Monospace, fontSize = 13.sp)
                 )
+            }
+        }
+
+        is HtmlBlock.Table -> {
+            val rows = block.rows
+            if (rows.isEmpty()) return
+
+            val maxCols = rows.maxOf { it.cells.size }
+
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                shape = RoundedCornerShape(8.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
+                colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+            ) {
+                val scrollState = rememberScrollState()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(scrollState)
+                ) {
+                    Column {
+                        rows.forEachIndexed { rowIdx, row ->
+                            val isFirstRow = rowIdx == 0
+                            val isHeaderRow = isFirstRow && row.cells.any { it.isHeader }
+
+                            Row(modifier = Modifier.fillMaxWidth()) {
+                                for (colIdx in 0 until maxCols) {
+                                    val cell = row.cells.getOrNull(colIdx)
+                                    val cellBg = when {
+                                        isHeaderRow -> colors.brownDeep
+                                        rowIdx % 2 == 0 -> colors.creamSurface
+                                        else -> colors.creamBackground
+                                    }
+                                    val cellTextColor = if (isHeaderRow) Color.White else colors.textDark
+
+                                    Box(
+                                        modifier = Modifier
+                                            .widthIn(min = 80.dp, max = 240.dp)
+                                            .background(cellBg)
+                                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                                    ) {
+                                        if (cell != null && cell.blocks.isNotEmpty()) {
+                                            Column {
+                                                cell.blocks.forEach { innerBlock ->
+                                                    when (innerBlock) {
+                                                        is HtmlBlock.Text -> {
+                                                            Text(
+                                                                text = innerBlock.annotatedString,
+                                                                style = TextStyle(
+                                                                    color = cellTextColor,
+                                                                    fontSize = 13.sp,
+                                                                    lineHeight = 18.sp,
+                                                                    fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
+                                                                    textAlign = innerBlock.textAlign
+                                                                )
+                                                            )
+                                                        }
+                                                        else -> HtmlBlockRenderer(innerBlock, tid)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Column divider
+                                    if (colIdx < maxCols - 1) {
+                                        Box(
+                                            modifier = Modifier
+                                                .width(1.dp)
+                                                .heightIn(min = 36.dp)
+                                                .background(colors.brownPrimary.copy(alpha = 0.15f))
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Row divider
+                            if (rowIdx < rows.size - 1) {
+                                HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.15f))
+                            }
+                        }
+                    }
+                }
             }
         }
     }

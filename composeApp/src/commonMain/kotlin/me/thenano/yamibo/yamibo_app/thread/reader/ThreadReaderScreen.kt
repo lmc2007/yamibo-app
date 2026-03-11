@@ -1,8 +1,5 @@
 package me.thenano.yamibo.yamibo_app.thread.reader
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -13,16 +10,11 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.core.YamiboResult
@@ -39,7 +31,9 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadLoadingSkeleton
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadTopBar
+import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
+import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
+import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.render.PostRenderer
 
 internal sealed interface ReaderState {
@@ -56,7 +50,8 @@ internal fun ThreadReaderScreen(
     title: String,
     authorId: UserId? = null,
     initialPage: Int = 1,
-    targetPid: PostId? = null
+    targetPid: PostId? = null,
+    isAuthorOnly: Boolean = false
 ) {
     val colors = YamiboTheme.colors
     val threadRepository = LocalThreadRepository.current
@@ -72,7 +67,6 @@ internal fun ThreadReaderScreen(
     var totalPages by remember { mutableStateOf(1) }
     var isLoadingNextPage by remember { mutableStateOf(false) }
 
-    // local state to mapping page -> posts for the catalog drawer
     val loadedPostsByPage = remember { mutableStateMapOf<Int, List<Post>>() }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -85,13 +79,11 @@ internal fun ThreadReaderScreen(
         return authRepo.currentUser()?.formHash
     }
 
-    // Logic to load a specific page
     suspend fun loadPage(page: Int) {
         if (page in loadedPages) return
 
         isLoadingNextPage = true
 
-        // Check cache first for page 1
         if (page == 1) {
             val cached = threadRepository.getCachedThread(tid, page)
             if (cached != null) {
@@ -109,7 +101,6 @@ internal fun ThreadReaderScreen(
         when (val result = threadRepository.fetchThread(tid, authorId, page)) {
             is YamiboResult.Success -> {
                 val newPosts = result.value.posts
-                // Merge and sort posts by PID or simply append
                 posts = (posts + newPosts).distinctBy { it.pid }.sortedBy { it.floor }
                 loadedPostsByPage[page] = newPosts
                 totalPages = result.value.pageNav?.totalPages ?: 1
@@ -134,11 +125,9 @@ internal fun ThreadReaderScreen(
     LaunchedEffect(tid, initialPage, targetPid) {
         loadPage(initialPage)
 
-        // After loading the page, try to scroll to the target post
         if (targetPid != null && posts.isNotEmpty()) {
             val targetIndex = posts.indexOfFirst { it.pid == targetPid }
             if (targetIndex >= 0) {
-                // Animate slightly or snap
                 listState.scrollToItem(targetIndex)
             }
         }
@@ -156,7 +145,6 @@ internal fun ThreadReaderScreen(
                 val lastVisibleItemIndex = visibleItems.last().index
                 val totalItems = layoutInfo.totalItemsCount
 
-                // If we are near the bottom (e.g. 5 items away)
                 if (lastVisibleItemIndex >= totalItems - 5) {
                     val nextPage = (loadedPages.maxOrNull() ?: 0) + 1
                     if (nextPage <= totalPages) {
@@ -169,18 +157,18 @@ internal fun ThreadReaderScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(
                 drawerContainerColor = colors.creamBackground,
                 modifier = Modifier.fillMaxWidth(0.7f)
             ) {
-                ThreadCatalogPanel(
+                ReaderCatalogPanel(
                     totalPages = totalPages,
                     loadedPostsByPage = loadedPostsByPage,
                     onPageOrPostClick = { page, post ->
                         scope.launch {
                             if (post != null) {
-                                // Specific post clicked: close and scroll
                                 drawerState.close()
                                 if (page !in loadedPages) {
                                     loadPage(page)
@@ -188,12 +176,9 @@ internal fun ThreadReaderScreen(
                                 val targetIndex = posts.indexOfFirst { it.pid == post.pid }
                                 if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
                             } else {
-                                // Page toggle or navigation
                                 if (page !in loadedPages) {
-                                    // Not loaded: load it and stay in drawer
                                     loadPage(page)
                                 } else {
-                                    // Already loaded: close and scroll to start of page
                                     drawerState.close()
                                     val targetIndex =
                                         posts.indexOfFirst { loadedPostsByPage[page]?.contains(it) == true }
@@ -212,13 +197,8 @@ internal fun ThreadReaderScreen(
                 .background(colors.creamBackground)
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        // Accept the down even if already consumed by a child (e.g. link, button)
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val up = waitForUpOrCancellation()
-                        // Only toggle menu when:
-                        // 1. Touch ended (not cancelled)
-                        // 2. No child consumed the up event (links/buttons will consume theirs)
-                        // 3. Tap is in center 1/3 of screen width
                         if (up != null && !up.isConsumed) {
                             val x = up.position.x
                             val width = size.width
@@ -300,6 +280,23 @@ internal fun ThreadReaderScreen(
                                 }
                             )
 
+                            // Author-only mode: comment banner after each post
+                            if (isAuthorOnly) {
+                                CommentBanner(
+                                    text = "點擊跳轉到評論區",
+                                    onClick = {
+                                        navigator.navigate(
+                                            ICommentReaderScreen(
+                                                tid = tid,
+                                                postTitle = post.title.ifEmpty { "第${post.floor}樓" },
+                                                oPostId = post.pid,
+                                                authorId = authorId!!
+                                            )
+                                        )
+                                    }
+                                )
+                            }
+
                             // Separator between posts
                             if (index < posts.size - 1) {
                                 HorizontalDivider(
@@ -345,172 +342,15 @@ internal fun ThreadReaderScreen(
                 }
             }
 
-            // Overlay Menu (TopBar)
-            // Snackbar host for feedback messages
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 32.dp)
-            )
-
-            // Overlay Menu (TopBar)
-            AnimatedVisibility(
+            // Overlay menu
+            ReaderOverlayMenu(
                 visible = showMenu,
-                enter = slideInVertically(initialOffsetY = { -it }),
-                exit = slideOutVertically(targetOffsetY = { -it }),
-                modifier = Modifier.align(Alignment.TopCenter)
-            ) {
-                Surface(
-                    color = colors.brownDeep,
-                    shadowElevation = 4.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    ThreadTopBar(
-                        title = title,
-                        onBack = { navigator.pop() },
-                        windowInsets = WindowInsets.statusBars,
-                        actions = {
-                            IconButton(
-                                onClick = { scope.launch { drawerState.open() } },
-                                modifier = Modifier.padding(end = 8.dp)
-                            ) {
-                                Text(
-                                    text = "☰",
-                                    color = Color.White,
-                                    fontSize = 24.sp
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-internal fun ThreadCatalogPanel(
-    totalPages: Int,
-    loadedPostsByPage: Map<Int, List<Post>>,
-    onPageOrPostClick: (Int, Post?) -> Unit
-) {
-    val colors = YamiboTheme.colors
-    var expandedPages by remember { mutableStateOf(setOf<Int>()) }
-
-    Column(modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.brownDeep)
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "目錄 (Catalog)",
-                color = colors.creamBackground,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
+                title = title,
+                snackbarHostState = snackbarHostState,
+                onBack = { navigator.pop() },
+                onCatalog = { scope.launch { drawerState.open() } },
+                modifier = Modifier.align(Alignment.BottomCenter)
             )
-        }
-
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
-            items(totalPages) { index ->
-                val page = index + 1
-                val isExpanded = expandedPages.contains(page)
-                val isLoaded = loadedPostsByPage.containsKey(page)
-
-                val rotation by androidx.compose.animation.core.animateFloatAsState(
-                    targetValue = if (isExpanded) 180f else 0f,
-                    label = "page_chevron"
-                )
-
-                Column {
-                    // Page Header
-                    Surface(
-                        color = if (isExpanded) colors.brownLight.copy(alpha = 0.1f) else colors.creamBackground,
-                        onClick = {
-                            expandedPages = if (isExpanded) expandedPages - page else expandedPages + page
-                            if (!isLoaded) {
-                                onPageOrPostClick(page, null)
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "第 $page 頁",
-                                color = colors.brownPrimary,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = "▲",
-                                modifier = Modifier.graphicsLayer { rotationZ = rotation },
-                                color = colors.brownPrimary.copy(alpha = 0.6f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    // Content List (Expanded)
-                    androidx.compose.animation.AnimatedVisibility(
-                        visible = isExpanded,
-                        enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
-                        exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut()
-                    ) {
-                        if (!isLoaded) {
-                            // Loading state
-                            Box(
-                                modifier = Modifier.fillMaxWidth().height(60.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = colors.brownDeep,
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                        } else {
-                            // Posts List
-                            val pagePosts = loadedPostsByPage[page] ?: emptyList()
-                            Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
-                                pagePosts.forEach { post ->
-                                    Surface(
-                                        color = colors.creamSurface,
-                                        onClick = { onPageOrPostClick(page, post) },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
-                                            Text(
-                                                text = "${post.floor}#",
-                                                color = colors.brownPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                modifier = Modifier.width(40.dp)
-                                            )
-                                            Text(
-                                                text = post.title.ifEmpty { "..." },
-                                                color = colors.textDark,
-                                                fontSize = 14.sp,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                    HorizontalDivider(
-                                        color = colors.brownLight.copy(alpha = 0.1f),
-                                        modifier = Modifier.padding(start = 24.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.2f))
-                }
-            }
         }
     }
 }

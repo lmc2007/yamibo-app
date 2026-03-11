@@ -18,6 +18,12 @@ interface ThreadRepository {
         page: Int = 1
     ): YamiboResult<ThreadPage>
 
+    /** Locate a specific post in the full-view thread page */
+    suspend fun fetchFindPost(
+        tid: ThreadId,
+        postId: PostId
+    ): YamiboResult<ThreadPage>
+
     suspend fun addFavorite(tid: ThreadId, formHash: FormHash): YamiboResult<String>
     
     suspend fun votePoll(fId: ForumId, tId: ThreadId, pollOptionIds: List<PollOptionId>, formHash: FormHash): YamiboResult<String>

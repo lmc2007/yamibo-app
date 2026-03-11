@@ -25,6 +25,7 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.value.ForumId
+import io.github.littlesurvival.YamiboForum
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
@@ -34,6 +35,7 @@ import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -204,13 +206,22 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                 navigator.navigate(IForumScreen(subFid, subName))
                             },
                             onThreadClick = { thread ->
-                                navigator.navigate(
-                                    INovelThreadDetailScreen(
-                                        thread.tid,
-                                        thread.title,
-                                        thread.author?.uid
+                                if (isNovelForum(fid)) {
+                                    navigator.navigate(
+                                        INovelThreadDetailScreen(
+                                            thread.tid,
+                                            thread.title,
+                                            thread.author?.uid
+                                        )
                                     )
-                                )
+                                } else {
+                                    navigator.navigate(
+                                        IThreadReaderScreen(
+                                            tid = thread.tid,
+                                            title = thread.title
+                                        )
+                                    )
+                                }
                             }
                         )
                     }
@@ -228,9 +239,22 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 showSearch = false
             },
             onThreadClick = { thread ->
-                navigator.navigate(
-                    INovelThreadDetailScreen(thread.tid, thread.title, thread.author?.uid)
-                )
+                if (isNovelForum(fid)) {
+                    navigator.navigate(
+                        INovelThreadDetailScreen(
+                            thread.tid,
+                            thread.title,
+                            thread.author?.uid
+                        )
+                    )
+                } else {
+                    navigator.navigate(
+                        IThreadReaderScreen(
+                            tid = thread.tid,
+                            title = thread.title
+                        )
+                    )
+                }
             }
         )
     }
@@ -481,3 +505,8 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
+
+/** Check if a forum is a novel forum that should use author-only thread viewing */
+private fun isNovelForum(fid: ForumId): Boolean =
+    fid.value == YamiboForum.LITERATURE.id.value ||
+        fid.value == YamiboForum.TRANSLATED_LIGHT_NOVEL.id.value

@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.littlesurvival.dto.page.Post
@@ -34,104 +33,102 @@ fun PostRenderer(
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
 
-    SelectionContainer {
-        Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
-            // Author Header
+    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // Author Header
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val avatarUrl = post.author.avatarUrl
+            // TODO: Long-press or tap to navigate to author profile (post.author.uid)
+            Box(modifier = Modifier.clickable { /* TODO: navigate to user profile */ }) {
+                if (!avatarUrl.isNullOrEmpty()) {
+                    SubcomposeAsyncImage(
+                        model = avatarUrl,
+                        contentDescription = "Avatar",
+                        modifier = Modifier.size(36.dp).clip(CircleShape),
+                        contentScale = ContentScale.Crop,
+                        error = {
+                            Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(36.dp), tint = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+                        },
+                        loading = {
+                            CircularProgressIndicator(
+                                color = YamiboTheme.colors.brownPrimary,
+                                modifier = Modifier.padding(8.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    )
+                } else {
+                    Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(36.dp), tint = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+                }
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(post.author.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = YamiboTheme.colors.brownPrimary)
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(post.timeText, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+            }
+
+            Text("${post.floor}#", fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+        }
+
+        // Content HTML
+        HtmlRenderer(post.contentHtml)
+
+        // Edited Text
+        if (!post.editedText.isNullOrEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = post.editedText!!,
+                fontSize = 12.sp,
+                color = YamiboTheme.colors.textDark.copy(alpha = 0.5f)
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Poll
+        post.poll?.let { poll ->
+            PollRenderer(poll, onVote = onVote)
+        }
+
+        // Rates
+        if (post.rateBlock.rates.isNotEmpty()) {
+            RateRenderer(post.rateBlock)
+        }
+
+        // Comments
+        if (post.comments.isNotEmpty()) {
+            CommentRenderer(post.comments)
+        }
+
+        // Attachments
+        if (post.attachments.isNotEmpty()) {
+            AttachmentRenderer(post.attachments)
+        }
+
+        // Action Buttons Row (Bottom)
+        if (onRate != null || onComment != null) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = YamiboTheme.colors.brownPrimary.copy(alpha = 0.15f))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                val avatarUrl = post.author.avatarUrl
-                // TODO: Long-press or tap to navigate to author profile (post.author.uid)
-                Box(modifier = Modifier.clickable { /* TODO: navigate to user profile */ }) {
-                    if (!avatarUrl.isNullOrEmpty()) {
-                        SubcomposeAsyncImage(
-                            model = avatarUrl,
-                            contentDescription = "Avatar",
-                            modifier = Modifier.size(36.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop,
-                            error = {
-                                Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(36.dp), tint = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
-                            },
-                            loading = {
-                                CircularProgressIndicator(
-                                    color = YamiboTheme.colors.brownPrimary,
-                                    modifier = Modifier.padding(8.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            }
-                        )
-                    } else {
-                        Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(36.dp), tint = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+                if (onRate != null) {
+                    TextButton(onClick = { showRateDialog = true }) {
+                        Icon(imageVector = YamiboIcons.Heart, contentDescription = "評分", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("評分", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                     }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(post.author.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = YamiboTheme.colors.brownPrimary)
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(post.timeText, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
-                }
-                
-                Text("${post.floor}#", fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
-            }
-
-            // Content HTML
-            HtmlRenderer(post.contentHtml)
-
-            // Edited Text
-            if (!post.editedText.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = post.editedText!!,
-                    fontSize = 12.sp,
-                    color = YamiboTheme.colors.textDark.copy(alpha = 0.5f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Poll
-            post.poll?.let { poll ->
-                PollRenderer(poll, onVote = onVote)
-            }
-
-            // Rates
-            if (post.rateBlock.rates.isNotEmpty()) {
-                RateRenderer(post.rateBlock)
-            }
-
-            // Comments
-            if (post.comments.isNotEmpty()) {
-                CommentRenderer(post.comments)
-            }
-
-            // Attachments
-            if (post.attachments.isNotEmpty()) {
-                AttachmentRenderer(post.attachments)
-            }
-
-            // Action Buttons Row (Bottom)
-            if (onRate != null || onComment != null) {
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = YamiboTheme.colors.brownPrimary.copy(alpha = 0.15f))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onRate != null) {
-                        TextButton(onClick = { showRateDialog = true }) {
-                            Icon(imageVector = YamiboIcons.Heart, contentDescription = "評分", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("評分", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    if (onComment != null) {
-                        TextButton(onClick = { showCommentDialog = true }) {
-                            Icon(imageVector = YamiboIcons.Comment, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("點評", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
-                        }
+                if (onComment != null) {
+                    TextButton(onClick = { showCommentDialog = true }) {
+                        Icon(imageVector = YamiboIcons.Comment, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("點評", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }

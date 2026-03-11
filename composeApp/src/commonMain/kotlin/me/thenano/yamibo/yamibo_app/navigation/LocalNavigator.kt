@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.navigation
 
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.saveable.SaveableStateHolder
 import me.thenano.yamibo.yamibo_app.IMainScreen
@@ -18,6 +19,9 @@ class ComposableNavigator(start: Navigatable = IMainScreen()) {
     var lastAction = NavAction.Push
     lateinit var stateHolder: SaveableStateHolder
     val backHandlers = mutableListOf<() -> Boolean>()
+
+    /** Index of the screen currently animating out (-1 = none) */
+    val poppingIndex = mutableIntStateOf(-1)
 
     val currentScreen: Navigatable
         get() = stack.last()
@@ -37,9 +41,19 @@ class ComposableNavigator(start: Navigatable = IMainScreen()) {
             if (handler()) return true
         }
         if (stack.size <= 1) return false
+        if (poppingIndex.intValue >= 0) return false // already popping
         lastAction = NavAction.Pop
-        stack.removeAt(stack.lastIndex)
+        poppingIndex.intValue = stack.lastIndex
         return true
+    }
+
+    /** Called when pop exit animation completes — actually remove the screen */
+    fun completePop() {
+        val idx = poppingIndex.intValue
+        if (idx in stack.indices) {
+            stack.removeAt(idx)
+        }
+        poppingIndex.intValue = -1
     }
 
     fun popToRoot() {
