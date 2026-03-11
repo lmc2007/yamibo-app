@@ -13,4 +13,9 @@ sealed class HtmlBlock {
     data class Locked(val cost: Int, val contentBlocks: List<HtmlBlock>) : HtmlBlock()
     data class Quote(val contentBlocks: List<HtmlBlock>) : HtmlBlock()
     data class Code(val codeText: String) : HtmlBlock()
+
+    /** Table: rows of cells, each cell containing parsed HtmlBlocks */
+    data class Table(val rows: List<TableRow>) : HtmlBlock()
+    data class TableRow(val cells: List<TableCell>)
+    data class TableCell(val blocks: List<HtmlBlock>, val isHeader: Boolean = false)
 }

@@ -128,7 +128,37 @@ object HtmlParser {
                                 }
                             }
                         }
-                        "p", "ul", "ol", "table", "tbody", "tr", "td" -> {
+                        "table" -> {
+                            // Detect if this is a multi-cell table (data table) or single-cell wrapper
+                            val trs = node.select("tr")
+                            val isDataTable = trs.any { tr ->
+                                tr.select("td, th").size > 1
+                            }
+
+                            if (isDataTable) {
+                                commitText()
+                                val rows = trs.map { tr ->
+                                    val cells = tr.select("td, th").map { cell ->
+                                        val cellBlocks = parseHtml(cell.html())
+                                        val isHeader = cell.tagName().lowercase() == "th" ||
+                                            cell.select("strong, b").isNotEmpty()
+                                        HtmlBlock.TableCell(blocks = cellBlocks, isHeader = isHeader)
+                                    }
+                                    HtmlBlock.TableRow(cells = cells)
+                                }
+                                blocks.add(HtmlBlock.Table(rows = rows))
+                            } else {
+                                // Single-cell wrapper table — treat as inline content
+                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
+                                    globalBuilder.append("\n")
+                                }
+                                node.childNodes().forEach { parseNode(it, parentAlign) }
+                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
+                                    globalBuilder.append("\n")
+                                }
+                            }
+                        }
+                        "p", "ul", "ol", "tbody", "tr", "td", "th" -> {
                             if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                 globalBuilder.append("\n")
                             }
@@ -235,14 +265,14 @@ object HtmlParser {
 
     private fun fontSizeToSp(size: String?): TextUnit {
         return when (size) {
-            "1" -> 10.sp
-            "2" -> 13.sp
-            "3" -> 15.sp // Standard base
-            "4" -> 18.sp
-            "5" -> 24.sp
-            "6" -> 32.sp
-            "7" -> 44.sp // Huge
-            else -> 15.sp
+            "1" -> 12.sp
+            "2" -> 15.sp
+            "3" -> 17.sp // Standard base
+            "4" -> 21.sp
+            "5" -> 28.sp
+            "6" -> 36.sp
+            "7" -> 48.sp // Huge
+            else -> 17.sp
         }
     }
 
