@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ForumSummary
 import io.github.littlesurvival.dto.page.ForumCategory
@@ -40,6 +41,8 @@ import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.components.SearchModal
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
@@ -57,6 +60,7 @@ private sealed interface HomeState {
 fun HomePageScreen() {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
+    val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -127,7 +131,25 @@ fun HomePageScreen() {
             SearchModal(
                 fid = null,
                 onDismiss = { showSearch = false },
-                onThreadClick = { /* TODO: navigate to thread */ }
+                onThreadClick = { thread ->
+                    if (isNovelForum(thread.tag)) {
+                        navigator.navigate(
+                            INovelThreadDetailScreen(
+                                thread.tid,
+                                thread.title,
+                                thread.author?.uid
+                            )
+                        )
+                    } else {
+                        navigator.navigate(
+                            IThreadReaderScreen(
+                                tid = thread.tid,
+                                title = thread.title
+                            )
+                        )
+                    }
+                    showSearch = false
+                }
             )
         }
 
@@ -487,3 +509,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
+
+private fun isNovelForum(name: String?): Boolean =
+    name == YamiboForum.LITERATURE.forumName || name == "文学区" ||
+        name == YamiboForum.TRANSLATED_LIGHT_NOVEL.forumName || name == "輕小說/譯文區"

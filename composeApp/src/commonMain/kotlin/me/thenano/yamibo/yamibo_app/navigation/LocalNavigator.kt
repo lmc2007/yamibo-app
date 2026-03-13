@@ -25,6 +25,9 @@ class ComposableNavigator(start: Navigatable = IMainScreen()) {
         get() = stack.last()
 
     fun navigate(navigatable: Navigatable) {
+        // Prevent pushing the exact same screen twice consecutively (avoids common duplicate key crashes)
+        if (stack.isNotEmpty() && stack.last().id == navigatable.id) return
+        
         lastAction = NavAction.Push
         stack.add(navigatable)
     }

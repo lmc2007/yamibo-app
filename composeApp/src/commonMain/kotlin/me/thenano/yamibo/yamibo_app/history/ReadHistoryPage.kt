@@ -28,6 +28,7 @@ import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.value.ThreadId
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -121,7 +122,7 @@ fun ReadHistoryPage() {
 
     val stackSize = navigator.stack.size
     LaunchedEffect(stackSize) {
-        if (navigator.currentScreen is me.thenano.yamibo.yamibo_app.IMainScreen) {
+        if (navigator.currentScreen is IMainScreen) {
             if (mode == PageMode.Normal) {
                 loadPage(currentPage)
             } else if (mode == PageMode.Search) {
@@ -199,11 +200,12 @@ fun ReadHistoryPage() {
                         onDeleteSelected = {
                             if (selectedIds.isNotEmpty()) {
                                 scope.launch {
+                                    val deletedAmount = selectedIds.size
                                     readHistoryRepo.deleteHistoryBatch(selectedIds.toList())
                                     selectedIds = emptySet()
                                     mode = PageMode.Normal
                                     loadPage(1)
-                                    snackbarHostState.showSnackbar("已刪除 ${selectedIds.size} 條紀錄")
+                                    snackbarHostState.showSnackbar("已刪除 $deletedAmount 條紀錄")
                                 }
                             }
                         },
@@ -452,7 +454,7 @@ private fun NormalTopBar(
             Icon(
                 imageVector = YamiboIcons.Search,
                 contentDescription = "搜尋",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(30.dp).offset(y = 5.dp),
                 tint = colors.brownDeep
             )
         }
@@ -466,7 +468,7 @@ private fun NormalTopBar(
             Icon(
                 imageVector = YamiboIcons.Trashcan,
                 contentDescription = "多選刪除",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(30.dp),
                 tint = colors.brownDeep
             )
         }

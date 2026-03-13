@@ -9,7 +9,7 @@ class IForumScreen(
     private val fid: ForumId,
     private val name: String
 ) : Navigatable {
-    override val id = "ForumScreen_${fid.value}_${Any().hashCode()}"
+    override val id = "ForumScreen_${fid.value}"
 
     @Composable
     override fun Content() {

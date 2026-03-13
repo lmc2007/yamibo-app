@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
@@ -60,7 +61,7 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                 thread.author?.let { user ->
                     val avatarUrl = user.avatarUrl
                     if (!avatarUrl.isNullOrEmpty()) {
-                        coil3.compose.SubcomposeAsyncImage(
+                        SubcomposeAsyncImage(
                             model = avatarUrl,
                             contentDescription = "Avatar",
                             modifier = Modifier.size(28.dp).clip(CircleShape),

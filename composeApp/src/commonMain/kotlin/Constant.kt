@@ -132,17 +132,22 @@ object YamiboIcons {
                 strokeLineWidth = 1f
             ) {
                 moveTo(11.742f, 10.344f)
-                arcTo(6.5f, 6.5f, 0f, true, false, 10.345f, 11.742f)
+                arcTo(6.5f, 6.5f, 0f, isMoreThanHalf = true, isPositiveArc = false, x1 = 10.345f, y1 = 11.742f)
                 horizontalLineToRelative(-0.001f)
                 curveToRelative(0.03f, 0.04f, 0.062f, 0.078f, 0.098f, 0.115f)
                 lineToRelative(3.85f, 3.85f)
-                arcToRelative(1f, 1f, 0f, false, false, 1.415f, -1.414f)
+                arcToRelative(1f, 1f, 0f, isMoreThanHalf = false, isPositiveArc = false, dx1 = 1.415f, dy1 = -1.414f)
                 lineToRelative(-3.85f, -3.85f)
-                arcToRelative(1.007f, 1.007f, 0f, false, false, -0.115f, -0.1f)
+                arcToRelative(1.007f, 1.007f, 0f,
+                    isMoreThanHalf = false,
+                    isPositiveArc = false,
+                    dx1 = -0.115f,
+                    dy1 = -0.1f
+                )
                 close()
                 moveTo(12f, 6.5f)
-                arcToRelative(5.5f, 5.5f, 0f, true, true, -11f, 0f)
-                arcToRelative(5.5f, 5.5f, 0f, false, true, 11f, 0f)
+                arcToRelative(5.5f, 5.5f, 0f, isMoreThanHalf = true, isPositiveArc = true, dx1 = -11f, dy1 = 0f)
+                arcToRelative(5.5f, 5.5f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = 11f, dy1 = 0f)
                 close()
             }
         }.build()
@@ -707,44 +712,184 @@ object YamiboIcons {
         ).apply {
             group(
                 translationX = 64f,
-                translationY = 42.666667f
+                translationY = 42.666668f
             ) {
                 path(fill = SolidColor(Color.Black)) {
-                    moveTo(256f, 42.6666667f)
-                    lineTo(128f, 42.6666667f)
+                    moveTo(256f, 42.666668f)
+                    lineTo(128f, 42.666668f)
                     lineTo(128f, 0f)
                     lineTo(256f, 0f)
-                    lineTo(256f, 42.6666667f)
+                    lineTo(256f, 42.666668f)
                     close()
-                    moveTo(170.666667f, 170.666667f)
-                    lineTo(128f, 170.666667f)
-                    lineTo(128f, 341.333333f)
-                    lineTo(170.666667f, 341.333333f)
-                    lineTo(170.666667f, 170.666667f)
+                    moveTo(170.66667f, 170.66667f)
+                    lineTo(128f, 170.66667f)
+                    lineTo(128f, 341.33334f)
+                    lineTo(170.66667f, 341.33334f)
+                    lineTo(170.66667f, 170.66667f)
                     close()
-                    moveTo(256f, 170.666667f)
-                    lineTo(213.333333f, 170.666667f)
-                    lineTo(213.333333f, 341.333333f)
-                    lineTo(256f, 341.333333f)
-                    lineTo(256f, 170.666667f)
+                    moveTo(256f, 170.66667f)
+                    lineTo(213.33333f, 170.66667f)
+                    lineTo(213.33333f, 341.33334f)
+                    lineTo(256f, 341.33334f)
+                    lineTo(256f, 170.66667f)
                     close()
-                    moveTo(384f, 85.3333333f)
+                    moveTo(384f, 85.333336f)
                     lineTo(384f, 128f)
-                    lineTo(341.333333f, 128f)
-                    lineTo(341.333333f, 426.666667f)
-                    lineTo(42.6666667f, 426.666667f)
-                    lineTo(42.6666667f, 128f)
+                    lineTo(341.33334f, 128f)
+                    lineTo(341.33334f, 426.66666f)
+                    lineTo(42.666668f, 426.66666f)
+                    lineTo(42.666668f, 128f)
                     lineTo(0f, 128f)
-                    lineTo(0f, 85.3333333f)
-                    lineTo(384f, 85.3333333f)
+                    lineTo(0f, 85.333336f)
+                    lineTo(384f, 85.333336f)
                     close()
-                    moveTo(298.666667f, 128f)
-                    lineTo(85.3333333f, 128f)
-                    lineTo(85.3333333f, 384f)
-                    lineTo(298.666667f, 384f)
-                    lineTo(298.666667f, 128f)
+                    moveTo(298.66666f, 128f)
+                    lineTo(85.333336f, 128f)
+                    lineTo(85.333336f, 384f)
+                    lineTo(298.66666f, 384f)
+                    lineTo(298.66666f, 128f)
                     close()
                 }
+            }
+        }.build()
+
+    val Reload =
+        ImageVector.Builder(
+            name = "Reload",
+            defaultWidth = 24.0.dp,
+            defaultHeight = 24.0.dp,
+            viewportWidth = 24.0f,
+            viewportHeight = 24.0f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.0f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(3.0f, 3.0f)
+                verticalLineTo(8.0f)
+                moveTo(3.0f, 8.0f)
+                horizontalLineTo(8.0f)
+                moveTo(3.0f, 8.0f)
+                lineTo(6.0f, 5.2917f)
+                curveTo(7.5923f, 3.8666f, 9.6949f, 3.0f, 12.0f, 3.0f)
+                curveTo(16.9706f, 3.0f, 21.0f, 7.0294f, 21.0f, 12.0f)
+                curveTo(21.0f, 16.9706f, 16.9706f, 21.0f, 12.0f, 21.0f)
+                curveTo(7.7168f, 21.0f, 4.1325f, 18.008f, 3.223f, 14.0f)
+            }
+        }.build()
+
+    val Reply =
+        ImageVector.Builder(
+            name = "Reply",
+            defaultWidth = 24.0.dp,
+            defaultHeight = 24.0.dp,
+            viewportWidth = 24.0f,
+            viewportHeight = 24.0f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2.0f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(20.0f, 17.0f)
+                verticalLineTo(15.8f)
+                curveTo(20.0f, 14.1198f, 20.0f, 13.2798f, 19.673f, 12.638f)
+                curveTo(19.3854f, 12.0735f, 18.9265f, 11.6146f, 18.362f, 11.327f)
+                curveTo(17.7202f, 11.0f, 16.8802f, 11.0f, 15.2f, 11.0f)
+                horizontalLineTo(4.0f)
+                moveTo(4.0f, 11.0f)
+                lineTo(8.0f, 7.0f)
+                moveTo(4.0f, 11.0f)
+                lineTo(8.0f, 15.0f)
+            }
+        }.build()
+
+    val Setting =
+        ImageVector.Builder(
+            name = "Setting",
+            defaultWidth = 24.0.dp,
+            defaultHeight = 24.0.dp,
+            viewportWidth = 24.0f,
+            viewportHeight = 24.0f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(11.0175f, 19.0f)
+                curveTo(10.6601f, 19.0f, 10.3552f, 18.7347f, 10.297f, 18.373f)
+                curveTo(10.2434f, 18.0804f, 10.038f, 17.8413f, 9.7617f, 17.75f)
+                curveTo(9.5366f, 17.6707f, 9.3165f, 17.5772f, 9.1026f, 17.47f)
+                curveTo(8.8482f, 17.3365f, 8.5429f, 17.3565f, 8.307f, 17.522f)
+                curveTo(8.0216f, 17.7325f, 7.6294f, 17.6999f, 7.3808f, 17.445f)
+                lineTo(6.4136f, 16.453f)
+                curveTo(6.1533f, 16.186f, 6.1194f, 15.7651f, 6.3336f, 15.458f)
+                curveTo(6.4988f, 15.2105f, 6.5226f, 14.8914f, 6.396f, 14.621f)
+                curveTo(6.3126f, 14.4332f, 6.2391f, 14.2409f, 6.1757f, 14.045f)
+                curveTo(6.0849f, 13.7363f, 5.8342f, 13.5051f, 5.5253f, 13.445f)
+                curveTo(5.1529f, 13.384f, 4.8779f, 13.0559f, 4.875f, 12.669f)
+                verticalLineTo(11.428f)
+                curveTo(4.873f, 10.9821f, 5.1871f, 10.6007f, 5.616f, 10.528f)
+                curveTo(5.9414f, 10.4645f, 6.2132f, 10.2359f, 6.3375f, 9.921f)
+                curveTo(6.3746f, 9.8323f, 6.4136f, 9.7443f, 6.4545f, 9.657f)
+                curveTo(6.6199f, 9.3304f, 6.5971f, 8.9371f, 6.395f, 8.633f)
+                curveTo(6.1424f, 8.2729f, 6.1812f, 7.7781f, 6.4867f, 7.464f)
+                lineTo(7.1975f, 6.735f)
+                curveTo(7.548f, 6.3753f, 8.1009f, 6.3288f, 8.504f, 6.625f)
+                lineTo(8.5264f, 6.641f)
+                curveTo(8.8274f, 6.8488f, 9.2103f, 6.8864f, 9.5443f, 6.741f)
+                curveTo(9.9016f, 6.6091f, 10.1649f, 6.2942f, 10.2375f, 5.912f)
+                lineTo(10.2473f, 5.878f)
+                curveTo(10.3275f, 5.372f, 10.7536f, 5.0002f, 11.2535f, 5.0f)
+                horizontalLineTo(12.1115f)
+                curveTo(12.6248f, 4.9998f, 13.0629f, 5.3806f, 13.1469f, 5.9f)
+                lineTo(13.1625f, 5.97f)
+                curveTo(13.2314f, 6.3362f, 13.4811f, 6.6392f, 13.8216f, 6.77f)
+                curveTo(14.1498f, 6.9145f, 14.5272f, 6.8767f, 14.822f, 6.67f)
+                lineTo(14.8707f, 6.634f)
+                curveTo(15.2842f, 6.3283f, 15.8528f, 6.3754f, 16.2133f, 6.745f)
+                lineTo(16.8675f, 7.417f)
+                curveTo(17.1954f, 7.7552f, 17.2366f, 8.2869f, 16.965f, 8.674f)
+                curveTo(16.7522f, 8.9975f, 16.7251f, 9.4133f, 16.8938f, 9.763f)
+                lineTo(16.9358f, 9.863f)
+                curveTo(17.0724f, 10.2045f, 17.3681f, 10.452f, 17.7216f, 10.521f)
+                curveTo(18.1837f, 10.5983f, 18.5235f, 11.0069f, 18.525f, 11.487f)
+                verticalLineTo(12.6f)
+                curveTo(18.5249f, 13.0234f, 18.2263f, 13.3846f, 17.8191f, 13.454f)
+                curveTo(17.4842f, 13.5199f, 17.2114f, 13.7686f, 17.1083f, 14.102f)
+                curveTo(17.0628f, 14.2353f, 17.0121f, 14.3687f, 16.9562f, 14.502f)
+                curveTo(16.8261f, 14.795f, 16.855f, 15.1364f, 17.0323f, 15.402f)
+                curveTo(17.2662f, 15.7358f, 17.2299f, 16.1943f, 16.9465f, 16.485f)
+                lineTo(16.0388f, 17.417f)
+                curveTo(15.7792f, 17.6832f, 15.3698f, 17.7175f, 15.0716f, 17.498f)
+                curveTo(14.8226f, 17.3235f, 14.5001f, 17.3043f, 14.2331f, 17.448f)
+                curveTo(14.0428f, 17.5447f, 13.8475f, 17.6305f, 13.6481f, 17.705f)
+                curveTo(13.3692f, 17.8037f, 13.1636f, 18.0485f, 13.1099f, 18.346f)
+                curveTo(13.053f, 18.7203f, 12.7401f, 18.9972f, 12.3708f, 19.0f)
+                horizontalLineTo(11.0175f)
+                close()
+            }
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(13.9747f, 12.0f)
+                curveTo(13.9747f, 13.2885f, 12.9563f, 14.333f, 11.7f, 14.333f)
+                curveTo(10.4437f, 14.333f, 9.42533f, 13.2885f, 9.42533f, 12.0f)
+                curveTo(9.42533f, 10.7115f, 10.4437f, 9.66699f, 11.7f, 9.66699f)
+                curveTo(12.9563f, 9.66699f, 13.9747f, 10.7115f, 13.9747f, 12.0f)
+                close()
             }
         }.build()
 }

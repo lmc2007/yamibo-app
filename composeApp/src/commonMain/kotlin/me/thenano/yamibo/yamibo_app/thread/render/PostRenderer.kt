@@ -16,8 +16,12 @@ import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.thread.render.components.*
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import YamiboIcons
+import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
 
@@ -28,7 +32,8 @@ fun PostRenderer(
     modifier: Modifier = Modifier,
     onVote: ((List<PollOptionId>) -> Unit)? = null,
     onRate: ((Int, String) -> Unit)? = null,
-    onComment: ((String) -> Unit)? = null
+    onComment: ((String) -> Unit)? = null,
+    onReply: (() -> Unit)? = null
 ) {
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
@@ -109,7 +114,7 @@ fun PostRenderer(
         }
 
         // Action Buttons Row (Bottom)
-        if (onRate != null || onComment != null) {
+        if (onRate != null || onComment != null || onReply != null) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), thickness = 0.5.dp, color = YamiboTheme.colors.brownPrimary.copy(alpha = 0.15f))
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -129,6 +134,14 @@ fun PostRenderer(
                         Icon(imageVector = YamiboIcons.Comment, contentDescription = "點評", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("點評", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                if (onReply != null) {
+                    TextButton(onClick = { onReply() }) {
+                        Icon(imageVector = YamiboIcons.Reply, contentDescription = "回復", modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("回復", fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -185,35 +198,73 @@ fun PostRenderer(
 
     if (showCommentDialog) {
         var commentInput by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { showCommentDialog = false },
-            title = { Text("新增點評", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
-            text = {
-                OutlinedTextField(
-                    value = commentInput,
-                    onValueChange = { commentInput = it },
-                    label = { Text("輸入內容", fontSize = 12.sp) },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = YamiboTheme.colors.brownPrimary, focusedLabelColor = YamiboTheme.colors.brownPrimary)
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onComment?.invoke(commentInput)
-                        showCommentDialog = false
-                    },
-                    enabled = commentInput.isNotBlank(),
-                    colors = ButtonDefaults.buttonColors(containerColor = YamiboTheme.colors.brownPrimary)
-                ) { Text("提交", color = YamiboTheme.colors.creamBackground) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCommentDialog = false }) { Text("取消", color = YamiboTheme.colors.brownPrimary) }
-            },
-            containerColor = YamiboTheme.colors.creamSurface,
-            titleContentColor = YamiboTheme.colors.brownPrimary,
-            textContentColor = YamiboTheme.colors.textDark
-        )
+        androidx.compose.ui.window.Dialog(onDismissRequest = { showCommentDialog = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = YamiboTheme.colors.creamSurface
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "點評",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = YamiboTheme.colors.brownPrimary,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .background(
+                                YamiboTheme.colors.creamBackground.copy(alpha = 0.5f),
+                                RoundedCornerShape(8.dp)
+                            )
+                            .padding(8.dp)
+                    ) {
+                        BasicTextField(
+                            value = commentInput,
+                            onValueChange = { commentInput = it },
+                            modifier = Modifier.fillMaxSize(),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = YamiboTheme.colors.textDark,
+                                fontSize = 16.sp
+                            ),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(YamiboTheme.colors.brownPrimary)
+                        )
+                        if (commentInput.isEmpty()) {
+                            Text(
+                                "輸入內容...",
+                                color = YamiboTheme.colors.textDark.copy(alpha = 0.4f),
+                                fontSize = 16.sp,
+                                modifier = Modifier.align(Alignment.TopStart)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Button(
+                        onClick = {
+                            onComment?.invoke(commentInput)
+                            showCommentDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = YamiboTheme.colors.brownDeep,
+                            disabledContainerColor = YamiboTheme.colors.brownDeep.copy(alpha = 0.5f)
+                        ),
+                        enabled = commentInput.isNotBlank()
+                    ) {
+                        Text("發布", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
     }
 }

@@ -15,12 +15,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.value.FormHash
+import io.github.littlesurvival.dto.value.PollOptionId
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
@@ -41,6 +45,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.render.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 internal sealed interface ReaderState {
     data object Loading : ReaderState
@@ -63,6 +68,7 @@ internal fun ThreadReaderScreen(
     val threadRepository = LocalThreadRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
+    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
@@ -86,19 +92,80 @@ internal fun ThreadReaderScreen(
     var saveJob by remember { mutableStateOf<Job?>(null) }
     var hasRestoredPosition by remember { mutableStateOf(false) }
 
+    /** Extract first image URL from first post as thread avatar */
+    val firstPost = posts.firstOrNull()
+    val coverUrl = remember(firstPost) {
+        val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
+
+        if (attachedImage.contains("none.gif") || attachedImage.contains("smiley/") || attachedImage.contains("face")) return@remember null
+        if (attachedImage.startsWith("http")) attachedImage else "${YamiboRoute.Domain.build()}$attachedImage"
+    }
+
     fun getFormHash(): FormHash? {
         return authRepo.currentUser()?.formHash
     }
 
-    /** Extract first image URL from first post as thread avatar */
-    fun extractAvatar(): String? {
-        val firstPost = posts.firstOrNull() ?: return null
-        val content = firstPost.contentHtml
-        val imgRegex = Regex("""<img[^>]+(?:file|zoomfile|src)="([^"]+)"[^>]*>""")
-        val match = imgRegex.find(content) ?: return null
-        val url = match.groupValues[1]
-        if (url.contains("none.gif")) return null
-        return if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
+    val handleVote: (List<PollOptionId>) -> Unit = { optionIds ->
+        val formHash = getFormHash()
+        val fId = threadInfo?.forum?.fid
+        if (formHash == null || fId == null) {
+            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+        } else {
+            scope.launch {
+                when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar("投票成功")
+                    else -> snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
+                }
+            }
+        }
+    }
+
+    val handleRate: (PostId, Int, String) -> Unit = { pid, score, reason ->
+        val formHash = getFormHash()
+        if (formHash == null) {
+            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+        } else {
+            scope.launch {
+                when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash)) {
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar("評分成功，刷新後更新評分/點評狀態")
+                    else -> snackbarHostState.showSnackbar("評分失敗: ${res.message()}")
+                }
+            }
+        }
+    }
+
+    val handleComment: (PostId, String) -> Unit = { pid, message ->
+        val formHash = getFormHash()
+        if (formHash == null) {
+            scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
+        } else {
+            scope.launch {
+                when (val res = threadRepository.commentPost(tid, pid, message, formHash)) {
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar("點評成功，刷新後更新評分/點評狀態")
+                    else -> snackbarHostState.showSnackbar("點評失敗: ${res.message()}")
+                }
+            }
+        }
+    }
+
+    val handleReply: (PostId) -> Unit = { pid ->
+        val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
+        navigator.navigate(
+            IActionWebView(
+                title = "發表回復",
+                initialUrl = replyPageUrl,
+                successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar("回復成功") } },
+            )
+        )
+    }
+
+    fun rebuildPosts() {
+        val allPostsMutable = mutableListOf<Post>()
+        loadedPostsByPage.keys.sorted().forEach { p ->
+            allPostsMutable.addAll(loadedPostsByPage[p]!!)
+        }
+        posts = allPostsMutable.distinctBy { it.pid }.sortedBy { it.floor }
     }
 
     /** Build a reading history snapshot from current scroll state (does NOT save) */
@@ -123,7 +190,7 @@ internal fun ThreadReaderScreen(
         /** Calculate ratio within this post */
         val postTop = centerItem.offset
         val postSize = centerItem.size.coerceAtLeast(1)
-        val anchorPostRatio = ((viewportCenter - postTop).toFloat() / postSize).coerceIn(0f, 1f)
+        val anchorPostRatio = ((viewportCenter - postTop).toFloat() / postSize.toFloat()).coerceIn(0f, 1f)
 
         /** Find which page this post is on */
         val postPage = loadedPostsByPage.entries
@@ -137,7 +204,7 @@ internal fun ThreadReaderScreen(
         return ThreadReadingHistory(
             threadName = title,
             threadId = tid,
-            threadCover = extractAvatar(),
+            threadCover = coverUrl,
             forumName = forumInfo?.name,
             forumId = forumInfo?.fid,
             authorId = authorId,
@@ -157,7 +224,7 @@ internal fun ThreadReaderScreen(
         )
     }
 
-    /** Debounced save — wait 2 seconds after scroll stops */
+    /** Debounced save - wait 2 seconds after scroll stops */
     fun scheduleSave() {
         saveJob?.cancel()
         saveJob = scope.launch {
@@ -166,55 +233,91 @@ internal fun ThreadReaderScreen(
             try {
                 readHistoryRepo.savePosition(history)
             } catch (_: Exception) {
-                // Silently fail — non-critical
             }
         }
     }
 
-    suspend fun loadPage(page: Int) {
-        if (page in loadedPages) return
-
+    suspend fun loadPage(page: Int, forceRefresh: Boolean = false) {
+        if (!forceRefresh && page in loadedPages) return
         isLoadingNextPage = true
 
-        val cached = threadRepository.getCachedThread(tid, authorId, page)
-        if (cached != null) {
-            posts = (posts + cached.posts).distinctBy { it.pid }.sortedBy { it.floor }
-            loadedPostsByPage[page] = cached.posts
-            if (threadInfo == null) {
-                threadInfo = cached.thread
+        suspend fun loadFromCache(): Boolean {
+            val cached = threadRepository.getCachedThread(tid, authorId, page)
+            if (cached != null) {
+                loadedPostsByPage[page] = cached.posts
+                rebuildPosts()
+                if (threadInfo == null) threadInfo = cached.thread
+                totalPages = cached.pageNav?.totalPages ?: 1
+                loadedPages = loadedPages + page
+                if (page == initialPage || page == 1) state = ReaderState.Success
+                return true
             }
-            totalPages = cached.pageNav?.totalPages ?: 1
-            loadedPages = loadedPages + page
-            if (page == initialPage) {
-                state = ReaderState.Success
-            }
-            isLoadingNextPage = false
-            return
+            return false
         }
 
-        when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-            is YamiboResult.Success -> {
-                val newPosts = result.value.posts
-                posts = (posts + newPosts).distinctBy { it.pid }.sortedBy { it.floor }
-                loadedPostsByPage[page] = newPosts
-                totalPages = result.value.pageNav?.totalPages ?: 1
-                loadedPages = loadedPages + page
-
-                if (threadInfo == null) {
-                    threadInfo = result.value.thread
+        if (forceRefresh) {
+            when (val result = threadRepository.fetchThread(tid, authorId, page)) {
+                is YamiboResult.Success -> {
+                    loadedPostsByPage[page] = result.value.posts
+                    rebuildPosts()
+                    totalPages = result.value.pageNav?.totalPages ?: 1
+                    loadedPages = loadedPages + page
+                    if (threadInfo == null) threadInfo = result.value.thread
+                    if (page == initialPage || page == 1) state = ReaderState.Success
                 }
-                if (page == initialPage || page == 1) {
-                    state = ReaderState.Success
+                else -> {
+                    snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取快取")
+                    if (!loadFromCache() && (page == initialPage || page == 1)) {
+                        state = ReaderState.Error(result.message())
+                    }
                 }
             }
-
-            else -> {
-                if (page == initialPage || page == 1) {
-                    state = ReaderState.Error(result.message())
+        } else {
+            if (loadFromCache()) {
+                isLoadingNextPage = false
+                return
+            }
+            
+            when (val result = threadRepository.fetchThread(tid, authorId, page)) {
+                is YamiboResult.Success -> {
+                    loadedPostsByPage[page] = result.value.posts
+                    rebuildPosts()
+                    totalPages = result.value.pageNav?.totalPages ?: 1
+                    loadedPages = loadedPages + page
+                    if (threadInfo == null) threadInfo = result.value.thread
+                    if (page == initialPage || page == 1) state = ReaderState.Success
+                }
+                else -> {
+                    if (page == initialPage || page == 1) state = ReaderState.Error(result.message())
+                    else snackbarHostState.showSnackbar("載入失敗: ${result.message()}")
                 }
             }
         }
         isLoadingNextPage = false
+    }
+
+    suspend fun fallbackNearestPost(targetPidLong: Long, fallbackPage: Int) {
+        if (posts.isEmpty() || state is ReaderState.Error) return
+        var targetPage = fallbackPage
+        val maxPid = posts.maxOfOrNull { it.pid.value.toLong() } ?: return
+        val minPid = posts.minOfOrNull { it.pid.value.toLong() } ?: return
+
+        if (targetPidLong > maxPid && targetPage < totalPages) {
+            targetPage++
+            if (targetPage !in loadedPages) loadPage(targetPage)
+        } else if (targetPidLong < minPid && targetPage > 1) {
+            targetPage--
+            if (targetPage !in loadedPages) loadPage(targetPage)
+        }
+
+        val nearestIndex = posts.indices.minByOrNull { kotlin.math.abs(posts[it].pid.value.toLong() - targetPidLong) } ?: -1
+        if (nearestIndex >= 0) {
+            listState.scrollToItem(nearestIndex)
+            hasRestoredPosition = true
+            if (posts[nearestIndex].pid.value.toLong() != targetPidLong) {
+                snackbarHostState.showSnackbar("找不到指定的樓層，已跳轉至最接近的樓層")
+            }
+        }
     }
 
     // Initial load + position restore
@@ -226,6 +329,8 @@ internal fun ThreadReaderScreen(
             if (targetIndex >= 0) {
                 listState.scrollToItem(targetIndex)
                 hasRestoredPosition = true
+            } else {
+                fallbackNearestPost(targetPid.value.toLong(), initialPage)
             }
         }
 
@@ -238,13 +343,18 @@ internal fun ThreadReaderScreen(
                     if (savedPosition.page != initialPage) {
                         loadPage(savedPosition.page)
                     }
-                    // Restore by firstVisibleItemIndex/offset (most reliable)
+
+                    // Restore by firstVisibleItemIndex/offset (most reliable) if post matches
                     val savedIndex = savedPosition.firstVisibleItemIndex
                     val savedOffset = savedPosition.firstVisibleItemOffset
                     if (savedIndex != null && savedIndex >= 0 && savedIndex < posts.size) {
-                        listState.scrollToItem(savedIndex, savedOffset ?: 0)
-                        hasRestoredPosition = true
+                        val postAtSavedIndex = posts[savedIndex]
+                        if (postAtSavedIndex.pid.value.toLong() == savedPosition.anchorPostId) {
+                            listState.scrollToItem(savedIndex, savedOffset ?: 0)
+                            hasRestoredPosition = true
+                        }
                     }
+
                     // Fallback: restore by post ID
                     if (!hasRestoredPosition && savedPosition.anchorPostId > 0) {
                         val postIndex = posts.indexOfFirst {
@@ -253,11 +363,12 @@ internal fun ThreadReaderScreen(
                         if (postIndex >= 0) {
                             listState.scrollToItem(postIndex)
                             hasRestoredPosition = true
+                        } else {
+                            fallbackNearestPost(savedPosition.anchorPostId, savedPosition.page)
                         }
                     }
                 }
             } catch (_: Exception) {
-                // Silently fail — non-critical
             }
             hasRestoredPosition = true
         }
@@ -281,29 +392,45 @@ internal fun ThreadReaderScreen(
 
                 val firstVisibleItemIndex = visibleItems.first().index
                 val lastVisibleItemIndex = visibleItems.last().index
-                val totalItems = layoutInfo.totalItemsCount
 
-                // Load next page
-                if (lastVisibleItemIndex >= totalItems - 5) {
-                    val nextPage = (loadedPages.maxOrNull() ?: 0) + 1
-                    if (nextPage <= totalPages) {
-                        currentPageFetching = nextPage
-                        scope.launch { loadPage(nextPage) }
+                // Detect if we are close to the beginning of the CURRENT loaded page block
+                val firstPost = posts.getOrNull(firstVisibleItemIndex)
+                if (firstPost != null) {
+                    val page =
+                        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == firstPost.pid } }?.key
+                            ?: 1
+                    val firstIndex =
+                        posts.indexOfFirst { p -> loadedPostsByPage[page]?.any { it.pid == p.pid } == true }
+                    if (firstVisibleItemIndex - firstIndex <= 5) {
+                        val prevPage = page - 1
+                        if (prevPage >= 1 && prevPage !in loadedPages) {
+                            currentPageFetching = prevPage
+                            scope.launch { loadPage(prevPage) }
+                            return@collect
+                        }
                     }
                 }
 
-                // Load previous page
-                if (firstVisibleItemIndex <= 5) {
-                    val prevPage = (loadedPages.minOrNull() ?: 2) - 1
-                    if (prevPage >= 1 && prevPage !in loadedPages) {
-                        currentPageFetching = prevPage
-                        scope.launch { loadPage(prevPage) }
+                // Detect if we are close to the end of the CURRENT loaded page block
+                val lastPost = posts.getOrNull(lastVisibleItemIndex)
+                if (lastPost != null) {
+                    val page =
+                        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == lastPost.pid } }?.key
+                            ?: 1
+                    val lastIndex = posts.indexOfLast { p -> loadedPostsByPage[page]?.any { it.pid == p.pid } == true }
+                    if (lastIndex - lastVisibleItemIndex <= 5) {
+                        val nextPage = page + 1
+                        if (nextPage <= totalPages && nextPage !in loadedPages) {
+                            currentPageFetching = nextPage
+                            scope.launch { loadPage(nextPage) }
+                            return@collect
+                        }
                     }
                 }
             }
     }
 
-    /** Save on leaving screen — use runBlocking since scope is already cancelled */
+    /** Save on leaving screen — use runBlocking since scope is already canceled */
     DisposableEffect(tid) {
         onDispose {
             saveJob?.cancel()
@@ -312,13 +439,18 @@ internal fun ThreadReaderScreen(
                 runBlocking {
                     try {
                         readHistoryRepo.savePosition(history)
-                    } catch (_: Exception) {
-                        // Silently fail — non-critical
-                    }
+                    } catch (_: Exception) { }
                 }
             }
         }
     }
+
+    val currentVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
+    val currentVisiblePost = posts.getOrNull(currentVisibleItemIndex)
+    val currentPage = currentVisiblePost?.let { p ->
+        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == p.pid } }?.key
+    } ?: initialPage
+    val currentPid = currentVisiblePost?.pid
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -331,23 +463,22 @@ internal fun ThreadReaderScreen(
                 ReaderCatalogPanel(
                     totalPages = totalPages,
                     loadedPostsByPage = loadedPostsByPage,
+                    currentPage = currentPage,
+                    currentPid = currentPid,
                     onPageOrPostClick = { page, post ->
                         scope.launch {
                             if (post != null) {
                                 drawerState.close()
                                 if (page !in loadedPages) {
                                     loadPage(page)
+                                    delay(50) // Wait briefly for Compose to layout the new items
                                 }
                                 val targetIndex = posts.indexOfFirst { it.pid == post.pid }
-                                if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
+                                if (targetIndex >= 0) listState.scrollToItem(targetIndex)
                             } else {
+                                // User just clicked the page header to expand catalog, load the page, don't close drawer
                                 if (page !in loadedPages) {
                                     loadPage(page)
-                                } else {
-                                    drawerState.close()
-                                    val targetIndex =
-                                        posts.indexOfFirst { loadedPostsByPage[page]?.contains(it) == true }
-                                    if (targetIndex >= 0) listState.animateScrollToItem(targetIndex)
                                 }
                             }
                         }
@@ -401,48 +532,10 @@ internal fun ThreadReaderScreen(
                         itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
                             PostRenderer(
                                 post = post,
-                                onVote = { optionIds ->
-                                    val formHash = getFormHash()
-                                    val fId = threadInfo?.forum?.fid
-                                    if (formHash == null || fId == null) {
-                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                        return@PostRenderer
-                                    }
-                                    scope.launch {
-                                        when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
-                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("投票成功")
-                                            else -> snackbarHostState.showSnackbar("投票失敗: ${res.message()}")
-                                        }
-                                    }
-                                },
-                                onRate = { score, reason ->
-                                    val formHash = getFormHash()
-                                    if (formHash == null) {
-                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                        return@PostRenderer
-                                    }
-                                    scope.launch {
-                                        when (val res =
-                                            threadRepository.ratePost(tid, post.pid, score, reason, formHash)) {
-                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("評分成功，刷新後更新評分/點評狀態")
-                                            else -> snackbarHostState.showSnackbar("評分失敗: ${res.message()}")
-                                        }
-                                    }
-                                },
-                                onComment = { message ->
-                                    val formHash = getFormHash()
-                                    if (formHash == null) {
-                                        scope.launch { snackbarHostState.showSnackbar("獲取登入資訊失敗，請重新登入") }
-                                        return@PostRenderer
-                                    }
-                                    scope.launch {
-                                        when (val res =
-                                            threadRepository.commentPost(tid, post.pid, message, formHash)) {
-                                            is YamiboResult.Success -> snackbarHostState.showSnackbar("點評成功，刷新後更新評分/點評狀態")
-                                            else -> snackbarHostState.showSnackbar("點評失敗: ${res.message()}")
-                                        }
-                                    }
-                                }
+                                onVote = { optionIds -> handleVote(optionIds) },
+                                onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                onComment = { message -> handleComment(post.pid, message) },
+                                onReply = { handleReply(post.pid) }
                             )
 
                             // Author-only mode: comment banner after each post
@@ -514,6 +607,44 @@ internal fun ThreadReaderScreen(
                 snackbarHostState = snackbarHostState,
                 onBack = { navigator.pop() },
                 onCatalog = { scope.launch { drawerState.open() } },
+                onFavorite = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("收藏功能開發中")
+                    }
+                },
+                onShare = {
+                    val url = YamiboRoute.Thread(tid).build()
+
+                    clipboardManager.setText(AnnotatedString(url))
+                    scope.launch {
+                        snackbarHostState.showSnackbar("已複製連結")
+                    }
+                },
+                onReply = {
+                    val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
+                    navigator.navigate(
+                        IActionWebView(
+                            title = "發表回復",
+                            initialUrl = replyUrl,
+                            successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
+                            onSuccess = {
+                                scope.launch { snackbarHostState.showSnackbar("回復成功") }
+                            },
+                        )
+                    )
+                },
+                // Reload the current page
+                onRefresh = {
+                    scope.launch {
+                        state = ReaderState.Loading
+                        loadPage(currentPage, forceRefresh = true)
+                    }
+                },
+                onSettings = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("設定功能開發中")
+                    }
+                },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
         }

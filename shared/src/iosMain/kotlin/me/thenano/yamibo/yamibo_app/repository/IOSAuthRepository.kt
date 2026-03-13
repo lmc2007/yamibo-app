@@ -43,6 +43,10 @@ class IOSAuthRepository(
             is YamiboResult.Failure -> {
                 return YamiboResult.Failure("獲取用戶資料失敗: ${profileResult.reason}")
             }
+
+            is YamiboResult.NoPermission -> {
+                return YamiboResult.Failure("獲取用戶資料失敗: ${profileResult.reason}")
+            }
         }
     }
 

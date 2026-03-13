@@ -18,18 +18,29 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.page.Post
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import androidx.compose.ui.draw.drawBehind
 
 /** Catalog drawer panel showing pages and post entries */
 @Composable
 internal fun ReaderCatalogPanel(
     totalPages: Int,
     loadedPostsByPage: Map<Int, List<Post>>,
+    currentPage: Int,
+    currentPid: PostId?,
     onPageOrPostClick: (Int, Post?) -> Unit
 ) {
     val colors = YamiboTheme.colors
-    var expandedPages by remember { mutableStateOf(setOf<Int>()) }
+    var expandedPages by remember { mutableStateOf(setOf(currentPage)) }
+
+    // Auto expand current page when it changes
+    LaunchedEffect(currentPage) {
+        if (!expandedPages.contains(currentPage)) {
+            expandedPages = expandedPages + currentPage
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().background(colors.creamBackground).systemBarsPadding()) {
         Box(
@@ -111,23 +122,42 @@ internal fun ReaderCatalogPanel(
                             val pagePosts = loadedPostsByPage[page] ?: emptyList()
                             Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
                                 pagePosts.forEach { post ->
+                                    val isCurrentPost = post.pid == currentPid
                                     Surface(
-                                        color = colors.creamSurface,
+                                        color = if (isCurrentPost) colors.brownLight.copy(alpha = 0.15f) else colors.creamSurface,
                                         onClick = { onPageOrPostClick(page, post) },
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Row(modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
+                                        Row(
+                                            modifier = Modifier
+                                                .let {
+                                                    if (isCurrentPost) {
+                                                        it.drawBehind {
+                                                            drawRect(
+                                                                color = colors.brownPrimary,
+                                                                size = size.copy(width = 4.dp.toPx())
+                                                            )
+                                                        }
+                                                    } else it
+                                                }
+                                                .padding(
+                                                    horizontal = 24.dp,
+                                                    vertical = if (isCurrentPost) 14.dp else 12.dp
+                                                ),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
                                             Text(
                                                 text = "${post.floor}#",
-                                                color = colors.brownPrimary,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                modifier = Modifier.width(40.dp)
+                                                color = if (isCurrentPost) colors.brownDeep else colors.brownPrimary,
+                                                fontWeight = if (isCurrentPost) FontWeight.ExtraBold else FontWeight.Bold,
+                                                fontSize = if (isCurrentPost) 16.sp else 14.sp,
+                                                modifier = Modifier.width(if (isCurrentPost) 48.dp else 40.dp)
                                             )
                                             Text(
                                                 text = post.title.ifEmpty { "..." },
-                                                color = colors.textDark,
-                                                fontSize = 14.sp,
+                                                color = if (isCurrentPost) colors.brownDeep else colors.textDark,
+                                                fontWeight = if (isCurrentPost) FontWeight.ExtraBold else FontWeight.Normal,
+                                                fontSize = if (isCurrentPost) 16.sp else 14.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )

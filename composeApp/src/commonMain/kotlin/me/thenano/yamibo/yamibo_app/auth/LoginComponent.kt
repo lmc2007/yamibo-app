@@ -53,12 +53,19 @@ expect fun LoginWebView(onLoadingChanged: (Boolean) -> Unit = {})
 fun LoginScreen() {
     val navigator = LocalNavigator.current
     var loading by remember { mutableStateOf(false) }
-    Box(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-        LoginWebView(onLoadingChanged = { loading = it })
-        WebViewTopBar(title = "登入頁面", url = YamiboRoute.Login.build(), onBackClick = { navigator.pop() })
-        LoadingOverlay(
-            visible = loading,
+    Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+        WebViewTopBar(
+            title = "登入頁面",
+            url = YamiboRoute.Login.build(),
+            onCloseClick = { navigator.pop() },
+            useBackIcon = true
         )
+        Box(modifier = Modifier.weight(1f)) {
+            LoginWebView(onLoadingChanged = { loading = it })
+            LoadingOverlay(
+                visible = loading,
+            )
+        }
     }
 }
 

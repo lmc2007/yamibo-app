@@ -21,11 +21,12 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.ForumPage
+import io.github.littlesurvival.dto.page.PinnedItem
 import io.github.littlesurvival.dto.value.ForumId
-import io.github.littlesurvival.YamiboForum
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
@@ -205,6 +206,26 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                             onSubForumClick = { subFid, subName ->
                                 navigator.navigate(IForumScreen(subFid, subName))
                             },
+                            onPinnedItemClick = { item ->
+                                when (item) {
+                                    is PinnedItem.Thread -> {
+                                        navigator.navigate(
+                                            IThreadReaderScreen(
+                                                tid = item.tid,
+                                                title = item.title
+                                            )
+                                        )
+                                    }
+                                    is PinnedItem.Announcement -> {
+                                        scope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                "暫不支持跳轉到公告頁",
+                                                duration = SnackbarDuration.Short
+                                            )
+                                        }
+                                    }
+                                }
+                            },
                             onThreadClick = { thread ->
                                 if (isNovelForum(fid)) {
                                     navigator.navigate(
@@ -239,6 +260,8 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 showSearch = false
             },
             onThreadClick = { thread ->
+                @Suppress("AssignedValueIsNeverRead")
+                showSearch = false
                 if (isNovelForum(fid)) {
                     navigator.navigate(
                         INovelThreadDetailScreen(
@@ -368,6 +391,7 @@ private fun ForumContent(
     forumPage: ForumPage,
     onPageChange: (Int) -> Unit,
     onSubForumClick: (ForumId, String) -> Unit,
+    onPinnedItemClick: (PinnedItem) -> Unit,
     onThreadClick: (ThreadSummary) -> Unit
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
@@ -381,7 +405,7 @@ private fun ForumContent(
 
         /** pinned items */
         if (forumPage.pinnedItems.isNotEmpty()) {
-            item { PinnedSection(items = forumPage.pinnedItems) }
+            item { PinnedSection(items = forumPage.pinnedItems, onItemClick = onPinnedItemClick) }
         }
 
         /** thread list */

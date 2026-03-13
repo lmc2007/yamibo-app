@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.webview
+package me.thenano.yamibo.yamibo_app.webview.action
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -7,37 +7,35 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import me.thenano.yamibo.yamibo_app.auth.LoadingOverlay
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
 
-/** Platform-specific WebView content implementation */
 @Composable
-expect fun PlatformWebViewContent(
+expect fun ActionPlatformWebView(
     url: String,
     onTitleChanged: (String) -> Unit,
     onUrlChanged: (String) -> Unit,
     onLoadingChanged: (Boolean) -> Unit,
-    onBack: (() -> Unit) -> Unit,
-    onForward: (() -> Unit) -> Unit,
-    onReload: (() -> Unit) -> Unit,
+    onSuccessDetected: () -> Unit,
+    successCondition: (url: String) -> Boolean,
 )
 
 @Composable
-internal fun PlatformWebViewScreen(initialUrl: String) {
+internal fun ActionWebViewScreen(
+    title: String,
+    initialUrl: String,
+    successCondition: (url: String) -> Boolean,
+    onSuccess: () -> Unit,
+) {
     val navigator = LocalNavigator.current
-    val uriHandler = LocalUriHandler.current
-    val colors = YamiboTheme.colors
 
-    var currentTitle by remember { mutableStateOf("WebView") }
+    var currentTitle by remember { mutableStateOf(title) }
     var currentUrl by remember { mutableStateOf(initialUrl) }
     var loading by remember { mutableStateOf(true) }
-    
-    var backFunc by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var forwardFunc by remember { mutableStateOf<(() -> Unit)?>(null) }
-    var reloadFunc by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val colors = YamiboTheme.colors
 
     Box(modifier = Modifier.fillMaxSize().background(colors.brownDeep)) {
         Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
@@ -45,36 +43,23 @@ internal fun PlatformWebViewScreen(initialUrl: String) {
                 title = currentTitle,
                 url = currentUrl,
                 onCloseClick = { navigator.pop() },
-                onBackClick = { backFunc?.invoke() },
-                onForwardClick = { forwardFunc?.invoke() },
-                onRefreshClick = { reloadFunc?.invoke() },
-                onOpenBrowserClick = {
-                    try {
-                        uriHandler.openUri(currentUrl)
-                    } catch (_: Exception) {}
-                }
+                showNavigation = false,
+                useBackIcon = true,
             )
             Box(modifier = Modifier.weight(1f)) {
-                PlatformWebViewContent(
+                ActionPlatformWebView(
                     url = initialUrl,
                     onTitleChanged = { currentTitle = it },
                     onUrlChanged = { currentUrl = it },
                     onLoadingChanged = { loading = it },
-                    onBack = { backFunc = it },
-                    onForward = { forwardFunc = it },
-                    onReload = { reloadFunc = it }
+                    onSuccessDetected = {
+                        onSuccess()
+                        navigator.pop()
+                    },
+                    successCondition = successCondition,
                 )
                 LoadingOverlay(visible = loading)
             }
         }
-    }
-}
-
-class IPlatformWebView(val link: String = "https://bbs.yamibo.com/") : Navigatable {
-    override val id: Any = "WebView_$link"
-
-    @Composable
-    override fun Content() {
-        PlatformWebViewScreen(link)
     }
 }

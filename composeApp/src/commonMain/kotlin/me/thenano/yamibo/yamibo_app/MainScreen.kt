@@ -35,7 +35,7 @@ enum class MainTab(val title: String, val icon: ImageVector) {
 }
 
 class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable {
-    override val id = "MainScreen_${Any().hashCode()}"
+    override val id = "MainScreen_${initialTab.name}"
 
     @Composable
     override fun Content() {

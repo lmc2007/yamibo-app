@@ -115,12 +115,12 @@ fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId, String) -> Uni
 
 /** Pinned items section */
 @Composable
-fun PinnedSection(items: List<PinnedItem>) {
+fun PinnedSection(items: List<PinnedItem>, onItemClick: (PinnedItem) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         items.forEach { item ->
             when (item) {
-                is PinnedItem.Announcement -> AnnouncementRow(item)
-                is PinnedItem.Thread -> PinnedThreadRow(item)
+                is PinnedItem.Announcement -> AnnouncementRow(item, onClick = { onItemClick(item) })
+                is PinnedItem.Thread -> PinnedThreadRow(item, onClick = { onItemClick(item) })
             }
         }
     }
@@ -128,7 +128,7 @@ fun PinnedSection(items: List<PinnedItem>) {
 
 /** Announcement row */
 @Composable
-private fun AnnouncementRow(announcement: PinnedItem.Announcement) {
+private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
     Row(
         modifier =
@@ -136,7 +136,7 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement) {
                 .padding(vertical = 3.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.announceBg)
-                .clickable { /* TODO: open announcement */ }
+                .clickable { onClick() }
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -162,7 +162,7 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement) {
 
 /** Pinned thread row */
 @Composable
-private fun PinnedThreadRow(thread: PinnedItem.Thread) {
+private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
     Row(
         modifier =
@@ -170,7 +170,7 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread) {
                 .padding(vertical = 3.dp)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.pinnedBg)
-                .clickable { /* TODO: open pinned thread */ }
+                .clickable { onClick() }
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
