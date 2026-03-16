@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.render.components
+package me.thenano.yamibo.yamibo_app.thread.reader.render.impl
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

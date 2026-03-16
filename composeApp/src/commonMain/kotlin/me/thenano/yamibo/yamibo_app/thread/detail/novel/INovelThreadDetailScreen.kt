@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.novel
+package me.thenano.yamibo.yamibo_app.thread.detail.novel
 
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.ThreadId

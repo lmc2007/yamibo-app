@@ -38,12 +38,12 @@ import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadErrorContent
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadLoadingSkeleton
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
-import me.thenano.yamibo.yamibo_app.thread.render.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.render.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
@@ -241,7 +241,7 @@ internal fun ThreadReaderScreen(
         if (!forceRefresh && page in loadedPages) return
         isLoadingNextPage = true
 
-        suspend fun loadFromCache(): Boolean {
+        fun loadFromCache(): Boolean {
             val cached = threadRepository.getCachedThread(tid, authorId, page)
             if (cached != null) {
                 loadedPostsByPage[page] = cached.posts
@@ -493,7 +493,7 @@ internal fun ThreadReaderScreen(
                 .background(colors.creamBackground)
                 .pointerInput(Unit) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
+                        awaitFirstDown(requireUnconsumed = false)
                         val up = waitForUpOrCancellation()
                         if (up != null && !up.isConsumed) {
                             val x = up.position.x

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.render.components
+package me.thenano.yamibo.yamibo_app.thread.reader.render.impl
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Document
 import com.fleeksoft.ksoup.nodes.Element
+import com.fleeksoft.ksoup.nodes.Node
 import com.fleeksoft.ksoup.nodes.TextNode
 
 object HtmlParser {
@@ -53,7 +54,7 @@ object HtmlParser {
             }
         }
 
-        fun parseNode(node: com.fleeksoft.ksoup.nodes.Node, parentAlign: TextAlign = TextAlign.Start) {
+        fun parseNode(node: Node, parentAlign: TextAlign = TextAlign.Start) {
             when (node) {
                 is TextNode -> {
                     val txt = node.text()

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.novel.components
+package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
 import Log
 import androidx.compose.animation.animateContentSize

@@ -55,7 +55,7 @@ fun App() {
                 key(navigatable.id) {
                     // New push screens start invisible (false→true), others start visible
                     val visibleState = remember {
-                        MutableTransitionState(if (isNewPush) false else true)
+                        MutableTransitionState(!isNewPush)
                     }
 
                     // Drive animation: pop = true→false, otherwise stay/become true

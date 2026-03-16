@@ -9,9 +9,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadPage
@@ -25,11 +27,14 @@ import me.thenano.yamibo.yamibo_app.LocalNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadErrorContent
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadLoadingSkeleton
-import me.thenano.yamibo.yamibo_app.thread.novel.components.ThreadTopBar
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
-import me.thenano.yamibo.yamibo_app.thread.render.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderBottomBar
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
+import me.thenano.yamibo.yamibo_app.thread.reader.render.PostRenderer
+import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 private sealed interface CommentState {
     data object Loading : CommentState
@@ -60,6 +65,7 @@ internal fun CommentReaderScreen(
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboardManager = LocalClipboardManager.current
 
     var state by remember { mutableStateOf<CommentState>(CommentState.Loading) }
     var commentPosts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -72,6 +78,18 @@ internal fun CommentReaderScreen(
 
     fun getFormHash(): FormHash? {
         return authRepo.currentUser()?.formHash
+    }
+
+    val handleReply: (PostId) -> Unit = { pid ->
+        val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
+        navigator.navigate(
+            IActionWebView(
+                title = "發表回復",
+                initialUrl = replyPageUrl,
+                successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar("回復成功") } },
+            )
+        )
     }
 
     /**
@@ -291,7 +309,7 @@ internal fun CommentReaderScreen(
                     } else {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(bottom = 24.dp)
+                            contentPadding = PaddingValues(bottom = 120.dp)
                         ) {
                             itemsIndexed(
                                 commentPosts,
@@ -324,7 +342,8 @@ internal fun CommentReaderScreen(
                                                 else -> snackbarHostState.showSnackbar("點評失敗: ${res.message()}")
                                             }
                                         }
-                                    }
+                                    },
+                                    onReply = { handleReply(post.pid) }
                                 )
 
                                 if (index < commentPosts.size - 1) {
@@ -367,10 +386,8 @@ internal fun CommentReaderScreen(
 
                                                     // Check full page cache first
                                                     val cachedPage = novelCache.getCachedFullPage(tid, nextPage)
-                                                    val threadPage = if (cachedPage != null) {
-                                                        cachedPage
-                                                    } else {
-                                                        when (val result =
+                                                    val threadPage = cachedPage
+                                                        ?: when (val result =
                                                             threadRepository.fetchThread(tid, null, nextPage)) {
                                                             is YamiboResult.Success -> result.value
                                                             else -> {
@@ -379,7 +396,6 @@ internal fun CommentReaderScreen(
                                                                 return@launch
                                                             }
                                                         }
-                                                    }
 
                                                     currentFullPage = nextPage
                                                     totalFullPages = threadPage.pageNav?.totalPages ?: totalFullPages
@@ -422,6 +438,67 @@ internal fun CommentReaderScreen(
                     }
                 }
             }
+
+            // Always-visible float buttons (Refresh & Settings)
+            ReaderFloatButtons(
+                visible = true,
+                onRefresh = {
+                    scope.launch {
+                        state = CommentState.Loading
+                        // Re-fetch using fetchFindPost
+                        when (val result = threadRepository.fetchFindPost(tid, oPostId)) {
+                            is YamiboResult.Success -> {
+                                currentFullPage = result.value.pageNav?.currentPage ?: 1
+                                totalFullPages = result.value.pageNav?.totalPages ?: 1
+                                val (comments, complete) = extractAndCacheComments(result.value)
+                                commentPosts = comments
+                                isCommentComplete = complete
+                                state = CommentState.Success
+                            }
+                            else -> state = CommentState.Error(result.message())
+                        }
+                    }
+                },
+                onSettings = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("設定功能開發中")
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 110.dp, end = 16.dp)
+            )
+
+            // Always-visible bottom bar (Reply, Favorite, Share)
+            ReaderBottomBar(
+                visible = true,
+                onReply = {
+                    val replyUrl = YamiboRoute.ThreadReply(tid, currentFullPage).build()
+                    navigator.navigate(
+                        IActionWebView(
+                            title = "發表回復",
+                            initialUrl = replyUrl,
+                            successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
+                            onSuccess = {
+                                scope.launch { snackbarHostState.showSnackbar("回復成功") }
+                            },
+                        )
+                    )
+                },
+                onFavorite = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar("收藏功能開發中")
+                    }
+                },
+                onShare = {
+                    val url = YamiboRoute.Thread(tid).build()
+                    clipboardManager.setText(AnnotatedString(url))
+                    scope.launch {
+                        snackbarHostState.showSnackbar("已複製連結")
+                    }
+                },
+                modifier = Modifier.align(Alignment.BottomCenter)
+            )
         }
     }
 }

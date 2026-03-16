@@ -1,6 +1,7 @@
-package me.thenano.yamibo.yamibo_app.thread.render.components
+package me.thenano.yamibo.yamibo_app.thread.reader.render.impl
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -25,10 +26,12 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImagePainter
@@ -37,6 +40,7 @@ import coil3.compose.SubcomposeAsyncImage
 import coil3.compose.SubcomposeAsyncImageContent
 import coil3.network.NetworkHeaders
 import coil3.network.httpHeaders
+import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
 import io.github.littlesurvival.YamiboRoute
@@ -194,7 +198,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 }) { Text("在應用內開啟連結", color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
-                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(fullUrl))
+                                    clipboardManager.setText(AnnotatedString(fullUrl))
                                     showLongPressMenu = null
                                 }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
 
@@ -251,8 +255,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     .crossfade(true)
 
                 if (retryKey > 0) {
-                    builder.memoryCachePolicy(coil3.request.CachePolicy.READ_ONLY)
-                        .diskCachePolicy(coil3.request.CachePolicy.READ_ONLY)
+                    builder.memoryCachePolicy(CachePolicy.READ_ONLY)
+                        .diskCachePolicy(CachePolicy.READ_ONLY)
                 }
                 builder.build()
             }
@@ -300,7 +304,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 url,
                                 color = colors.brownDeep,
                                 fontSize = 10.sp,
-                                style = TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                                style = TextStyle(textDecoration = TextDecoration.Underline)
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             OutlinedButton(
@@ -325,7 +329,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 shape = RoundedCornerShape(4.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
                 colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
                 onClick = { expanded = !expanded }
             ) {
@@ -428,7 +432,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                 shape = RoundedCornerShape(8.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
                 colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
             ) {
                 val scrollState = rememberScrollState()

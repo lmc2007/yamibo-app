@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.novel
+package me.thenano.yamibo.yamibo_app.thread.detail.novel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -28,7 +28,12 @@ import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.novel.components.*
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.FirstFloorPreview
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.PostPageSection
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadHeader
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
+import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 
 /** Thread detail state */
@@ -77,7 +82,6 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                     pagePostsCache[page] = result.value.posts
                     ThreadState.Success(result.value)
                 }
-
                 else -> ThreadState.Error(result.message())
             }
     }

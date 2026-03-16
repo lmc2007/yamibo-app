@@ -1,5 +1,6 @@
-package me.thenano.yamibo.yamibo_app.thread.novel.components
+package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -77,7 +78,7 @@ internal fun PostPageSection(
         }
 
         /** Expanded post list */
-        androidx.compose.animation.AnimatedVisibility(
+        AnimatedVisibility(
             visible = isExpanded,
             enter =
                 expandVertically(animationSpec = tween(300)) +

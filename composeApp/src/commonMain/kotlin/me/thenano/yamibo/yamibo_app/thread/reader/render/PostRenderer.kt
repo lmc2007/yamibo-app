@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.render
+package me.thenano.yamibo.yamibo_app.thread.reader.render
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PollOptionId
-import me.thenano.yamibo.yamibo_app.thread.render.components.*
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -22,8 +21,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.window.Dialog
 import coil3.compose.SubcomposeAsyncImage
+import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.AttachmentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.CommentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.HtmlRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.PollRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.RateRenderer
 
 @Composable
 @Suppress("AssignedValueIsNeverRead")
@@ -198,7 +205,7 @@ fun PostRenderer(
 
     if (showCommentDialog) {
         var commentInput by remember { mutableStateOf("") }
-        androidx.compose.ui.window.Dialog(onDismissRequest = { showCommentDialog = false }) {
+        Dialog(onDismissRequest = { showCommentDialog = false }) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -230,11 +237,11 @@ fun PostRenderer(
                             value = commentInput,
                             onValueChange = { commentInput = it },
                             modifier = Modifier.fillMaxSize(),
-                            textStyle = androidx.compose.ui.text.TextStyle(
+                            textStyle = TextStyle(
                                 color = YamiboTheme.colors.textDark,
                                 fontSize = 16.sp
                             ),
-                            cursorBrush = androidx.compose.ui.graphics.SolidColor(YamiboTheme.colors.brownPrimary)
+                            cursorBrush = SolidColor(YamiboTheme.colors.brownPrimary)
                         )
                         if (commentInput.isEmpty()) {
                             Text(

@@ -51,7 +51,7 @@ internal fun ReaderCatalogPanel(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "目錄 (Catalog)",
+                text = "目錄",
                 color = colors.creamBackground,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold

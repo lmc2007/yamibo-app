@@ -81,8 +81,10 @@ class MainActivity : ComponentActivity() {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()
                 SideEffect {
-                    @Suppress("DEPRECATION") window.statusBarColor = scheme.brownDeep.toInt()
-                    @Suppress("DEPRECATION") window.navigationBarColor = scheme.brownDeep.toInt()
+                    @Suppress("DEPRECATION")
+                    window.statusBarColor = scheme.brownDeep.toInt()
+                    @Suppress("DEPRECATION")
+                    window.navigationBarColor = scheme.brownDeep.toInt()
                     WindowInsetsControllerCompat(window, window.decorView).apply {
                         isAppearanceLightStatusBars = false
                         isAppearanceLightNavigationBars = false

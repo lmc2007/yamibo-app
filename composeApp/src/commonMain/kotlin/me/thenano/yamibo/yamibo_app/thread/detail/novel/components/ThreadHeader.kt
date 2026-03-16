@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.novel.components
+package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import org.jetbrains.compose.resources.painterResource
@@ -55,7 +56,7 @@ internal fun ThreadHeader(
         val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
 
         if (attachedImage.contains("none.gif") || attachedImage.contains("smiley/") || attachedImage.contains("face")) return@remember null
-        if (attachedImage.startsWith("http")) attachedImage else "${io.github.littlesurvival.YamiboRoute.Domain.build()}$attachedImage"
+        if (attachedImage.startsWith("http")) attachedImage else "${YamiboRoute.Domain.build()}$attachedImage"
     }
 
     Card(

@@ -71,7 +71,7 @@ internal fun PlatformWebViewScreen(initialUrl: String) {
 }
 
 class IPlatformWebView(val link: String = "https://bbs.yamibo.com/") : Navigatable {
-    override val id: Any = "WebView_$link"
+    override val id = "WebView_$link"
 
     @Composable
     override fun Content() {
