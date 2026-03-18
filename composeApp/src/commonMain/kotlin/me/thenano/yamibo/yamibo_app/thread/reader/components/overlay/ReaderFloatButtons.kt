@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.overlay
 
+import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -17,42 +18,61 @@ import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 
-/** Floating circle buttons (Refresh & Settings) */
+/** Floating circle buttons (Refresh, Settings, and optionally Manga Reader) */
 @Composable
 fun ReaderFloatButtons(
     visible: Boolean,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
+    showMangaReader: Boolean = false,
+    onMangaReader: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
-    AnimatedVisibility(
-        visible = visible,
-        modifier = modifier,
-        enter = fadeIn(),
-        exit = fadeOut()
+
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = modifier
     ) {
-        Column(
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+        // Refresh & Settings: tied to overlay visibility
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(),
+            exit = fadeOut()
         ) {
-            // Refresh
-            IconButton(
-                onClick = onRefresh,
-                modifier = Modifier
-                    .size(56.dp)
-                    .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Icon(imageVector = YamiboIcons.Reload, contentDescription = "重新整理", tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
+                ) {
+                    Icon(imageVector = YamiboIcons.Reload, contentDescription = "重新整理", tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                }
+                IconButton(
+                    onClick = onSettings,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
+                ) {
+                    Icon(imageVector = YamiboIcons.Setting, contentDescription = "設定", tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
+                }
             }
-            // Settings
+        }
+
+        // Manga Reader: always visible when showMangaReader is true (independent of overlay)
+        if (showMangaReader) {
             IconButton(
-                onClick = onSettings,
+                onClick = onMangaReader,
                 modifier = Modifier
                     .size(56.dp)
                     .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
             ) {
-                Icon(imageVector = YamiboIcons.Setting, contentDescription = "設定", tint = colors.brownPrimary, modifier = Modifier.size(28.dp))
+                Icon(imageVector = YamiboIcons.Book, contentDescription = "漫畫閱讀模式", tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
             }
         }
     }

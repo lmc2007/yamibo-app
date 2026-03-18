@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.render
+package me.thenano.yamibo.yamibo_app.thread.reader.post
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,12 +26,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.window.Dialog
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.theme.YamiboColors
-import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.AttachmentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.CommentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.HtmlRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.PollRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.render.impl.RateRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.AttachmentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.CommentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.HtmlRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.PollRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.RateRenderer
 
 @Composable
 @Suppress("AssignedValueIsNeverRead")

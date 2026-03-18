@@ -1,0 +1,179 @@
+package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
+
+import YamiboIcons
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+
+/**
+ * Manga reader overlay with TopBar, BottomBar (page navigator + settings button).
+ */
+@Composable
+fun MangaReaderOverlay(
+    visible: Boolean,
+    title: String,
+    currentPage: Int,
+    totalPages: Int,
+    onBack: () -> Unit,
+    onPageChange: (Int) -> Unit,
+    onSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = YamiboTheme.colors
+
+    Box(modifier = modifier.fillMaxSize()) {
+        // Top Bar
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInVertically(animationSpec = tween(150), initialOffsetY = { -it }),
+            exit = slideOutVertically(animationSpec = tween(150), targetOffsetY = { -it }),
+            modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+        ) {
+            Surface(
+                color = colors.brownDeep,
+                shadowElevation = 4.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 4.dp, vertical = 8.dp)
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = YamiboIcons.Reply,
+                            contentDescription = "返回",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                    )
+                }
+            }
+        }
+
+        // Bottom Bar
+        AnimatedVisibility(
+            visible = visible,
+            enter = slideInVertically(animationSpec = tween(150), initialOffsetY = { it }),
+            exit = slideOutVertically(animationSpec = tween(150), targetOffsetY = { it }),
+            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()
+        ) {
+            Surface(
+                color = colors.brownDeep.copy(alpha = 0.95f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                ) {
+                    // Page navigator
+                    if (totalPages > 1) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            // First page button
+                            IconButton(
+                                onClick = { onPageChange(0) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("◀", color = Color.White, fontSize = 14.sp)
+                            }
+
+                            // Current page
+                            Text(
+                                text = "${currentPage + 1}",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Slider
+                            Slider(
+                                value = currentPage.toFloat(),
+                                onValueChange = { onPageChange(it.toInt()) },
+                                valueRange = 0f..(totalPages - 1).toFloat(),
+                                steps = if (totalPages > 2) totalPages - 2 else 0,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = colors.brownPrimary,
+                                    activeTrackColor = colors.brownPrimary,
+                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            // Total pages
+                            Text(
+                                text = "$totalPages",
+                                color = Color.White,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            // Last page button
+                            IconButton(
+                                onClick = { onPageChange(totalPages - 1) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Text("▶", color = Color.White, fontSize = 14.sp)
+                            }
+                        }
+                    }
+
+                    // Bottom action buttons
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        // Settings button
+                        IconButton(
+                            onClick = onSettings,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color.Transparent, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = YamiboIcons.Setting,
+                                contentDescription = "設定",
+                                tint = Color.White,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

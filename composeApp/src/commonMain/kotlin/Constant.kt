@@ -892,4 +892,163 @@ object YamiboIcons {
                 close()
             }
         }.build()
+
+    val Book =
+        ImageVector.Builder(
+            name = "Book",
+            defaultWidth = 16.0.dp,
+            defaultHeight = 16.0.dp,
+            viewportWidth = 16.0f,
+            viewportHeight = 16.0f
+        ).apply {
+            path(
+                fill = SolidColor(Color.Black),
+                fillAlpha = 1f,
+                stroke = null,
+                strokeAlpha = 1f,
+                strokeLineWidth = 1.0f,
+                strokeLineCap = StrokeCap.Butt,
+                strokeLineJoin = StrokeJoin.Miter,
+                strokeLineMiter = 1.0f,
+                pathFillType = PathFillType.NonZero
+            ) {
+                moveTo(15.0f, 4.7f)
+                verticalLineToRelative(-0.7f)
+                curveToRelative(-1.159f, -1.163f, -2.734f, -1.91f, -4.484f, -1.999f)
+                curveToRelative(-0.112f, -0.012f, -0.222f, -0.018f, -0.334f, -0.018f)
+                curveToRelative(-0.874f, 0.0f, -1.657f, 0.394f, -2.179f, 1.013f)
+                curveToRelative(-0.556f, -0.617f, -1.357f, -1.007f, -2.249f, -1.007f)
+                curveToRelative(-0.09f, 0.0f, -0.178f, 0.004f, -0.266f, 0.012f)
+                curveToRelative(-1.754f, 0.089f, -3.33f, 0.836f, -4.488f, 1.999f)
+                lineToRelative(0.0f, 0.7f)
+                lineToRelative(-1.0f, 0.3f)
+                verticalLineToRelative(10.0f)
+                lineToRelative(6.7f, -1.4f)
+                lineToRelative(0.3f, 0.4f)
+                horizontalLineToRelative(2.0f)
+                lineToRelative(0.3f, -0.4f)
+                lineToRelative(6.7f, 1.4f)
+                verticalLineToRelative(-10.0f)
+                close()
+                moveTo(5.48f, 11.31f)
+                curveToRelative(-1.275f, 0.037f, -2.467f, 0.358f, -3.526f, 0.902f)
+                lineToRelative(0.046f, -7.792f)
+                curveToRelative(0.885f, -0.835f, 2.066f, -1.365f, 3.369f, -1.42f)
+                curveToRelative(0.806f, 0.054f, 1.534f, 0.303f, 2.159f, 0.701f)
+                lineToRelative(-0.019f, 7.869f)
+                curveToRelative(-0.555f, -0.166f, -1.193f, -0.262f, -1.854f, -0.262f)
+                curveToRelative(-0.062f, 0.0f, -0.124f, 0.001f, -0.185f, 0.003f)
+                close()
+                moveTo(14.0f, 12.19f)
+                curveToRelative(-1.013f, -0.522f, -2.205f, -0.843f, -3.468f, -0.88f)
+                curveToRelative(-0.056f, -0.001f, -0.108f, -0.002f, -0.161f, -0.002f)
+                curveToRelative(-0.66f, 0.0f, -1.297f, 0.096f, -1.899f, 0.274f)
+                lineToRelative(0.047f, -7.902f)
+                curveToRelative(0.601f, -0.381f, 1.322f, -0.627f, 2.096f, -0.679f)
+                curveToRelative(1.324f, 0.055f, 2.501f, 0.586f, 3.386f, 1.422f)
+                lineToRelative(-0.003f, 7.768f)
+                close()
+            }
+        }.build()
+
+    val Copy: ImageVector =
+        ImageVector.Builder(
+            name = "Copy",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(6.0f, 11.0f)
+                curveTo(6.0f, 8.172f, 6.0f, 6.757f, 6.879f, 5.879f)
+                curveTo(7.757f, 5.0f, 9.172f, 5.0f, 12.0f, 5.0f)
+                horizontalLineTo(15.0f)
+                curveTo(17.828f, 5.0f, 19.243f, 5.0f, 20.121f, 5.879f)
+                curveTo(21.0f, 6.757f, 21.0f, 8.172f, 21.0f, 11.0f)
+                verticalLineTo(16.0f)
+                curveTo(21.0f, 18.828f, 21.0f, 20.243f, 20.121f, 21.121f)
+                curveTo(19.243f, 22.0f, 17.828f, 22.0f, 15.0f, 22.0f)
+                horizontalLineTo(12.0f)
+                curveTo(9.172f, 22.0f, 7.757f, 22.0f, 6.879f, 21.121f)
+                curveTo(6.0f, 20.243f, 6.0f, 18.828f, 6.0f, 16.0f)
+                verticalLineTo(11.0f)
+                close()
+            }
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.5f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(6.0f, 19.0f)
+                curveTo(4.343f, 19.0f, 3.0f, 17.657f, 3.0f, 16.0f)
+                verticalLineTo(10.0f)
+                curveTo(3.0f, 6.229f, 3.0f, 4.343f, 4.172f, 3.172f)
+                curveTo(5.343f, 2.0f, 7.229f, 2.0f, 11.0f, 2.0f)
+                horizontalLineTo(15.0f)
+                curveTo(16.657f, 2.0f, 18.0f, 3.343f, 18.0f, 5.0f)
+            }
+        }.build()
+
+    val Save: ImageVector =
+        ImageVector.Builder(
+            name = "Save",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(17.0f, 21.0f)
+                lineTo(7.0f, 21.0f)
+                moveTo(17.0f, 21.0f)
+                lineTo(17.803f, 21.0f)
+                curveTo(18.921f, 21.0f, 19.48f, 21.0f, 19.907f, 20.782f)
+                curveTo(20.284f, 20.591f, 20.591f, 20.284f, 20.782f, 19.908f)
+                curveTo(21.0f, 19.481f, 21.0f, 18.921f, 21.0f, 17.803f)
+                verticalLineTo(9.22f)
+                curveTo(21.0f, 8.771f, 21.0f, 8.545f, 20.952f, 8.331f)
+                curveTo(20.91f, 8.14f, 20.839f, 7.957f, 20.743f, 7.786f)
+                curveTo(20.637f, 7.597f, 20.487f, 7.431f, 20.193f, 7.104f)
+                lineTo(17.438f, 4.042f)
+                curveTo(17.097f, 3.664f, 16.924f, 3.472f, 16.717f, 3.334f)
+                curveTo(16.53f, 3.21f, 16.324f, 3.119f, 16.107f, 3.063f)
+                curveTo(15.863f, 3.0f, 15.6f, 3.0f, 15.075f, 3.0f)
+                horizontalLineTo(6.2f)
+                curveTo(5.08f, 3.0f, 4.52f, 3.0f, 4.092f, 3.218f)
+                curveTo(3.715f, 3.41f, 3.41f, 3.715f, 3.218f, 4.092f)
+                curveTo(3.0f, 4.52f, 3.0f, 5.08f, 3.0f, 6.2f)
+                verticalLineTo(17.8f)
+                curveTo(3.0f, 18.92f, 3.0f, 19.48f, 3.218f, 19.907f)
+                curveTo(3.41f, 20.284f, 3.715f, 20.591f, 4.092f, 20.782f)
+                curveTo(4.519f, 21.0f, 5.079f, 21.0f, 6.197f, 21.0f)
+                horizontalLineTo(7.0f)
+                moveTo(17.0f, 21.0f)
+                verticalLineTo(17.197f)
+                curveTo(17.0f, 16.079f, 17.0f, 15.519f, 16.782f, 15.092f)
+                curveTo(16.591f, 14.716f, 16.284f, 14.41f, 15.907f, 14.218f)
+                curveTo(15.48f, 14.0f, 14.92f, 14.0f, 13.8f, 14.0f)
+                horizontalLineTo(10.2f)
+                curveTo(9.08f, 14.0f, 8.52f, 14.0f, 8.092f, 14.218f)
+                curveTo(7.715f, 14.41f, 7.41f, 14.716f, 7.218f, 15.092f)
+                curveTo(7.0f, 15.52f, 7.0f, 16.08f, 7.0f, 17.2f)
+                verticalLineTo(21.0f)
+                moveTo(15.0f, 7.0f)
+                horizontalLineTo(9.0f)
+            }
+        }.build()
 }

@@ -19,7 +19,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderOverl
  *
  *  BottomBar : (Reply, Share, Favorite)
  *
- *  Float Circle Button (Refresh & Settings)
+ *  Float Circle Button (Refresh & Settings, optionally Manga Reader)
  */
 @Composable
 internal fun ReaderOverlayMenu(
@@ -33,6 +33,8 @@ internal fun ReaderOverlayMenu(
     onReply: () -> Unit,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
+    showMangaReader: Boolean = false,
+    onMangaReader: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(modifier = modifier.fillMaxSize()) {
@@ -45,11 +47,13 @@ internal fun ReaderOverlayMenu(
             modifier = Modifier.align(Alignment.TopCenter)
         )
 
-        // Float Circle Buttons (Refresh & Settings)
+        // Float Circle Buttons (Refresh & Settings, optionally Manga Reader)
         ReaderFloatButtons(
             visible = visible,
             onRefresh = onRefresh,
             onSettings = onSettings,
+            showMangaReader = showMangaReader,
+            onMangaReader = onMangaReader,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(bottom = 110.dp, end = 16.dp)

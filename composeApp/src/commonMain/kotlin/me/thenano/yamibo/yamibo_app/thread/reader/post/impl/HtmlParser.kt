@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.render.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.post.impl
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString

@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
@@ -43,7 +44,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoading
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
-import me.thenano.yamibo.yamibo_app.thread.reader.render.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
@@ -601,6 +602,11 @@ internal fun ThreadReaderScreen(
                 }
             }
 
+            // Manga reader button visibility
+            val isMangaForum = threadInfo?.forum?.fid?.let { YamiboForum.isMangaForum(it) } == true
+            val isFirstPage = currentPage == 1
+            val showMangaReader = isMangaForum && isFirstPage
+
             // Overlay menu
             ReaderOverlayMenu(
                 visible = showMenu,
@@ -645,6 +651,19 @@ internal fun ThreadReaderScreen(
                     scope.launch {
                         snackbarHostState.showSnackbar("設定功能開發中")
                     }
+                },
+                showMangaReader = showMangaReader,
+                onMangaReader = {
+                    val firstPostImages = posts.firstOrNull()?.images?.map { img ->
+                        if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
+                    } ?: emptyList()
+                    navigator.navigate(
+                        IMangaReaderScreen(
+                            tid = tid,
+                            threadTitle = title,
+                            imageList = firstPostImages
+                        )
+                    )
                 },
                 modifier = Modifier.align(Alignment.BottomCenter)
             )
