@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.sp
 
 /** Touch zone layout configuration for the manga reader */
 enum class TouchZoneLayout(val label: String) {
-    DEFAULT("預設"),
     L_SHAPE("L式"),
     KINDLE("Kindle式"),
     EDGE("邊緣式"),
@@ -49,7 +48,7 @@ fun TouchZoneOverlay(
         modifier = modifier.fillMaxSize()
     ) {
         when (layout) {
-            TouchZoneLayout.DEFAULT, TouchZoneLayout.L_SHAPE -> LShapeZoneLayout()
+            TouchZoneLayout.L_SHAPE -> LShapeZoneLayout()
             TouchZoneLayout.KINDLE -> KindleZoneLayout()
             TouchZoneLayout.EDGE -> EdgeZoneLayout()
             TouchZoneLayout.LEFT_RIGHT -> LeftRightZoneLayout()
@@ -61,7 +60,7 @@ fun TouchZoneOverlay(
 /** Determine touch action based on layout and tap position (fraction: 0..1) */
 fun getTouchAction(layout: TouchZoneLayout, xFraction: Float, yFraction: Float): TouchAction? {
     return when (layout) {
-        TouchZoneLayout.DEFAULT, TouchZoneLayout.L_SHAPE -> {
+        TouchZoneLayout.L_SHAPE -> {
             when {
                 yFraction < 0.20f -> TouchAction.PREV
                 xFraction < 0.30f -> TouchAction.PREV
@@ -115,20 +114,23 @@ private fun KindleZoneLayout() {
     }
 }
 
-/** L Shape : Top strip + left column = prev (⌐ shape), bottom strip + right column = next, center = menu */
+/** L Shape : Top strip + left column = prev, bottom strip + right column = next, center = menu */
 @Composable
 private fun LShapeZoneLayout() {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Base layer
-        ZoneCell(TouchAction.MENU, Modifier.fillMaxSize())
-        
-        // Next (layer 1)
-        ZoneCell(TouchAction.NEXT, Modifier.fillMaxWidth().fillMaxHeight(0.2f).align(Alignment.BottomCenter))
-        ZoneCell(TouchAction.NEXT, Modifier.fillMaxHeight().fillMaxWidth(0.3f).align(Alignment.CenterEnd))
-        
-        // Prev (layer 2 - overlapping corners correctly)
-        ZoneCell(TouchAction.PREV, Modifier.fillMaxWidth().fillMaxHeight(0.2f).align(Alignment.TopCenter))
-        ZoneCell(TouchAction.PREV, Modifier.fillMaxHeight().fillMaxWidth(0.3f).align(Alignment.CenterStart))
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Top strip: full width PREV
+        ZoneCell(TouchAction.PREV, Modifier.fillMaxWidth().weight(0.2f))
+        // Middle: left PREV | center MENU | right NEXT
+        Row(modifier = Modifier.weight(0.6f).fillMaxWidth()) {
+            ZoneCell(TouchAction.PREV, Modifier.weight(0.3f).fillMaxHeight())
+            ZoneCell(TouchAction.MENU, Modifier.weight(0.4f).fillMaxHeight())
+            ZoneCell(TouchAction.NEXT, Modifier.weight(0.3f).fillMaxHeight())
+        }
+        // Bottom: left PREV | right NEXT
+        Row(modifier = Modifier.weight(0.2f).fillMaxWidth()) {
+            ZoneCell(TouchAction.PREV, Modifier.weight(0.3f).fillMaxHeight())
+            ZoneCell(TouchAction.NEXT, Modifier.weight(0.7f).fillMaxHeight())
+        }
     }
 }
 
@@ -160,9 +162,9 @@ private fun LeftRightZoneLayout() {
 @Composable
 private fun ZoneCell(action: TouchAction, modifier: Modifier = Modifier) {
     val color = when (action) {
-        TouchAction.PREV -> Color(0x55FF6B00)
-        TouchAction.NEXT -> Color(0x5544BB88)
-        TouchAction.MENU -> Color(0x5544DD44)
+        TouchAction.PREV -> Color(0x44FF9800)
+        TouchAction.NEXT -> Color(0x4400BCD4)
+        TouchAction.MENU -> Color(0x449C27B0)
     }
     Box(
         modifier = modifier.background(color),

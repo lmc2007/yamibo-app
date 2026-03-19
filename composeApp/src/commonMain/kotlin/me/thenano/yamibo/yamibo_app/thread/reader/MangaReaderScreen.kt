@@ -1,17 +1,22 @@
 package me.thenano.yamibo.yamibo_app.thread.reader
 
 import YamiboIcons
+import androidx.compose.animation.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.exponentialDecay
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,31 +25,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
+import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.manga.*
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import kotlin.math.abs
 
 @Composable
 fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String>) {
-    val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
-    val clipboardManager = LocalClipboardManager.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
     /** State */
-    var readingMode by remember { mutableStateOf(ReadingMode.DEFAULT) }
-    var touchZoneLayout by remember { mutableStateOf(TouchZoneLayout.DEFAULT) }
+    var readingMode by remember { mutableStateOf(ReadingMode.SINGLE_LTR) }
+    var touchZoneLayout by remember { mutableStateOf(TouchZoneLayout.L_SHAPE) }
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showTouchZonePreview by remember { mutableStateOf(false) }
@@ -52,20 +59,37 @@ fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String
     var contextMenuImageUrl by remember { mutableStateOf("") }
     var currentPage by remember { mutableIntStateOf(0) }
 
-    /** Zoom state for single-page modes */
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offset by remember { mutableStateOf(Offset.Zero) }
+    /** Animated zoom state */
+    val scaleAnim = remember { Animatable(1f) }
+    val offsetXAnim = remember { Animatable(0f) }
+    val offsetYAnim = remember { Animatable(0f) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
-    val isZoomed = scale > 1.1f
+    val isRtl = readingMode == ReadingMode.SINGLE_RTL
+    val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
+    val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
 
-    /** Reset zoom */
-    fun resetZoom() {
-        scale = 1f
-        offset = Offset.Zero
+    /** Track previous page for slide direction (Single-page mode only) */
+    var previousPage by remember { mutableIntStateOf(currentPage) }
+    val slideDirection = if (currentPage >= previousPage) 1 else -1
+    LaunchedEffect(currentPage) { previousPage = currentPage }
+
+    /** Reset zoom with animation */
+    fun resetZoom(animated: Boolean = false) {
+        scope.launch {
+            if (animated) {
+                launch { scaleAnim.animateTo(1f, tween(250)) }
+                launch { offsetXAnim.animateTo(0f, tween(250)) }
+                launch { offsetYAnim.animateTo(0f, tween(250)) }
+            } else {
+                scaleAnim.snapTo(1f)
+                offsetXAnim.snapTo(0f)
+                offsetYAnim.snapTo(0f)
+            }
+        }
     }
 
-    /** Handle back press priority */
+    /** Handle back press: settings > overlay > touchZonePreview */
     fun handleBack(): Boolean {
         return when {
             showSettings -> { showSettings = false; true }
@@ -82,346 +106,410 @@ fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String
         onDispose { navigator.backHandlers.remove(handler) }
     }
 
-    /** Handle single tap with touch zone logic */
+    /** Handle single tap touch zone logic */
     fun handleSingleTap(xFraction: Float, yFraction: Float) {
-        // Dismiss touch zone preview on any tap
-        if (showTouchZonePreview) {
-            showTouchZonePreview = false
-            return
-        }
+        if (showSettings) { showSettings = false; return }
+        if (showOverlay) return  // Overlay dismissed via its own scrim
+        if (showTouchZonePreview) { showTouchZonePreview = false; return }
 
-        // Priority: exit settings > exit overlay
-        if (showSettings) {
-            showSettings = false
-            return
-        }
-
-        if (showOverlay) {
-            showOverlay = false
-            return
-        }
-
-        // Touch zone navigation
         if (touchZoneLayout != TouchZoneLayout.DISABLED) {
-            val action = getTouchAction(touchZoneLayout, xFraction, yFraction)
-            when (action) {
+            when (getTouchAction(touchZoneLayout, xFraction, yFraction)) {
                 TouchAction.PREV -> {
-                    if (currentPage > 0) {
-                        currentPage--
-                        resetZoom()
-                    }
+                    if (isScrollMode) return // Scroll mode uses native scroll, prev zone optional
+                    if (currentPage > 0) { currentPage--; resetZoom() }
                 }
                 TouchAction.NEXT -> {
-                    if (currentPage < imageList.size - 1) {
-                        currentPage++
-                        resetZoom()
-                    }
+                    if (isScrollMode) return // Scroll mode uses native scroll, next zone optional
+                    if (currentPage < imageList.size - 1) { currentPage++; resetZoom() }
                 }
-                TouchAction.MENU -> {
-                    showOverlay = true
-                }
-                null -> { /* disabled */ }
+                TouchAction.MENU -> showOverlay = true
+                null -> {}
             }
         } else {
             showOverlay = !showOverlay
         }
     }
 
-    /** Handle double tap → zoom toggle */
+    /** Handle double tap → animated zoom toggle */
     fun handleDoubleTap(tapOffset: Offset) {
-        if (isZoomed) {
-            resetZoom()
-        } else {
-            scale = 2.5f
-            // Center zoom on tap point
-            val centerX = containerSize.width / 2f
-            val centerY = containerSize.height / 2f
-            offset = Offset(
-                x = (centerX - tapOffset.x) * 1.5f,
-                y = (centerY - tapOffset.y) * 1.5f
-            )
+        scope.launch {
+            if (scaleAnim.value > 1.1f) {
+                // Zoom Out
+                launch { scaleAnim.animateTo(1f, tween(280)) }
+                launch { offsetXAnim.animateTo(0f, tween(280)) }
+                launch { offsetYAnim.animateTo(0f, tween(280)) }
+            } else {
+                // Zoom In
+                val centerX = containerSize.width / 2f
+                val centerY = containerSize.height / 2f
+                val targetScale = 2.0f
+                launch { scaleAnim.animateTo(targetScale, tween(280)) }
+                launch { offsetXAnim.animateTo((centerX - tapOffset.x) * (targetScale - 1f), tween(280)) }
+                launch { offsetYAnim.animateTo((centerY - tapOffset.y) * (targetScale - 1f), tween(280)) }
+            }
         }
     }
 
-    /** Determine if we're in scroll mode */
-    val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
-
+    // Outer wrapper so nothing outside goes black
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
             .onSizeChanged { containerSize = it }
     ) {
-        if (imageList.isEmpty()) {
-            // Empty state
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = YamiboIcons.Book,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(48.dp)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = "沒有找到圖片",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        } else if (isScrollMode) {
-            // Scroll mode (continuous or with gaps)
-            val scrollListState = rememberLazyListState()
+        // Zoomable Content Box
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                // ── Single Unified Gesture Handler for Both Modes ──
+                .pointerInput(touchZoneLayout, readingMode) {
+                    // Persist state across iterations
+                    var lastTapTime = 0L
+                    var pendingTapJob: Job? = null
 
-            LazyColumn(
-                state = scrollListState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(touchZoneLayout) {
-                        detectTapGestures(
-                            onTap = { tapOffset ->
-                                val xFrac = tapOffset.x / size.width.toFloat()
-                                val yFrac = tapOffset.y / size.height.toFloat()
-                                handleSingleTap(xFrac, yFrac)
-                            },
-                            onLongPress = { _ ->
-                                // Find visible image for context menu
-                                val visibleIndex = scrollListState.firstVisibleItemIndex.coerceIn(0, imageList.lastIndex)
-                                contextMenuImageUrl = imageList[visibleIndex]
-                                showContextMenu = true
-                            }
-                        )
-                    }
-            ) {
-                itemsIndexed(imageList) { index, url ->
-                    SubcomposeAsyncImage(
-                        model = url,
-                        contentDescription = "第${index + 1}頁",
-                        contentScale = ContentScale.FillWidth,
-                        loading = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(400.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    color = colors.brownPrimary,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                            }
-                        },
-                        error = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(200.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("圖片載入失敗", color = Color.White.copy(alpha = 0.5f))
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
 
-                    // Gap between images in gap mode
-                    if (readingMode == ReadingMode.SCROLL_GAP && index < imageList.lastIndex) {
-                        Spacer(Modifier.height(16.dp))
-                    }
-                }
-            }
+                        // If overlay/settings is open, don't handle any gestures here
+                        if (showOverlay || showSettings) {
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                            } while (event.changes.any { it.pressed })
+                            return@awaitEachGesture
+                        }
 
-            // Track current page from scroll position
-            LaunchedEffect(scrollListState) {
-                snapshotFlow { scrollListState.firstVisibleItemIndex }
-                    .collect { index -> currentPage = index }
-            }
-        } else {
-            // Single-page mode
-            val transformState = rememberTransformableState { zoomChange, panChange, _ ->
-                scale = (scale * zoomChange).coerceIn(0.5f, 5f)
-                if (isZoomed) {
-                    offset += panChange
-                }
-            }
+                        val downTime = currentTimeMillis()
+                        val downPos = down.position
+                        var totalDrag = Offset.Zero
+                        var isLongPress = false
+                        var longPressCancelled = false
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(currentPage, touchZoneLayout) {
-                        detectTapGestures(
-                            onTap = { tapOffset ->
-                                if (isZoomed) {
-                                    resetZoom()
-                                } else {
-                                    val xFrac = tapOffset.x / size.width.toFloat()
-                                    val yFrac = tapOffset.y / size.height.toFloat()
-                                    handleSingleTap(xFrac, yFrac)
-                                }
-                            },
-                            onDoubleTap = { tapOffset ->
-                                handleDoubleTap(tapOffset)
-                            },
-                            onLongPress = { _ ->
+                        val longPressJob = scope.launch {
+                            delay(400)
+                            if (!longPressCancelled) {
+                                isLongPress = true
                                 contextMenuImageUrl = imageList.getOrElse(currentPage) { "" }
                                 showContextMenu = true
                             }
-                        )
-                    }
-                    .pointerInput(currentPage, readingMode) {
-                        // Swipe detection based on reading mode (observing passively!)
-                        awaitEachGesture {
-                            awaitFirstDown(requireUnconsumed = false)
-                            var totalX = 0f
-                            var totalY = 0f
-                            
-                            do {
-                                val event = awaitPointerEvent(PointerEventPass.Final)
-                                // Only accumulate if not zoomed to avoid huge totals from panning
-                                if (!isZoomed) {
-                                    val change = event.changes.firstOrNull()
-                                    if (change != null) {
-                                        val delta = change.position - change.previousPosition
-                                        totalX += delta.x
-                                        totalY += delta.y
-                                    }
+                        }
+
+                        do {
+                            val event = awaitPointerEvent(PointerEventPass.Final)
+                            val change = event.changes.firstOrNull()
+                            if (change != null) {
+                                totalDrag += change.position - change.previousPosition
+                            }
+                            // Cancel long press if moved > 15px
+                            if ((abs(totalDrag.x) + abs(totalDrag.y)) > 15f && !longPressCancelled) {
+                                longPressCancelled = true
+                                longPressJob.cancel()
+                            }
+                        } while (event.changes.any { it.pressed })
+
+                        longPressJob.cancel()
+                        if (isLongPress) return@awaitEachGesture
+
+                        val dragDist = abs(totalDrag.x) + abs(totalDrag.y)
+                        val isTap = dragDist < 30f
+
+                        if (isTap) {
+                            val elapsed = downTime - lastTapTime
+                            if (elapsed in 1L..<320L) {
+                                // Double tap
+                                lastTapTime = 0L
+                                pendingTapJob?.cancel()
+                                pendingTapJob = null
+                                handleDoubleTap(downPos)
+                            } else {
+                                // Defer single tap
+                                lastTapTime = downTime
+                                pendingTapJob?.cancel()
+                                pendingTapJob = scope.launch {
+                                    delay(320)
+                                    val xFrac = downPos.x / size.width.toFloat()
+                                    val yFrac = downPos.y / size.height.toFloat()
+                                    handleSingleTap(xFrac, yFrac)
                                 }
-                            } while (event.changes.any { it.pressed })
-                            
-                            // Pointer released
-                            if (!isZoomed) {
-                                val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
-                                if (isVerticalMode) {
-                                    val threshold = size.height * 0.15f
-                                    if (totalY < -threshold && currentPage < imageList.size - 1) {
+                            }
+                        } else if (scaleAnim.value <= 1.1f && !isScrollMode) {
+                            // Swipe gesture (Single-page mode only)
+                            pendingTapJob?.cancel()
+                            pendingTapJob = null
+                            if (isVerticalMode) {
+                                val threshold = size.height * 0.15f
+                                if (totalDrag.y < -threshold && currentPage < imageList.size - 1) {
+                                    currentPage++; resetZoom()
+                                } else if (totalDrag.y > threshold && currentPage > 0) {
+                                    currentPage--; resetZoom()
+                                }
+                            } else {
+                                val threshold = size.width * 0.15f
+                                if (isRtl) {
+                                    if (totalDrag.x > threshold && currentPage < imageList.size - 1) {
                                         currentPage++; resetZoom()
-                                    } else if (totalY > threshold && currentPage > 0) {
+                                    } else if (totalDrag.x < -threshold && currentPage > 0) {
                                         currentPage--; resetZoom()
                                     }
                                 } else {
-                                    val threshold = size.width * 0.15f
-                                    val isRtl = readingMode == ReadingMode.SINGLE_RTL || readingMode == ReadingMode.DEFAULT
-                                    if (isRtl) {
-                                        // RTL: swipe right = next, swipe left = prev
-                                        if (totalX > threshold && currentPage < imageList.size - 1) {
-                                            currentPage++; resetZoom()
-                                        } else if (totalX < -threshold && currentPage > 0) {
-                                            currentPage--; resetZoom()
+                                    if (totalDrag.x < -threshold && currentPage < imageList.size - 1) {
+                                        currentPage++; resetZoom()
+                                    } else if (totalDrag.x > threshold && currentPage > 0) {
+                                        currentPage--; resetZoom()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .pointerInput(readingMode) {
+                    awaitEachGesture {
+                        var pan = Offset.Zero
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var currentScale = scaleAnim.value
+                        var currentOffsetX = offsetXAnim.value
+                        var currentOffsetY = offsetYAnim.value
+                        
+                        var boundX = 0f
+                        var boundY = 0f
+                        var lastMoveTime = down.uptimeMillis
+                        var isStaleFling = false
+
+                        val velocityTracker = VelocityTracker()
+                        velocityTracker.addPosition(down.uptimeMillis, down.position)
+
+                        do {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { change ->
+                                if (change.pressed) {
+                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                    if ((change.position - change.previousPosition).getDistance() > 1f) {
+                                        lastMoveTime = change.uptimeMillis
+                                    }
+                                } else {
+                                    if (change.uptimeMillis - lastMoveTime > 60L) {
+                                        isStaleFling = true
+                                    }
+                                }
+                            }
+
+                            if (event.changes.size >= 2) {
+                                val firstChange = event.changes[0]
+                                val secondChange = event.changes[1]
+                                val prevDist = (firstChange.previousPosition - secondChange.previousPosition).getDistance()
+                                val currDist = (firstChange.position - secondChange.position).getDistance()
+                                if (prevDist > 0f) {
+                                    val zoom = currDist / prevDist
+                                    currentScale = (currentScale * zoom).coerceIn(1f, 5f)
+                                    
+                                    boundX = if (currentScale > 1f) (containerSize.width * (currentScale - 1f)) / 2f else 0f
+                                    boundY = if (currentScale > 1f && !isScrollMode) (containerSize.height * (currentScale - 1f)) / 2f else 0f
+                                    offsetXAnim.updateBounds(-boundX, boundX)
+                                    offsetYAnim.updateBounds(-boundY, boundY)
+                                    
+                                    currentOffsetX = currentOffsetX.coerceIn(-boundX, boundX)
+                                    currentOffsetY = currentOffsetY.coerceIn(-boundY, boundY)
+                                    
+                                    scope.launch { 
+                                        scaleAnim.snapTo(currentScale) 
+                                        offsetXAnim.snapTo(currentOffsetX)
+                                        offsetYAnim.snapTo(currentOffsetY)
+                                    }
+                                }
+                                event.changes.forEach { it.consume() } // consume pinch
+                            } else if (currentScale > 1.1f && event.changes.size == 1) {
+                                val change = event.changes[0]
+                                pan = change.position - change.previousPosition
+                                
+                                boundX = if (currentScale > 1f) (containerSize.width * (currentScale - 1f)) / 2f else 0f
+                                boundY = if (currentScale > 1f && !isScrollMode) (containerSize.height * (currentScale - 1f)) / 2f else 0f
+                                offsetXAnim.updateBounds(-boundX, boundX)
+                                offsetYAnim.updateBounds(-boundY, boundY)
+                                
+                                currentOffsetX = (currentOffsetX + pan.x).coerceIn(-boundX, boundX)
+                                if (!isScrollMode) {
+                                    currentOffsetY = (currentOffsetY + pan.y).coerceIn(-boundY, boundY)
+                                    change.consume() // Consume 1-finger drag so background lists don't scroll
+                                }
+                                scope.launch {
+                                    offsetXAnim.snapTo(currentOffsetX)
+                                    if (!isScrollMode) offsetYAnim.snapTo(currentOffsetY)
+                                }
+                            }
+                        } while (event.changes.any { it.pressed })
+
+                        // ── Inertia / Fling Animation ──
+                        if (currentScale > 1.1f && !isStaleFling) {
+                            val velocity = velocityTracker.calculateVelocity()
+                            if (abs(velocity.x) > 300f || (!isScrollMode && abs(velocity.y) > 300f)) {
+                                scope.launch {
+                                    if (abs(velocity.x) > 300f) {
+                                        launch {
+                                            offsetXAnim.animateDecay(
+                                                initialVelocity = velocity.x * 0.4f, // Reduce inertia
+                                                animationSpec = exponentialDecay()
+                                            )
                                         }
-                                    } else {
-                                        // LTR: swipe left = next, swipe right = prev
-                                        if (totalX < -threshold && currentPage < imageList.size - 1) {
-                                            currentPage++; resetZoom()
-                                        } else if (totalX > threshold && currentPage > 0) {
-                                            currentPage--; resetZoom()
+                                    }
+                                    if (!isScrollMode && abs(velocity.y) > 300f) {
+                                        launch {
+                                            offsetYAnim.animateDecay(
+                                                initialVelocity = velocity.y * 0.4f, // Reduce inertia
+                                                animationSpec = exponentialDecay()
+                                            )
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    .transformable(state = transformState)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = offset.x
-                        translationY = offset.y
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                val imageUrl = imageList.getOrElse(currentPage) { "" }
-                SubcomposeAsyncImage(
-                    model = imageUrl,
-                    contentDescription = "第${currentPage + 1}頁",
-                    contentScale = ContentScale.Fit,
-                    loading = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator(
-                                color = colors.brownPrimary,
-                                modifier = Modifier.size(40.dp)
-                            )
+                }
+                .graphicsLayer {
+                    scaleX = scaleAnim.value
+                    scaleY = scaleAnim.value
+                    translationX = offsetXAnim.value
+                    translationY = offsetYAnim.value
+                }
+        ) {
+            if (imageList.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = YamiboIcons.Book,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(text = "沒有找到圖片", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                    }
+                }
+            } else if (isScrollMode) {
+                val scrollListState = rememberLazyListState()
+
+                LazyColumn(
+                    state = scrollListState,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(imageList) { index, url ->
+                        ImageViewer(
+                            url = url,
+                            contentDescription = "第${index + 1}頁",
+                            contentScale = ContentScale.FillWidth,
+                            modifier = Modifier.fillMaxWidth(),
+                            enableContextMenu = false,
+                            isDarkTheme = true,
+                            enableCrossfade = false
+                        )
+                        if (readingMode == ReadingMode.SCROLL_GAP && index < imageList.lastIndex) {
+                            Spacer(Modifier.height(16.dp))
                         }
-                    },
-                    error = {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("圖片載入失敗", color = Color.White.copy(alpha = 0.5f))
+                    }
+                }
+
+                LaunchedEffect(scrollListState) {
+                    snapshotFlow { scrollListState.firstVisibleItemIndex }
+                        .collect { index -> currentPage = index }
+                }
+            } else {
+                AnimatedContent(
+                    targetState = currentPage,
+                    transitionSpec = {
+                        if (isVerticalMode) {
+                            slideInVertically(tween(300)) { it * slideDirection } togetherWith
+                                slideOutVertically(tween(300)) { -it * slideDirection }
+                        } else {
+                            val dirMul = if (isRtl) -1 else 1
+                            slideInHorizontally(tween(300)) { it * slideDirection * dirMul } togetherWith
+                                slideOutHorizontally(tween(300)) { -it * slideDirection * dirMul }
                         }
                     },
                     modifier = Modifier.fillMaxSize()
-                )
+                ) { page ->
+                    ImageViewer(
+                        url = imageList.getOrElse(page) { "" },
+                        contentDescription = "第${page + 1}頁",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize(),
+                        enableContextMenu = false,
+                        isDarkTheme = true,
+                        enableCrossfade = false
+                    )
+                }
             }
         }
 
+        /** Overlays (Not affected by graphicsLayer zoom) */
+
+        // Page Indicator
+        if (!showOverlay && imageList.isNotEmpty()) {
+            Text(
+                text = "${currentPage + 1} / ${imageList.size}",
+                color = Color.White,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 16.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+
         // Touch zone preview overlay
-        TouchZoneOverlay(
-            visible = showTouchZonePreview,
-            layout = touchZoneLayout
-        )
-        // Manga overlay (TopBar + BottomBar)
+        TouchZoneOverlay(visible = showTouchZonePreview, layout = touchZoneLayout)
+
+        // Manga overlay (TopBar + BottomBar) — has its own scrim for dismissal
         MangaReaderOverlay(
             visible = showOverlay && !showSettings,
             title = threadTitle,
             currentPage = currentPage,
             totalPages = imageList.size,
-            onBack = { navigator.pop() },
+            isRtl = isRtl,
+            onBack = {
+                // Ignore back handlers by temporarily hiding overlays so pop() works normally
+                showOverlay = false
+                showSettings = false
+                showTouchZonePreview = false
+                navigator.pop()
+            },
             onPageChange = { page ->
                 currentPage = page.coerceIn(0, imageList.lastIndex)
                 resetZoom()
-                if (isScrollMode) {
-                    scope.launch {
-                        val scrollState = /* handled by scroll mode */ Unit
-                    }
-                }
             },
-            onSettings = { showSettings = true }
+            onSettings = { showSettings = true },
+            onDismiss = { showOverlay = false }
         )
+
+        // Settings scrim to close panel when tapping outside
+        if (showSettings) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { showSettings = false }
+            )
+        }
 
         // Settings panel
         MangaReaderSettingsPanel(
             visible = showSettings,
             currentReadingMode = readingMode,
             currentTouchZoneLayout = touchZoneLayout,
-            onReadingModeChange = { mode ->
-                readingMode = mode
-                resetZoom()
-            },
-            onTouchZoneLayoutChange = { layout ->
-                touchZoneLayout = layout
-                showTouchZonePreview = true
-            },
+            onReadingModeChange = { mode -> readingMode = mode; resetZoom() },
+            onTouchZoneLayoutChange = { layout -> touchZoneLayout = layout; showTouchZonePreview = true },
             onDismiss = { showSettings = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
         // Context menu (long press)
-        MangaImageContextMenu(
+        ImageContextMenu(
             visible = showContextMenu,
             imageUrl = contextMenuImageUrl,
-            onCopy = {
-                clipboardManager.setText(AnnotatedString(contextMenuImageUrl))
-                showContextMenu = false
-                scope.launch { snackbarHostState.showSnackbar("已複製圖片連結") }
-            },
-            onShare = {
-                clipboardManager.setText(AnnotatedString(contextMenuImageUrl))
-                showContextMenu = false
-                scope.launch { snackbarHostState.showSnackbar("已複製圖片連結 (分享)") }
-            },
-            onSave = {
-                showContextMenu = false
-                scope.launch { snackbarHostState.showSnackbar("儲存功能開發中") }
-            },
-            onDismiss = { showContextMenu = false }
+            onDismiss = { showContextMenu = false },
+            isBottomSheet = true
         )
 
         // Snackbar

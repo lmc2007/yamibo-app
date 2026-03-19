@@ -23,7 +23,7 @@ fun ProfilePage() {
                 .verticalScroll(rememberScrollState())
                 .background(MaterialTheme.colorScheme.background)
     ) {
-        /** -------- top profile card -------- */
+        // top profile card
         UserProfileCard(
             userInfo = userInfo,
             isLoading = isLoading,
@@ -43,7 +43,7 @@ fun ProfilePage() {
         )
         Spacer(Modifier.height(8.dp))
 
-        /** -------- content blocks -------- */
+        // content blocks
         SectionCard(title = "功能區塊 A", description = "這裡可以放設定、收藏、歷史紀錄等內容")
 
         SectionCard(title = "功能區塊 B", description = "可用於顯示統計、會員資訊或快捷入口")

@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.thread.reader.post.impl
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
@@ -31,26 +30,12 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImagePainter
-import coil3.compose.LocalPlatformContext
-import coil3.compose.SubcomposeAsyncImage
-import coil3.compose.SubcomposeAsyncImageContent
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.CachePolicy
-import coil3.request.ImageRequest
-import coil3.request.crossfade
-import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.value.ThreadId
-import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.image_icon
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
 
 @Composable
@@ -203,7 +188,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
-                                    clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(linkText))
+                                    clipboardManager.setText(AnnotatedString(linkText))
                                     showLongPressMenu = null
                                 }) { Text("複製連結文字", color = colors.brownPrimary, fontSize = 16.sp) }
 
@@ -230,98 +215,17 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
         }
 
         is HtmlBlock.Image -> {
-            var retryKey by remember { mutableStateOf(0) }
             val url = if (block.url.startsWith("http")) block.url else "https://bbs.yamibo.com/${block.url}"
-
-            val context = LocalPlatformContext.current
-            val authRepo = LocalAuthRepository.current
-
-            val cookie = authRepo.cookieStore.load() ?: ""
-            val referer = if (tid != null) {
-                YamiboRoute.Thread(tid).build()
-            } else {
-                "https://bbs.yamibo.com/"
-            }
-
-            val imageRequest = remember(url, tid, cookie, retryKey) {
-                val builder = ImageRequest.Builder(context)
-                    .data(url)
-                    .httpHeaders(
-                        NetworkHeaders.Builder()
-                            .add("Cookie", cookie)
-                            .add("Referer", referer)
-                            .build()
-                    )
-                    .crossfade(true)
-
-                if (retryKey > 0) {
-                    builder.memoryCachePolicy(CachePolicy.READ_ONLY)
-                        .diskCachePolicy(CachePolicy.READ_ONLY)
-                }
-                builder.build()
-            }
-
-            SubcomposeAsyncImage(
-                model = imageRequest,
+            ImageViewer(
+                url = url,
                 contentDescription = block.alt,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 1.dp),
-                contentScale = ContentScale.FillWidth
-            ) {
-                val state by painter.state.collectAsState()
-                when (state) {
-                    is AsyncImagePainter.State.Loading, is AsyncImagePainter.State.Empty -> {
-                        Box(modifier = Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = colors.brownPrimary)
-                        }
-                    }
-
-                    is AsyncImagePainter.State.Error -> {
-                        val errorState = state as AsyncImagePainter.State.Error
-                        val errorMsg = errorState.result.throwable.message ?: "Unknown Error"
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Color(0xFFF3F3F3), RoundedCornerShape(8.dp))
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Image(
-                                painter = painterResource(Res.drawable.image_icon),
-                                contentDescription = "Image Load Failed",
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                "載入失敗: $errorMsg",
-                                color = colors.textDark,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                url,
-                                color = colors.brownDeep,
-                                fontSize = 10.sp,
-                                style = TextStyle(textDecoration = TextDecoration.Underline)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            OutlinedButton(
-                                onClick = { retryKey++ },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownPrimary),
-                                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 6.dp)
-                            ) {
-                                Text("重新載入", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-
-                    is AsyncImagePainter.State.Success -> {
-                        SubcomposeAsyncImageContent()
-                    }
-                }
-            }
+                contentScale = ContentScale.FillWidth,
+                enableContextMenu = true,
+                isDarkTheme = false
+            )
         }
 
         is HtmlBlock.Collapse -> {

@@ -3,24 +3,33 @@ package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 import YamiboIcons
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /**
  * Manga reader overlay with TopBar, BottomBar (page navigator + settings button).
+ * Includes a full-screen scrim that handles dismissal so buttons work correctly.
  */
 @Composable
 fun MangaReaderOverlay(
@@ -28,14 +37,34 @@ fun MangaReaderOverlay(
     title: String,
     currentPage: Int,
     totalPages: Int,
+    isRtl: Boolean,
     onBack: () -> Unit,
     onPageChange: (Int) -> Unit,
     onSettings: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
 
     Box(modifier = modifier.fillMaxSize()) {
+        // Scrim — intercepts all taps when overlay is visible
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(150)),
+            exit = fadeOut(tween(150)),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { onDismiss() }
+            )
+        }
+
         // Top Bar
         AnimatedVisibility(
             visible = visible,
@@ -94,57 +123,61 @@ fun MangaReaderOverlay(
                 ) {
                     // Page navigator
                     if (totalPages > 1) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            // First page button
-                            IconButton(
-                                onClick = { onPageChange(0) },
-                                modifier = Modifier.size(32.dp)
+                        // RTL layout direction for slider when in RTL reading mode
+                        val layoutDir = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
+                        CompositionLocalProvider(LocalLayoutDirection provides layoutDir) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp)
                             ) {
-                                Text("◀", color = Color.White, fontSize = 14.sp)
-                            }
+                                // First page button
+                                IconButton(
+                                    onClick = { onPageChange(0) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Text("◀", color = Color.White, fontSize = 14.sp)
+                                }
 
-                            // Current page
-                            Text(
-                                text = "${currentPage + 1}",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                                // Current page
+                                Text(
+                                    text = "${currentPage + 1}",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                            // Slider
-                            Slider(
-                                value = currentPage.toFloat(),
-                                onValueChange = { onPageChange(it.toInt()) },
-                                valueRange = 0f..(totalPages - 1).toFloat(),
-                                steps = if (totalPages > 2) totalPages - 2 else 0,
-                                colors = SliderDefaults.colors(
-                                    thumbColor = colors.brownPrimary,
-                                    activeTrackColor = colors.brownPrimary,
-                                    inactiveTrackColor = Color.White.copy(alpha = 0.3f)
-                                ),
-                                modifier = Modifier.weight(1f)
-                            )
+                                // Slider
+                                Slider(
+                                    value = currentPage.toFloat(),
+                                    onValueChange = { onPageChange(it.toInt()) },
+                                    valueRange = 0f..(totalPages - 1).toFloat(),
+                                    steps = if (totalPages > 2) totalPages - 2 else 0,
+                                    colors = SliderDefaults.colors(
+                                        thumbColor = colors.brownPrimary,
+                                        activeTrackColor = colors.brownPrimary,
+                                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
 
-                            // Total pages
-                            Text(
-                                text = "$totalPages",
-                                color = Color.White,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                                // Total pages
+                                Text(
+                                    text = "$totalPages",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
 
-                            // Last page button
-                            IconButton(
-                                onClick = { onPageChange(totalPages - 1) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Text("▶", color = Color.White, fontSize = 14.sp)
+                                // Last page button
+                                IconButton(
+                                    onClick = { onPageChange(totalPages - 1) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Text("▶", color = Color.White, fontSize = 14.sp)
+                                }
                             }
                         }
                     }

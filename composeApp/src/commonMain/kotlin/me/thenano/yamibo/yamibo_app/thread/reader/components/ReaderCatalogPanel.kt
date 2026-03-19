@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
@@ -23,7 +24,7 @@ import io.github.littlesurvival.dto.page.Post
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import androidx.compose.ui.draw.drawBehind
 
-/** Catalog drawer panel showing pages and post entries */
+/** Catalog drawer panel showing pages and post-entries */
 @Composable
 internal fun ReaderCatalogPanel(
     totalPages: Int,

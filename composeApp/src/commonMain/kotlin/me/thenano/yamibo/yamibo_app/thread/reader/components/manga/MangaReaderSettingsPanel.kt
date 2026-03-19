@@ -22,7 +22,6 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Reading mode configuration */
 enum class ReadingMode(val label: String) {
-    DEFAULT("預設"),
     SINGLE_LTR("單頁(左至右)"),
     SINGLE_RTL("單頁(右至左)"),
     SINGLE_TTB("單頁(上至下)"),

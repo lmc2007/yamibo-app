@@ -47,6 +47,8 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
+import kotlin.math.abs
+import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
 
 internal sealed interface ReaderState {
     data object Loading : ReaderState
@@ -266,6 +268,7 @@ internal fun ThreadReaderScreen(
                     if (threadInfo == null) threadInfo = result.value.thread
                     if (page == initialPage || page == 1) state = ReaderState.Success
                 }
+
                 else -> {
                     snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取快取")
                     if (!loadFromCache() && (page == initialPage || page == 1)) {
@@ -278,7 +281,7 @@ internal fun ThreadReaderScreen(
                 isLoadingNextPage = false
                 return
             }
-            
+
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
                 is YamiboResult.Success -> {
                     loadedPostsByPage[page] = result.value.posts
@@ -288,6 +291,7 @@ internal fun ThreadReaderScreen(
                     if (threadInfo == null) threadInfo = result.value.thread
                     if (page == initialPage || page == 1) state = ReaderState.Success
                 }
+
                 else -> {
                     if (page == initialPage || page == 1) state = ReaderState.Error(result.message())
                     else snackbarHostState.showSnackbar("載入失敗: ${result.message()}")
@@ -311,7 +315,8 @@ internal fun ThreadReaderScreen(
             if (targetPage !in loadedPages) loadPage(targetPage)
         }
 
-        val nearestIndex = posts.indices.minByOrNull { kotlin.math.abs(posts[it].pid.value.toLong() - targetPidLong) } ?: -1
+        val nearestIndex =
+            posts.indices.minByOrNull { abs(posts[it].pid.value.toLong() - targetPidLong) } ?: -1
         if (nearestIndex >= 0) {
             listState.scrollToItem(nearestIndex)
             hasRestoredPosition = true
@@ -440,7 +445,8 @@ internal fun ThreadReaderScreen(
                 runBlocking {
                     try {
                         readHistoryRepo.savePosition(history)
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {
+                    }
                 }
             }
         }
@@ -488,185 +494,187 @@ internal fun ThreadReaderScreen(
             }
         }
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(colors.creamBackground)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false)
-                        val up = waitForUpOrCancellation()
-                        if (up != null && !up.isConsumed) {
-                            val x = up.position.x
-                            val width = size.width
-                            if (x in (width / 3f)..(width * 2f / 3f)) {
-                                showMenu = !showMenu
+        CompositionLocalProvider(LocalReaderOverlayVisible provides showMenu) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.creamBackground)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            val up = waitForUpOrCancellation()
+                            if (up != null && !up.isConsumed) {
+                                val x = up.position.x
+                                val width = size.width
+                                if (x in (width / 3f)..(width * 2f / 3f)) {
+                                    showMenu = !showMenu
+                                }
                             }
                         }
                     }
-                }
-        ) {
-            when (val currentState = state) {
-                is ReaderState.Loading -> Box(
-                    modifier = Modifier.systemBarsPadding().fillMaxSize()
-                ) { ThreadLoadingSkeleton() }
+            ) {
+                when (val currentState = state) {
+                    is ReaderState.Loading -> Box(
+                        modifier = Modifier.systemBarsPadding().fillMaxSize()
+                    ) { ThreadLoadingSkeleton() }
 
-                is ReaderState.Error -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) {
-                    ThreadErrorContent(
-                        message = currentState.message,
-                        onRetry = {
-                            state = ReaderState.Loading
-                            scope.launch { loadPage(1) }
-                        }
-                    )
-                }
-
-                is ReaderState.Success -> {
-                    LazyColumn(
-                        state = listState,
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
-                            bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
+                    is ReaderState.Error -> Box(modifier = Modifier.systemBarsPadding().fillMaxSize()) {
+                        ThreadErrorContent(
+                            message = currentState.message,
+                            onRetry = {
+                                state = ReaderState.Loading
+                                scope.launch { loadPage(1) }
+                            }
                         )
-                    ) {
-                        itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
-                            PostRenderer(
-                                post = post,
-                                threadTitle = title,
-                                onVote = { optionIds -> handleVote(optionIds) },
-                                onRate = { score, reason -> handleRate(post.pid, score, reason) },
-                                onComment = { message -> handleComment(post.pid, message) },
-                                onReply = { handleReply(post.pid) }
-                            )
+                    }
 
-                            // Author-only mode: comment banner after each post
-                            if (isAuthorOnly) {
-                                CommentBanner(
-                                    text = "點擊跳轉到評論區",
-                                    onClick = {
-                                        navigator.navigate(
-                                            ICommentReaderScreen(
-                                                tid = tid,
-                                                postTitle = post.title.ifEmpty { "第${post.floor}樓" },
-                                                oPostId = post.pid,
-                                                authorId = authorId!!
+                    is ReaderState.Success -> {
+                        LazyColumn(
+                            state = listState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding(),
+                                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
+                            )
+                        ) {
+                            itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
+                                PostRenderer(
+                                    post = post,
+                                    threadTitle = title,
+                                    onVote = { optionIds -> handleVote(optionIds) },
+                                    onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                    onComment = { message -> handleComment(post.pid, message) },
+                                    onReply = { handleReply(post.pid) }
+                                )
+
+                                // Author-only mode: comment banner after each post
+                                if (isAuthorOnly) {
+                                    CommentBanner(
+                                        text = "點擊跳轉到評論區",
+                                        onClick = {
+                                            navigator.navigate(
+                                                ICommentReaderScreen(
+                                                    tid = tid,
+                                                    postTitle = post.title.ifEmpty { "第${post.floor}樓" },
+                                                    oPostId = post.pid,
+                                                    authorId = authorId!!
+                                                )
                                             )
+                                        }
+                                    )
+                                }
+
+                                // Separator between posts
+                                if (index < posts.size - 1) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                        color = colors.brownPrimary.copy(alpha = 0.15f)
+                                    )
+                                }
+                            }
+
+                            if (isLoadingNextPage) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(
+                                            color = colors.brownPrimary,
+                                            modifier = Modifier.size(24.dp)
                                         )
                                     }
-                                )
-                            }
-
-                            // Separator between posts
-                            if (index < posts.size - 1) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                    color = colors.brownPrimary.copy(alpha = 0.15f)
-                                )
-                            }
-                        }
-
-                        if (isLoadingNextPage) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(
-                                        color = colors.brownPrimary,
-                                        modifier = Modifier.size(24.dp)
-                                    )
                                 }
                             }
-                        }
 
-                        if (loadedPages.size == totalPages && posts.isNotEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 32.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "- 沒有更多內容了 -",
-                                        color = colors.textDark.copy(alpha = 0.5f),
-                                        fontSize = 12.sp
-                                    )
+                            if (loadedPages.size == totalPages && posts.isNotEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 32.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "- 沒有更多內容了 -",
+                                            color = colors.textDark.copy(alpha = 0.5f),
+                                            fontSize = 12.sp
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+
+                // Manga reader button visibility
+                val isMangaForum = threadInfo?.forum?.fid?.let { YamiboForum.isMangaForum(it) } == true
+                val isFirstPage = currentPage == 1
+                val showMangaReader = isMangaForum && isFirstPage
+
+                // Overlay menu
+                ReaderOverlayMenu(
+                    visible = showMenu,
+                    title = title,
+                    snackbarHostState = snackbarHostState,
+                    onBack = { navigator.pop() },
+                    onCatalog = { scope.launch { drawerState.open() } },
+                    onFavorite = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("收藏功能開發中")
+                        }
+                    },
+                    onShare = {
+                        val url = YamiboRoute.Thread(tid).build()
+
+                        clipboardManager.setText(AnnotatedString(url))
+                        scope.launch {
+                            snackbarHostState.showSnackbar("已複製連結")
+                        }
+                    },
+                    onReply = {
+                        val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
+                        navigator.navigate(
+                            IActionWebView(
+                                title = "發表回復",
+                                initialUrl = replyUrl,
+                                successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
+                                onSuccess = {
+                                    scope.launch { snackbarHostState.showSnackbar("回復成功") }
+                                },
+                            )
+                        )
+                    },
+                    // Reload the current page
+                    onRefresh = {
+                        scope.launch {
+                            state = ReaderState.Loading
+                            loadPage(currentPage, forceRefresh = true)
+                        }
+                    },
+                    onSettings = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("設定功能開發中")
+                        }
+                    },
+                    showMangaReader = showMangaReader,
+                    onMangaReader = {
+                        val firstPostImages = posts.firstOrNull()?.images?.map { img ->
+                            if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
+                        } ?: emptyList()
+                        navigator.navigate(
+                            IMangaReaderScreen(
+                                tid = tid,
+                                threadTitle = title,
+                                imageList = firstPostImages
+                            )
+                        )
+                    },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
-
-            // Manga reader button visibility
-            val isMangaForum = threadInfo?.forum?.fid?.let { YamiboForum.isMangaForum(it) } == true
-            val isFirstPage = currentPage == 1
-            val showMangaReader = isMangaForum && isFirstPage
-
-            // Overlay menu
-            ReaderOverlayMenu(
-                visible = showMenu,
-                title = title,
-                snackbarHostState = snackbarHostState,
-                onBack = { navigator.pop() },
-                onCatalog = { scope.launch { drawerState.open() } },
-                onFavorite = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar("收藏功能開發中")
-                    }
-                },
-                onShare = {
-                    val url = YamiboRoute.Thread(tid).build()
-
-                    clipboardManager.setText(AnnotatedString(url))
-                    scope.launch {
-                        snackbarHostState.showSnackbar("已複製連結")
-                    }
-                },
-                onReply = {
-                    val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
-                    navigator.navigate(
-                        IActionWebView(
-                            title = "發表回復",
-                            initialUrl = replyUrl,
-                            successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                            onSuccess = {
-                                scope.launch { snackbarHostState.showSnackbar("回復成功") }
-                            },
-                        )
-                    )
-                },
-                // Reload the current page
-                onRefresh = {
-                    scope.launch {
-                        state = ReaderState.Loading
-                        loadPage(currentPage, forceRefresh = true)
-                    }
-                },
-                onSettings = {
-                    scope.launch {
-                        snackbarHostState.showSnackbar("設定功能開發中")
-                    }
-                },
-                showMangaReader = showMangaReader,
-                onMangaReader = {
-                    val firstPostImages = posts.firstOrNull()?.images?.map { img ->
-                        if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
-                    } ?: emptyList()
-                    navigator.navigate(
-                        IMangaReaderScreen(
-                            tid = tid,
-                            threadTitle = title,
-                            imageList = firstPostImages
-                        )
-                    )
-                },
-                modifier = Modifier.align(Alignment.BottomCenter)
-            )
         }
     }
 }

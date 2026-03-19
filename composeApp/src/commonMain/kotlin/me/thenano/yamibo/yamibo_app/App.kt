@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,7 +45,7 @@ fun App() {
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors.creamBackground
+        color = YamiboTheme.colors.creamBackground
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             stack.forEachIndexed { index, navigatable ->
