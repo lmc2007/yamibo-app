@@ -494,7 +494,33 @@ internal fun ThreadReaderScreen(
             }
         }
     ) {
-        CompositionLocalProvider(LocalReaderOverlayVisible provides showMenu) {
+        val handleImageDoubleTap: (String) -> Unit = { url ->
+            val post = posts.firstOrNull { p -> p.images.any { it.url.endsWith(url) || url.endsWith(it.url) } }
+            if (post != null) {
+                val imageList = post.images.map { img ->
+                    if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
+                }
+                val cleanUrl = if (url.startsWith("http")) url else "${YamiboRoute.Domain.build()}$url"
+                val initialIndex = imageList.indexOfFirst { it == cleanUrl }.coerceAtLeast(0)
+
+                navigator.navigate(
+                    IImageReaderScreen(
+                        tid = tid,
+                        postId = post.pid,
+                        fid = threadInfo?.forum?.fid,
+                        threadTitle = title,
+                        imageList = imageList,
+                        initialPage = initialIndex + 1
+                    )
+                )
+            }
+        }
+
+        CompositionLocalProvider(
+            LocalReaderOverlayVisible provides showMenu,
+            me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener provides { showMenu = !showMenu },
+            me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener provides handleImageDoubleTap
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -661,16 +687,23 @@ internal fun ThreadReaderScreen(
                     },
                     showMangaReader = showMangaReader,
                     onMangaReader = {
-                        val firstPostImages = posts.firstOrNull()?.images?.map { img ->
-                            if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
-                        } ?: emptyList()
-                        navigator.navigate(
-                            IMangaReaderScreen(
-                                tid = tid,
-                                threadTitle = title,
-                                imageList = firstPostImages
-                            )
-                        )
+                            val firstPost = posts.firstOrNull()
+                            if (firstPost != null) {
+                                val firstPostImages = firstPost.images.map { img ->
+                                    if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
+                                }
+                                navigator.navigate(
+                                    IImageReaderScreen(
+                                        tid = tid,
+                                        postId = firstPost.pid,
+                                        fid = threadInfo?.forum?.fid,
+                                        threadTitle = title,
+                                        imageList = firstPostImages,
+                                        initialPage = 1,
+                                        loadHistory = true
+                                    )
+                                )
+                            }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )

@@ -101,9 +101,36 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             anchorBlockRatio = anchorBlockRatio?.toFloat(),
             globalScrollY = globalScrollY?.toInt(),
             viewportHeight = viewportHeight?.toInt(),
-            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
             firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
             lastVisitTime = lastVisitTime
         )
+    }
+
+    private val imageQueries = db.imageReadingHistoryQueries
+
+    override suspend fun saveImagePosition(history: ReadHistoryRepository.ImageReadingHistory) {
+        imageQueries.upsert(
+            postId = history.postId.value.toLong(),
+            threadId = history.threadId.value.toLong(),
+            pageIndex = history.pageIndex.toLong(),
+            totalPages = history.totalPages.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime
+        )
+    }
+
+    override suspend fun getImagePosition(postId: PostId): ReadHistoryRepository.ImageReadingHistory? {
+        return imageQueries.getByPostId(postId.value.toLong()).executeAsOneOrNull()?.let {
+            ReadHistoryRepository.ImageReadingHistory(
+                postId = PostId(it.postId.toInt()),
+                threadId = ThreadId(it.threadId.toInt()),
+                pageIndex = it.pageIndex.toInt(),
+                totalPages = it.totalPages.toInt(),
+                firstVisibleItemIndex = it.firstVisibleItemIndex?.toInt(),
+                firstVisibleItemOffset = it.firstVisibleItemOffset?.toInt(),
+                lastVisitTime = it.lastVisitTime
+            )
+        }
     }
 }

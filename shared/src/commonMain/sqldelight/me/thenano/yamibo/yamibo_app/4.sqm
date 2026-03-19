@@ -1,0 +1,9 @@
+CREATE TABLE ImageReadingHistory(
+    postId INTEGER NOT NULL PRIMARY KEY,
+    threadId INTEGER NOT NULL,
+    pageIndex INTEGER NOT NULL,
+    totalPages INTEGER NOT NULL,
+    firstVisibleItemIndex INTEGER,
+    firstVisibleItemOffset INTEGER,
+    lastVisitTime INTEGER NOT NULL
+);

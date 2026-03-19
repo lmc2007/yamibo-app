@@ -65,4 +65,21 @@ interface ReadHistoryRepository {
 
     /** Delete multiple history entries by thread IDs */
     suspend fun deleteHistoryBatch(tids: List<ThreadId>)
+
+    /** Full reading history entry specifically for image posts (manga forum) */
+    data class ImageReadingHistory(
+        val postId: PostId,
+        val threadId: ThreadId,
+        val pageIndex: Int,
+        val totalPages: Int,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+        val lastVisitTime: Long
+    )
+
+    /** Save or update a position for an image reading session */
+    suspend fun saveImagePosition(history: ImageReadingHistory)
+
+    /** Get saved position for a given post ID */
+    suspend fun getImagePosition(postId: PostId): ImageReadingHistory?
 }

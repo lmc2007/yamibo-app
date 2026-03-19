@@ -32,11 +32,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.littlesurvival.YamiboForum
+import io.github.littlesurvival.dto.value.ForumId
+import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.manga.*
@@ -44,10 +52,20 @@ import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import kotlin.math.abs
 
 @Composable
-fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String>) {
+fun ImagesReaderScreen(
+    tid: ThreadId,
+    postId: PostId,
+    fid: ForumId?,
+    threadTitle: String,
+    imageList: List<String>,
+    initialPage: Int = 1,
+    loadHistory: Boolean = false
+) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val historyRepo = LocalReadHistoryRepository.current
+    val isMangaForum = remember(fid) { fid?.let { YamiboForum.isMangaForum(it) } == true }
 
     /** State */
     var readingMode by remember { mutableStateOf(ReadingMode.SINGLE_LTR) }
@@ -57,7 +75,75 @@ fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String
     var showTouchZonePreview by remember { mutableStateOf(false) }
     var showContextMenu by remember { mutableStateOf(false) }
     var contextMenuImageUrl by remember { mutableStateOf("") }
-    var currentPage by remember { mutableIntStateOf(0) }
+    
+    val scrollListState = rememberLazyListState()
+    var currentPage by remember { mutableIntStateOf((initialPage - 1).coerceIn(0, (imageList.size - 1).coerceAtLeast(0))) }
+
+    LaunchedEffect(Unit) {
+        if (isMangaForum && loadHistory) {
+            val history = historyRepo.getImagePosition(postId)
+            if (history != null) {
+                currentPage = history.pageIndex.coerceIn(0, imageList.lastIndex)
+                if (history.firstVisibleItemIndex != null) {
+                    scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(isMangaForum) {
+        if (!isMangaForum) return@LaunchedEffect
+        
+        snapshotFlow { 
+            Triple(currentPage, scrollListState.firstVisibleItemIndex, scrollListState.firstVisibleItemScrollOffset)
+        }.collectLatest { (page, idx, offset) ->
+            delay(1000) // Debounce saves
+            val isScroll = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
+            val (finalIdx, finalOffset) = if (isScroll) {
+                idx to offset
+            } else {
+                null to null
+            }
+            historyRepo.saveImagePosition(
+                ReadHistoryRepository.ImageReadingHistory(
+                    postId = postId,
+                    threadId = tid,
+                    pageIndex = page,
+                    totalPages = imageList.size,
+                    firstVisibleItemIndex = finalIdx,
+                    firstVisibleItemOffset = finalOffset,
+                    lastVisitTime = currentTimeMillis()
+                )
+            )
+        }
+    }
+
+    DisposableEffect(isMangaForum) {
+        onDispose {
+            if (isMangaForum) {
+                val isScroll = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
+                val finalIdx = if (isScroll) scrollListState.firstVisibleItemIndex else null
+                val finalOffset = if (isScroll) scrollListState.firstVisibleItemScrollOffset else null
+                val snapshotPage = currentPage
+                val total = imageList.size
+                
+                @OptIn(DelicateCoroutinesApi::class)
+                GlobalScope.launch {
+                    historyRepo.saveImagePosition(
+                        ReadHistoryRepository.ImageReadingHistory(
+                            postId = postId,
+                            threadId = tid,
+                            pageIndex = snapshotPage,
+                            totalPages = total,
+                            firstVisibleItemIndex = finalIdx,
+                            firstVisibleItemOffset = finalOffset,
+                            lastVisitTime = currentTimeMillis()
+                        )
+                    )
+                }
+            }
+        }
+    }
 
     /** Animated zoom state */
     val scaleAnim = remember { Animatable(1f) }
@@ -384,7 +470,7 @@ fun MangaReaderScreen(tid: ThreadId, threadTitle: String, imageList: List<String
                     }
                 }
             } else if (isScrollMode) {
-                val scrollListState = rememberLazyListState()
+
 
                 LazyColumn(
                     state = scrollListState,

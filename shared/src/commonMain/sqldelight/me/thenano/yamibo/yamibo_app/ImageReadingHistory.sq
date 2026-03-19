@@ -1,0 +1,18 @@
+upsert:
+INSERT OR REPLACE INTO ImageReadingHistory(
+    postId, threadId, pageIndex, totalPages,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime
+) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+getByPostId:
+SELECT * FROM ImageReadingHistory WHERE postId = ?;
+
+deleteByPostId:
+DELETE FROM ImageReadingHistory WHERE postId = ?;
+
+deleteByThreadId:
+DELETE FROM ImageReadingHistory WHERE threadId = ?;
+
+deleteAll:
+DELETE FROM ImageReadingHistory;

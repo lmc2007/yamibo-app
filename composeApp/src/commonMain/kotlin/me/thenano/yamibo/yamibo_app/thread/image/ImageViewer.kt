@@ -2,9 +2,7 @@ package me.thenano.yamibo.yamibo_app.thread.image
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +37,8 @@ import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.image_icon
 
 val LocalReaderOverlayVisible = compositionLocalOf { false }
+val LocalImageClickListener = compositionLocalOf<(() -> Unit)?> { null }
+val LocalImageDoubleClickListener = compositionLocalOf<((String) -> Unit)?> { null }
 
 /**
  * A unified image viewer for posts and manga reading.
@@ -62,6 +62,9 @@ fun ImageViewer(
     val authRepo = LocalAuthRepository.current
     val colors = YamiboTheme.colors
     val isOverlayOpen = LocalReaderOverlayVisible.current
+
+    val onSingleTap = LocalImageClickListener.current
+    val onDoubleTap = LocalImageDoubleClickListener.current
     
     // Formatting styles
     val errorBgColor = if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFF3F3F3)
@@ -98,24 +101,22 @@ fun ImageViewer(
 
     Box(
         modifier = modifier.then(
-            if (enableContextMenu) {
-                Modifier.pointerInput(isOverlayOpen) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        val longPress = awaitLongPressOrCancellation(down.id)
-                        if (longPress != null) {
-                            if (!isOverlayOpen) {
-                                showMenu = true
-                            }
-                            // Consume the remaining drag/up events so they don't trigger anything else
-                            do {
-                                val event = awaitPointerEvent()
-                                event.changes.forEach { it.consume() }
-                            } while (event.changes.any { it.pressed })
+            Modifier.pointerInput(isOverlayOpen, enableContextMenu) {
+                detectTapGestures(
+                    onTap = {
+                        // Let single tap toggle the overlay
+                        onSingleTap?.invoke()
+                    },
+                    onDoubleTap = {
+                        onDoubleTap?.invoke(fullUrl)
+                    },
+                    onLongPress = {
+                        if (enableContextMenu && !isOverlayOpen) {
+                            showMenu = true
                         }
                     }
-                }
-            } else Modifier
+                )
+            }
         ),
         contentAlignment = Alignment.Center
     ) {
