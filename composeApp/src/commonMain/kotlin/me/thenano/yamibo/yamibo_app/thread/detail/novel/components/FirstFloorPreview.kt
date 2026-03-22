@@ -1,23 +1,18 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
-import Log
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +23,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
-import me.thenano.yamibo.yamibo_app.__info__tag
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** First floor body preview — scrollable with max half-screen height */
@@ -45,8 +39,6 @@ internal fun FirstFloorPreview(post: Post) {
             /** collapse blank lines (including spaces) */
             .replace(Regex("\\n\\s*\\n+"), "\n").trim()
     }
-    Log.i(__info__tag("FirstFloorPreview"), "FirstFloorPreview:\n$plainText")
-
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
         Card(
             modifier = Modifier.fillMaxWidth(),

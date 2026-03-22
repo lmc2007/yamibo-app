@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.PostId
+import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 
@@ -11,6 +12,11 @@ import io.github.littlesurvival.dto.value.UserId
  * Uses content-anchor positioning for accurate reading position restoration.
  */
 interface ReadHistoryRepository {
+
+    /** Common wrapper/interface for merging multiple types of reading history */
+    sealed interface AnyReadingHistory {
+        val lastVisitTime: Long
+    }
 
     /** Full reading history entry with anchor-based positioning data */
     data class ThreadReadingHistory(
@@ -36,8 +42,8 @@ interface ReadHistoryRepository {
         val firstVisibleItemIndex: Int? = null,
         val firstVisibleItemOffset: Int? = null,
 
-        val lastVisitTime: Long,
-    )
+        override val lastVisitTime: Long,
+    ) : AnyReadingHistory
 
     /** Save or update a reading position */
     suspend fun savePosition(history: ThreadReadingHistory)
@@ -66,6 +72,26 @@ interface ReadHistoryRepository {
     /** Delete multiple history entries by thread IDs */
     suspend fun deleteHistoryBatch(tids: List<ThreadId>)
 
+    // Combined History Queries
+
+    /** Get a combined page of history entries mixing Thread and TagManga (newest first) */
+    suspend fun getCombinedHistoryPage(page: Int, pageSize: Int = 20): List<AnyReadingHistory>
+
+    /** Total number of combined history entries */
+    suspend fun getCombinedHistoryCount(): Long
+
+    /** Search combined history entries by title/tag (newest first) */
+    suspend fun searchCombinedHistory(query: String, page: Int, pageSize: Int = 20): List<AnyReadingHistory>
+
+    /** Count combined search results */
+    suspend fun searchCombinedHistoryCount(query: String): Long
+
+    /** Batch delete combined history entries (based on their type-specific IDs) */
+    suspend fun deleteCombinedHistoryBatch(items: List<AnyReadingHistory>)
+
+    /** Delete all history entries across all types */
+    suspend fun deleteAllCombinedHistory()
+
     /** Full reading history entry specifically for image posts (manga forum) */
     data class ImageReadingHistory(
         val postId: PostId,
@@ -82,4 +108,28 @@ interface ReadHistoryRepository {
 
     /** Get saved position for a given post ID */
     suspend fun getImagePosition(postId: PostId): ImageReadingHistory?
+
+    /** Reading history entry for manga tag reading mode (keyed by tagId) */
+    data class TagMangaReadingHistory(
+        val tagId: TagId,
+        val tagName: String,
+        val tagPage: Int,
+        val threadId: ThreadId,
+        val threadTitle: String,
+        val threadImagePageIndex: Int,
+        val threadImageTotalPages: Int,
+        val firstVisibleItemIndex: Int? = null,
+        val firstVisibleItemOffset: Int? = null,
+        override val lastVisitTime: Long,
+        val coverUrl: String? = null
+    ) : AnyReadingHistory
+
+    /** Save or update manga tag reading position */
+    suspend fun saveTagMangaReaderModeHistory(history: TagMangaReadingHistory)
+
+    /** Get saved manga tag position for a given tag ID */
+    suspend fun getTagMangaReaderModeHistoryPosition(tagId: TagId): TagMangaReadingHistory?
+
+    /** Delete manga tag reading history */
+    suspend fun deleteMangaTagHistory(tagId: TagId)
 }

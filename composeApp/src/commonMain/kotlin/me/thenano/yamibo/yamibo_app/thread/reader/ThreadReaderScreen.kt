@@ -36,18 +36,22 @@ import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.__info__tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
+import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
-import me.thenano.yamibo.yamibo_app.thread.reader.post.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 import kotlin.math.abs
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
 
 internal sealed interface ReaderState {
@@ -95,13 +99,33 @@ internal fun ThreadReaderScreen(
     var saveJob by remember { mutableStateOf<Job?>(null) }
     var hasRestoredPosition by remember { mutableStateOf(false) }
 
-    /** Extract first image URL from first post as thread avatar */
-    val firstPost = posts.firstOrNull()
-    val coverUrl = remember(firstPost) {
-        val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
+    /** Extract image URL for thread avatar based on forum type */
+    var coverUrl by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(loadedPostsByPage[1], threadInfo) {
+        if (coverUrl != null) return@LaunchedEffect // Lock once found for stability
+        
+        val fid = threadInfo?.forum?.fid
+        val isMangaThread = fid?.let { YamiboForum.isMangaForum(it) } == true
 
-        if (attachedImage.contains("none.gif") || attachedImage.contains("smiley/") || attachedImage.contains("face")) return@remember null
-        if (attachedImage.startsWith("http")) attachedImage else "${YamiboRoute.Domain.build()}$attachedImage"
+        // Find the posts on the first page
+        val firstPagePosts = loadedPostsByPage[1] ?: return@LaunchedEffect
+
+        // Use the author from the very first post of the thread
+        val threadAuthorId = firstPagePosts.firstOrNull()?.author?.uid ?: return@LaunchedEffect
+
+        // Get posts by the thread author on the first page
+        val authorPosts = firstPagePosts.filter { it.author.uid == threadAuthorId }
+
+        val attachedImageUrl = if (isMangaThread) {
+            val candidateImages = authorPosts.take(2).flatMap { it.images }
+            candidateImages.getOrNull(1)?.url ?: candidateImages.getOrNull(0)?.url
+        } else {
+            authorPosts.firstOrNull()?.images?.firstOrNull()?.url
+        } ?: return@LaunchedEffect
+
+        if (attachedImageUrl.contains("none.gif") || attachedImageUrl.contains("smiley/") || attachedImageUrl.contains("face")) return@LaunchedEffect
+        coverUrl = if (attachedImageUrl.startsWith("http")) attachedImageUrl else "${YamiboRoute.Domain.build()}$attachedImageUrl"
     }
 
     fun getFormHash(): FormHash? {
@@ -203,7 +227,7 @@ internal fun ThreadReaderScreen(
         val forumInfo = threadInfo?.forum
         val firstVisible = listState.firstVisibleItemIndex
         val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-
+        Log.i(__info__tag("ThreadReaderScreen"), "$title : $coverUrl")
         return ThreadReadingHistory(
             threadName = title,
             threadId = tid,
@@ -508,6 +532,7 @@ internal fun ThreadReaderScreen(
                         tid = tid,
                         postId = post.pid,
                         fid = threadInfo?.forum?.fid,
+                        authorId = authorId,
                         threadTitle = title,
                         imageList = imageList,
                         initialPage = initialIndex + 1
@@ -518,8 +543,8 @@ internal fun ThreadReaderScreen(
 
         CompositionLocalProvider(
             LocalReaderOverlayVisible provides showMenu,
-            me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener provides { showMenu = !showMenu },
-            me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener provides handleImageDoubleTap
+            LocalImageClickListener provides { showMenu = !showMenu },
+            LocalImageDoubleClickListener provides handleImageDoubleTap
         ) {
             Box(
                 modifier = Modifier
@@ -573,8 +598,51 @@ internal fun ThreadReaderScreen(
                                     onReply = { handleReply(post.pid) }
                                 )
 
-                                // Author-only mode: comment banner after each post
+                                // Tag Banner (Always shown in the first post of the first page, tags are fetched via API by TagListScreen)
+                                if (post.floor == 1 && currentPage == 1) {
+                                    val fid = threadInfo?.forum?.fid
+                                    val isManga = fid?.let { YamiboForum.isMangaForum(it) } == true
+                                    val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
+
+                                    // Manga forum / Other forum (non-novel, non-authorOnly): Place after PostRenderer
+                                    if (isManga || (!isNovel && !isAuthorOnly)) {
+                                        CommentBanner(
+                                            text = "查看標籤列表",
+                                            icon = "🏷️",
+                                            onClick = {
+                                                navigator.navigate(
+                                                    ITagListScreen(
+                                                        tid = tid,
+                                                        initialTags = post.tags.value
+                                                    )
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+
+                                // Author-only mode: tag banner + comment banner
                                 if (isAuthorOnly) {
+                                    // Novel forum: Tag Banner is above the comments button
+                                    if (post.floor == 1 && currentPage == 1) {
+                                        val fid = threadInfo?.forum?.fid
+                                        val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
+                                        if (isNovel) {
+                                            CommentBanner(
+                                                text = "查看標籤列表",
+                                                icon = "🏷️",
+                                                onClick = {
+                                                    navigator.navigate(
+                                                        ITagListScreen(
+                                                            tid = tid,
+                                                            initialTags = post.tags.value
+                                                        )
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
+
                                     CommentBanner(
                                         text = "點擊跳轉到評論區",
                                         onClick = {
@@ -687,23 +755,22 @@ internal fun ThreadReaderScreen(
                     },
                     showMangaReader = showMangaReader,
                     onMangaReader = {
-                            val firstPost = posts.firstOrNull()
-                            if (firstPost != null) {
-                                val firstPostImages = firstPost.images.map { img ->
-                                    if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
-                                }
-                                navigator.navigate(
-                                    IImageReaderScreen(
-                                        tid = tid,
-                                        postId = firstPost.pid,
-                                        fid = threadInfo?.forum?.fid,
-                                        threadTitle = title,
-                                        imageList = firstPostImages,
-                                        initialPage = 1,
-                                        loadHistory = true
-                                    )
-                                )
+                        val firstPost = posts.firstOrNull()
+                        if (firstPost != null) {
+                            val firstPostImages = firstPost.images.map { img ->
+                                if (img.url.startsWith("http")) img.url else "${YamiboRoute.Domain.build()}${img.url}"
                             }
+                            navigator.navigate(
+                                IImageReaderScreen(
+                                    tid = tid,
+                                    postId = firstPost.pid,
+                                    fid = threadInfo?.forum?.fid,
+                                    threadTitle = title,
+                                    imageList = firstPostImages,
+                                    loadHistory = true,
+                                )
+                            )
+                        }
                     },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )

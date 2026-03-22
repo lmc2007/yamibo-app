@@ -12,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
@@ -33,6 +34,7 @@ fun MainViewController() = ComposeUIViewController {
     val dbFactory = remember { DatabaseFactory() }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }
+    val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient) }
 
     /** Provide Repositories */
     CompositionLocalProvider(
@@ -43,5 +45,6 @@ fun MainViewController() = ComposeUIViewController {
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalThemeRepository provides themeRepository,
+        LocalTagRepository provides tagRepository,
     ) { App() }
 }

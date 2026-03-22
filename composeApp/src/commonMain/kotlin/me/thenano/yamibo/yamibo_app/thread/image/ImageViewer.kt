@@ -65,13 +65,15 @@ fun ImageViewer(
 
     val onSingleTap = LocalImageClickListener.current
     val onDoubleTap = LocalImageDoubleClickListener.current
-    
+
+    val hasGestures = enableContextMenu || onSingleTap != null || onDoubleTap != null
+
     // Formatting styles
     val errorBgColor = if (isDarkTheme) Color.White.copy(alpha = 0.08f) else Color(0xFFF3F3F3)
     val errorTextColor = if (isDarkTheme) Color.White else colors.textDark
     val errorSubTextColor = if (isDarkTheme) Color.White.copy(alpha = 0.5f) else colors.textDark.copy(alpha = 0.6f)
     val errorUrlColor = if (isDarkTheme) Color.White.copy(alpha = 0.3f) else colors.brownDeep
-    
+
     // Resolve full URL
     val fullUrl = if (url.startsWith("http")) url else "https://bbs.yamibo.com/$url"
 
@@ -101,21 +103,25 @@ fun ImageViewer(
 
     Box(
         modifier = modifier.then(
-            Modifier.pointerInput(isOverlayOpen, enableContextMenu) {
-                detectTapGestures(
-                    onTap = {
-                        // Let single tap toggle the overlay
-                        onSingleTap?.invoke()
-                    },
-                    onDoubleTap = {
-                        onDoubleTap?.invoke(fullUrl)
-                    },
-                    onLongPress = {
-                        if (enableContextMenu && !isOverlayOpen) {
-                            showMenu = true
+            if (hasGestures) {
+                Modifier.pointerInput(isOverlayOpen, enableContextMenu) {
+                    detectTapGestures(
+                        onTap = {
+                            // Let single tap toggle the overlay
+                            onSingleTap?.invoke()
+                        },
+                        onDoubleTap = {
+                            onDoubleTap?.invoke(fullUrl)
+                        },
+                        onLongPress = {
+                            if (enableContextMenu && !isOverlayOpen) {
+                                showMenu = true
+                            }
                         }
-                    }
-                )
+                    )
+                }
+            } else {
+                Modifier
             }
         ),
         contentAlignment = Alignment.Center

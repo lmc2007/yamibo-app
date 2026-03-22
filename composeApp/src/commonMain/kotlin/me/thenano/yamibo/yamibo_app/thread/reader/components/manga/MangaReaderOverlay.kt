@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -42,6 +43,10 @@ fun MangaReaderOverlay(
     onPageChange: (Int) -> Unit,
     onSettings: () -> Unit,
     onDismiss: () -> Unit,
+    onCatalog: (() -> Unit)? = null,
+    onNavigateToThread: (() -> Unit)? = null,
+    subtitle: String? = null,
+    onShare: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -85,22 +90,42 @@ fun MangaReaderOverlay(
                         .padding(horizontal = 4.dp, vertical = 8.dp)
                 ) {
                     IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = YamiboIcons.Reply,
-                            contentDescription = "返回",
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                        Text("◀", color = Color.White, fontSize = 20.sp)
+                    }
+
+                    // Title area: support subtitle (two-line mode)
+                    if (subtitle != null) {
+                        Column(
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
+                        ) {
+                            Text(
+                                text = title,
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.StartEllipsis,
+                                //modifier = Modifier.basicMarquee()
+                            )
+                            Text(
+                                text = subtitle,
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = title,
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                         )
                     }
-                    Text(
-                        text = title,
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
-                    )
                 }
             }
         }
@@ -190,6 +215,18 @@ fun MangaReaderOverlay(
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
                     ) {
+                        // Catalog button
+                        if (onCatalog != null) {
+                            IconButton(
+                                onClick = onCatalog,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Transparent, CircleShape)
+                            ) {
+                                Text("☰", color = Color.White, fontSize = 24.sp)
+                            }
+                        }
+
                         // Settings button
                         IconButton(
                             onClick = onSettings,
@@ -203,6 +240,35 @@ fun MangaReaderOverlay(
                                 tint = Color.White,
                                 modifier = Modifier.size(36.dp)
                             )
+                        }
+
+                        // Share button (copy URL)
+                        if (onShare != null) {
+                            IconButton(
+                                onClick = onShare,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Transparent, CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = YamiboIcons.Share,
+                                    contentDescription = "分享",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+
+                        // Navigate to thread button
+                        if (onNavigateToThread != null) {
+                            IconButton(
+                                onClick = onNavigateToThread,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .background(Color.Transparent, CircleShape)
+                            ) {
+                                Text("📖", fontSize = 22.sp)
+                            }
                         }
                     }
                 }

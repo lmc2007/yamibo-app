@@ -5,6 +5,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +13,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -54,7 +56,13 @@ fun MangaReaderSettingsPanel(
         Surface(
             color = colors.brownDeep,
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                // Prevent touches from falling through to the scrim
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {}
         ) {
             Column(
                 modifier = Modifier
@@ -80,9 +88,7 @@ fun MangaReaderSettingsPanel(
                     options = TouchZoneLayout.entries.toList(),
                     selectedOption = currentTouchZoneLayout,
                     labelExtractor = { it.label },
-                    onSelect = { layout ->
-                        onTouchZoneLayoutChange(layout)
-                    }
+                    onSelect = onTouchZoneLayoutChange
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -109,27 +115,6 @@ private fun <T> ChipGroup(
     labelExtractor: (T) -> String,
     onSelect: (T) -> Unit
 ) {
-    val colors = YamiboTheme.colors
-
-    @Composable
-    fun Chip(option: T) {
-        val isSelected = option == selectedOption
-        val bgColor = if (isSelected) colors.brownPrimary else Color.White.copy(alpha = 0.1f)
-        val textColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f)
-
-        Text(
-            text = labelExtractor(option),
-            color = textColor,
-            fontSize = 13.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(bgColor)
-                .clickable { onSelect(option) }
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        )
-    }
-
     // Use FlowRow-like layout with wrapping
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val chunked = options.chunked(3)
@@ -138,8 +123,39 @@ private fun <T> ChipGroup(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                rowItems.forEach { option -> Chip(option) }
+                rowItems.forEach { option ->
+                    Chip(
+                        option = option,
+                        isSelected = option == selectedOption,
+                        label = labelExtractor(option),
+                        onSelect = onSelect
+                    )
+                }
             }
         }
     }
+}
+
+@Composable
+private fun <T> Chip(
+    option: T,
+    isSelected: Boolean,
+    label: String,
+    onSelect: (T) -> Unit
+) {
+    val colors = YamiboTheme.colors
+    val bgColor = if (isSelected) colors.brownPrimary else Color.White.copy(alpha = 0.1f)
+    val textColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.8f)
+
+    Text(
+        text = label,
+        color = textColor,
+        fontSize = 13.sp,
+        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(bgColor)
+            .clickable { onSelect(option) }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    )
 }

@@ -2,10 +2,12 @@ package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.PostId
+import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
 import me.thenano.yamibo.yamiboapp.ReadingHistory
 
 class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepository {
@@ -132,5 +134,114 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
                 lastVisitTime = it.lastVisitTime
             )
         }
+    }
+
+    private val mangaTagQueries = db.mangaTagReadingHistoryQueries
+
+    override suspend fun saveTagMangaReaderModeHistory(history: ReadHistoryRepository.TagMangaReadingHistory) {
+        mangaTagQueries.upsert(
+            tagId = history.tagId.value.toLong(),
+            tagName = history.tagName,
+            tagPage = history.tagPage.toLong(),
+            threadId = history.threadId.value.toLong(),
+            threadTitle = history.threadTitle,
+            threadImagePageIndex = history.threadImagePageIndex.toLong(),
+            threadImageTotalPages = history.threadImageTotalPages.toLong(),
+            firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
+            firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
+            lastVisitTime = history.lastVisitTime,
+            coverUrl = history.coverUrl
+        )
+    }
+
+    override suspend fun getTagMangaReaderModeHistoryPosition(tagId: TagId): ReadHistoryRepository.TagMangaReadingHistory? {
+        val history = mangaTagQueries.getByTagId(tagId.value.toLong()).executeAsOneOrNull()
+        return history?.let {
+            ReadHistoryRepository.TagMangaReadingHistory(
+                tagId = TagId(it.tagId.toInt()),
+                tagName = it.tagName,
+                tagPage = it.tagPage.toInt(),
+                threadId = ThreadId(it.threadId.toInt()),
+                threadTitle = it.threadTitle,
+                threadImagePageIndex = it.threadImagePageIndex.toInt(),
+                threadImageTotalPages = it.threadImageTotalPages.toInt(),
+                firstVisibleItemIndex = it.firstVisibleItemIndex?.toInt(),
+                firstVisibleItemOffset = it.firstVisibleItemOffset?.toInt(),
+                lastVisitTime = it.lastVisitTime,
+                coverUrl = it.coverUrl
+            )
+        }
+    }
+
+    override suspend fun deleteMangaTagHistory(tagId: TagId) {
+        mangaTagQueries.deleteByTagId(tagId.value.toLong())
+    }
+    private fun MangaTagReadingHistory.toHistory(): ReadHistoryRepository.TagMangaReadingHistory {
+        return ReadHistoryRepository.TagMangaReadingHistory(
+            tagId = TagId(tagId.toInt()),
+            tagName = tagName,
+            tagPage = tagPage.toInt(),
+            threadId = ThreadId(threadId.toInt()),
+            threadTitle = threadTitle,
+            threadImagePageIndex = threadImagePageIndex.toInt(),
+            threadImageTotalPages = threadImageTotalPages.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
+            firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
+            lastVisitTime = lastVisitTime,
+            coverUrl = coverUrl
+        )
+    }
+
+    override suspend fun getCombinedHistoryPage(
+        page: Int,
+        pageSize: Int
+    ): List<ReadHistoryRepository.AnyReadingHistory> {
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        // Safely fetch up to 2000 items each to combine and paginate locally without complex SQL VIEWs
+        val threads = queries.getPage(2000, 0).executeAsList().map { it.toHistory() }
+        val tags = mangaTagQueries.getPage(2000, 0).executeAsList().map { it.toHistory() }
+        return (threads + tags)
+            .sortedByDescending { it.lastVisitTime }
+            .drop(offset)
+            .take(pageSize)
+    }
+
+    override suspend fun getCombinedHistoryCount(): Long {
+        return queries.countAll().executeAsOne() + mangaTagQueries.countAll().executeAsOne()
+    }
+
+    override suspend fun searchCombinedHistory(
+        query: String,
+        page: Int,
+        pageSize: Int
+    ): List<ReadHistoryRepository.AnyReadingHistory> {
+        val offset = (page - 1).coerceAtLeast(0) * pageSize
+        val threads = queries.searchByName(query, 2000, 0).executeAsList().map { it.toHistory() }
+        val tags = mangaTagQueries.searchByName(query, query, 2000, 0).executeAsList().map { it.toHistory() }
+        return (threads + tags)
+            .sortedByDescending { it.lastVisitTime }
+            .drop(offset)
+            .take(pageSize)
+    }
+
+    override suspend fun searchCombinedHistoryCount(query: String): Long {
+        return queries.countByName(query).executeAsOne() + mangaTagQueries.countByName(query, query).executeAsOne()
+    }
+
+    override suspend fun deleteCombinedHistoryBatch(items: List<ReadHistoryRepository.AnyReadingHistory>) {
+        val threadIds = items.filterIsInstance<ReadHistoryRepository.ThreadReadingHistory>().map { it.threadId.value.toLong() }
+        val tagIds = items.filterIsInstance<ReadHistoryRepository.TagMangaReadingHistory>().map { it.tagId.value.toLong() }
+        
+        if (threadIds.isNotEmpty()) {
+            queries.deleteByThreadIds(threadIds)
+        }
+        if (tagIds.isNotEmpty()) {
+            mangaTagQueries.deleteByTagIds(tagIds)
+        }
+    }
+
+    override suspend fun deleteAllCombinedHistory() {
+        queries.deleteAll()
+        mangaTagQueries.deleteAll()
     }
 }

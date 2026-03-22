@@ -79,7 +79,7 @@ fun getTouchAction(layout: TouchZoneLayout, xFraction: Float, yFraction: Float):
 
         /** Same as DEFAULT */
 
-        // 邊緣式 (圖三): Left/right narrow edges (~15%) = NEXT, bottom strip (~15%) = PREV, center = MENU
+        // Edge type: Left/right narrow edges (~15%) = NEXT, bottom strip (~15%) = PREV, center = MENU
         TouchZoneLayout.EDGE -> {
             when {
                 yFraction > 0.85f -> TouchAction.PREV
@@ -89,7 +89,7 @@ fun getTouchAction(layout: TouchZoneLayout, xFraction: Float, yFraction: Float):
             }
         }
 
-        // 左右式 (圖四): Left ~25% = PREV, right ~25% = NEXT, center ~50% = MENU
+        // Left-Right type: Left ~25% = PREV, right ~25% = NEXT, center ~50% = MENU
         TouchZoneLayout.LEFT_RIGHT -> {
             when {
                 xFraction < 0.25f -> TouchAction.PREV

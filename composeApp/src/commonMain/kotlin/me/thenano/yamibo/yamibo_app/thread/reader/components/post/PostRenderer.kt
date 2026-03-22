@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.post
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,11 +26,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.window.Dialog
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.AttachmentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.CommentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.HtmlRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.PollRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.post.impl.RateRenderer
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.AttachmentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.CommentRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.PollRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.RateRenderer
 
 @Composable
 @Suppress("AssignedValueIsNeverRead")
@@ -71,7 +72,7 @@ fun PostRenderer(
             Box(modifier = Modifier.clickable { /* TODO: navigate to user profile */ }) {
                 if (!avatarUrl.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
-                        model = avatarUrl,
+                        model = rememberImageRequest(url = avatarUrl),
                         contentDescription = "Avatar",
                         modifier = Modifier.size(36.dp).clip(CircleShape),
                         contentScale = ContentScale.Crop,

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -76,7 +77,7 @@ internal fun ThreadHeader(
                 ) {
                     if (coverUrl != null) {
                         SubcomposeAsyncImage(
-                            model = coverUrl,
+                            model = rememberImageRequest(url = coverUrl),
                             contentDescription = "cover",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),

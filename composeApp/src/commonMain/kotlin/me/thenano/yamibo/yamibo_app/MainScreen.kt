@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -81,12 +82,17 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            when (currentTab) {
-                MainTab.Home -> HomeScreenContent()
-                MainTab.History -> ReadHistoryPage()
-                MainTab.Message -> PlaceholderScreen("Message")
-                MainTab.Favorite -> FavoritePage()
-                MainTab.Profile -> ProfilePage()
+            Crossfade(
+                targetState = currentTab,
+                label = "MainScreenTabCrossfade"
+            ) { tab ->
+                when (tab) {
+                    MainTab.Home -> HomeScreenContent()
+                    MainTab.History -> ReadHistoryPage()
+                    MainTab.Message -> PlaceholderScreen("Message")
+                    MainTab.Favorite -> FavoritePage()
+                    MainTab.Profile -> ProfilePage()
+                }
             }
         }
     }

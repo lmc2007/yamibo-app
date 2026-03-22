@@ -26,15 +26,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.PageNav
-import io.github.littlesurvival.dto.value.ThreadId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.IMainScreen
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
+import me.thenano.yamibo.yamibo_app.thread.reader.IImageReaderScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import kotlin.math.ceil
@@ -42,7 +44,7 @@ import kotlin.math.ceil
 private sealed interface HistoryState {
     data object Loading : HistoryState
     data class Success(
-        val items: List<ThreadReadingHistory>,
+        val items: List<ReadHistoryRepository.AnyReadingHistory>,
         val totalCount: Long,
         val currentPage: Int
     ) : HistoryState
@@ -76,17 +78,17 @@ fun ReadHistoryPage() {
     val focusRequester = remember { FocusRequester() }
 
     /** Select state */
-    var selectedIds by remember { mutableStateOf(setOf<ThreadId>()) }
+    var selectedItems by remember { mutableStateOf(setOf<ReadHistoryRepository.AnyReadingHistory>()) }
 
     suspend fun loadPage(page: Int) {
         state = HistoryState.Loading
         try {
-            val count = readHistoryRepo.getHistoryCount()
+            val count = readHistoryRepo.getCombinedHistoryCount()
             if (count == 0L) {
                 state = HistoryState.Empty
                 return
             }
-            val items = readHistoryRepo.getHistoryPage(page, PAGE_SIZE)
+            val items = readHistoryRepo.getCombinedHistoryPage(page, PAGE_SIZE)
             currentPage = page
             state = HistoryState.Success(
                 items = items,
@@ -103,12 +105,12 @@ fun ReadHistoryPage() {
         if (trimmed.isEmpty()) return
         state = HistoryState.Loading
         try {
-            val count = readHistoryRepo.searchHistoryCount(trimmed)
+            val count = readHistoryRepo.searchCombinedHistoryCount(trimmed)
             if (count == 0L) {
                 state = HistoryState.Empty
                 return
             }
-            val items = readHistoryRepo.searchHistory(trimmed, page, PAGE_SIZE)
+            val items = readHistoryRepo.searchCombinedHistory(trimmed, page, PAGE_SIZE)
             currentPage = page
             state = HistoryState.Success(
                 items = items,
@@ -158,7 +160,7 @@ fun ReadHistoryPage() {
                     PageMode.Normal -> NormalTopBar(
                         onSearch = { mode = PageMode.Search },
                         onMultiSelect = {
-                            selectedIds = emptySet()
+                            selectedItems = emptySet()
                             mode = PageMode.Select
                         }
                     )
@@ -181,35 +183,35 @@ fun ReadHistoryPage() {
                         onSelectAll = {
                             val current = state
                             if (current is HistoryState.Success) {
-                                selectedIds = current.items.map { it.threadId }.toSet()
+                                selectedItems = current.items.toSet()
                             }
                         },
                         onClearAll = {
                             scope.launch {
-                                readHistoryRepo.deleteAll()
-                                selectedIds = emptySet()
+                                readHistoryRepo.deleteAllCombinedHistory()
+                                selectedItems = emptySet()
                                 mode = PageMode.Normal
                                 state = HistoryState.Empty
                                 snackbarHostState.showSnackbar("已清除所有紀錄")
                             }
                         },
                         onCancel = {
-                            selectedIds = emptySet()
+                            selectedItems = emptySet()
                             mode = PageMode.Normal
                         },
                         onDeleteSelected = {
-                            if (selectedIds.isNotEmpty()) {
+                            if (selectedItems.isNotEmpty()) {
                                 scope.launch {
-                                    val deletedAmount = selectedIds.size
-                                    readHistoryRepo.deleteHistoryBatch(selectedIds.toList())
-                                    selectedIds = emptySet()
+                                    val deletedAmount = selectedItems.size
+                                    readHistoryRepo.deleteCombinedHistoryBatch(selectedItems.toList())
+                                    selectedItems = emptySet()
                                     mode = PageMode.Normal
                                     loadPage(1)
                                     snackbarHostState.showSnackbar("已刪除 $deletedAmount 條紀錄")
                                 }
                             }
                         },
-                        selectedCount = selectedIds.size
+                        selectedCount = selectedItems.size
                     )
                 }
             }
@@ -306,80 +308,136 @@ fun ReadHistoryPage() {
 
                             items(
                                 items = entries,
-                                key = { it.threadId.value }
+                                key = { history ->
+                                    if (history is ThreadReadingHistory) "thread_${history.threadId.value}"
+                                    else "tag_${(history as ReadHistoryRepository.TagMangaReadingHistory).tagId.value}"
+                                }
                             ) { history ->
-                                ReadHistoryCard(
-                                    history = history,
-                                    timeLabel = formatTime(history.lastVisitTime),
-                                    isSelectMode = mode == PageMode.Select,
-                                    isSelected = history.threadId in selectedIds,
-                                    onClick = {
-                                        when (mode) {
-                                            PageMode.Select -> {
-                                                selectedIds = if (history.threadId in selectedIds) {
-                                                    selectedIds - history.threadId
-                                                } else {
-                                                    selectedIds + history.threadId
+                                if (history is ThreadReadingHistory) {
+                                    ReadHistoryCard(
+                                        history = history,
+                                        timeLabel = formatTime(history.lastVisitTime),
+                                        isSelectMode = mode == PageMode.Select,
+                                        isSelected = history in selectedItems,
+                                        onClick = {
+                                            when (mode) {
+                                                PageMode.Select -> {
+                                                    selectedItems = if (history in selectedItems) {
+                                                        selectedItems - history
+                                                    } else {
+                                                        selectedItems + history
+                                                    }
+                                                }
+                                                else -> {
+                                                    navigator.navigate(
+                                                        IThreadReaderScreen(
+                                                            tid = history.threadId,
+                                                            title = history.threadName,
+                                                            authorId = history.authorId,
+                                                            initialPage = history.page,
+                                                            isAuthorOnly = history.authorId != null
+                                                        )
+                                                    )
                                                 }
                                             }
-
-                                            else -> {
-                                                navigator.navigate(
-                                                    IThreadReaderScreen(
-                                                        tid = history.threadId,
-                                                        title = history.threadName,
-                                                        authorId = history.authorId,
-                                                        initialPage = history.page,
-                                                        isAuthorOnly = history.authorId != null
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    },
-                                    onCoverClick = {
-                                        if (mode == PageMode.Select) {
-                                            selectedIds = if (history.threadId in selectedIds) {
-                                                selectedIds - history.threadId
+                                        },
+                                        onCoverClick = {
+                                            if (mode == PageMode.Select) {
+                                                selectedItems = if (history in selectedItems) {
+                                                    selectedItems - history
+                                                } else {
+                                                    selectedItems + history
+                                                }
                                             } else {
-                                                selectedIds + history.threadId
-                                            }
-                                        } else {
-                                            // Navigation logic for novel forum covers
-                                            val forumId = history.forumId
-                                            if (forumId != null && YamiboForum.isNovelForum(forumId)) {
-                                                navigator.navigate(
-                                                    INovelThreadDetailScreen(
-                                                        tid = history.threadId,
-                                                        title = history.threadName,
-                                                        authorId = history.authorId
+                                                val forumId = history.forumId
+                                                if (forumId != null && YamiboForum.isNovelForum(forumId)) {
+                                                    navigator.navigate(
+                                                        INovelThreadDetailScreen(
+                                                            tid = history.threadId,
+                                                            title = history.threadName,
+                                                            authorId = history.authorId
+                                                        )
                                                     )
-                                                )
+                                                } else {
+                                                    navigator.navigate(
+                                                        IThreadReaderScreen(
+                                                            tid = history.threadId,
+                                                            title = history.threadName,
+                                                            authorId = history.authorId,
+                                                            initialPage = history.page,
+                                                            isAuthorOnly = history.authorId != null
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        onDelete = {
+                                            scope.launch {
+                                                readHistoryRepo.deleteHistoryBatch(listOf(history.threadId))
+                                                loadPage(currentPage)
+                                                snackbarHostState.showSnackbar("已刪除紀錄")
+                                            }
+                                        },
+                                        onFavorite = { scope.launch { snackbarHostState.showSnackbar("收藏功能開發中") } }
+                                    )
+                                } else if (history is ReadHistoryRepository.TagMangaReadingHistory) {
+                                    TagMangaHistoryCard(
+                                        history = history,
+                                        timeLabel = formatTime(history.lastVisitTime),
+                                        isSelectMode = mode == PageMode.Select,
+                                        isSelected = history in selectedItems,
+                                        onClick = {
+                                            if (mode == PageMode.Select) {
+                                                selectedItems = if (history in selectedItems) {
+                                                    selectedItems - history
+                                                } else {
+                                                    selectedItems + history
+                                                }
                                             } else {
                                                 navigator.navigate(
-                                                    IThreadReaderScreen(
+                                                    IImageReaderScreen(
                                                         tid = history.threadId,
-                                                        title = history.threadName,
-                                                        authorId = history.authorId,
-                                                        initialPage = history.page,
-                                                        isAuthorOnly = history.authorId != null
+                                                        postId = null,
+                                                        fid = null,
+                                                        threadTitle = history.threadTitle,
+                                                        authorId = null,
+                                                        imageList = emptyList(),
+                                                        tagId = history.tagId,
+                                                        tagName = history.tagName,
+                                                        tagPage = history.tagPage,
+                                                        tagThreads = emptyList(),
+                                                        initialPage = history.threadImagePageIndex + 1
                                                     )
                                                 )
                                             }
+                                        },
+                                        onCoverClick = {
+                                            if (mode == PageMode.Select) {
+                                                selectedItems = if (history in selectedItems) {
+                                                    selectedItems - history
+                                                } else {
+                                                    selectedItems + history
+                                                }
+                                            } else {
+                                                navigator.navigate(
+                                                    ITagDetailScreen(
+                                                        tagId = history.tagId,
+                                                        title = history.tagName,
+                                                        page = history.tagPage
+                                                    )
+                                                )
+                                            }
+                                        },
+                                        onFavorite = { scope.launch { snackbarHostState.showSnackbar("收藏功能開發中") } },
+                                        onDelete = {
+                                            scope.launch {
+                                                readHistoryRepo.deleteMangaTagHistory(history.tagId)
+                                                loadPage(currentPage)
+                                                snackbarHostState.showSnackbar("已刪除紀錄")
+                                            }
                                         }
-                                    },
-                                    onDelete = {
-                                        scope.launch {
-                                            readHistoryRepo.deleteHistory(history.threadId)
-                                            loadPage(currentPage)
-                                            snackbarHostState.showSnackbar("已刪除紀錄")
-                                        }
-                                    },
-                                    onFavorite = {
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("收藏功能開發中")
-                                        }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
 
@@ -542,7 +600,7 @@ private fun SearchTopBar(
     }
 }
 
-/** Select mode top bar: selected count + 全選 + 刪除選取 + 清空紀錄 + 取消 */
+/** Select mode top bar: selected count + Select All + Delete Selected + Clear All + Cancel */
 @Composable
 private fun SelectTopBar(
     onSelectAll: () -> Unit,
@@ -567,7 +625,7 @@ private fun SelectTopBar(
             modifier = Modifier.weight(1f)
         )
 
-        /** 全選 */
+        /** Select All */
         Surface(
             onClick = onSelectAll,
             shape = RoundedCornerShape(10.dp),
@@ -582,7 +640,7 @@ private fun SelectTopBar(
             )
         }
 
-        /** 刪除選取 */
+        /** Delete Selected */
         if (selectedCount > 0) {
             Surface(
                 onClick = onDeleteSelected,
@@ -599,7 +657,7 @@ private fun SelectTopBar(
             }
         }
 
-        /** 清空紀錄 */
+        /** Clear All */
         Surface(
             onClick = onClearAll,
             shape = RoundedCornerShape(10.dp),
@@ -614,7 +672,7 @@ private fun SelectTopBar(
             )
         }
 
-        /** 取消 */
+        /** Cancel */
         Surface(
             onClick = onCancel,
             shape = RoundedCornerShape(10.dp),
@@ -632,11 +690,11 @@ private fun SelectTopBar(
 }
 
 /** Group history items by date label */
-private fun groupByDate(items: List<ThreadReadingHistory>): List<Pair<String, List<ThreadReadingHistory>>> {
+private fun groupByDate(items: List<ReadHistoryRepository.AnyReadingHistory>): List<Pair<String, List<ReadHistoryRepository.AnyReadingHistory>>> {
     val now = currentTimeMillis()
     val oneDayMs = 24 * 60 * 60 * 1000L
 
-    val grouped = mutableMapOf<String, MutableList<ThreadReadingHistory>>()
+    val grouped = mutableMapOf<String, MutableList<ReadHistoryRepository.AnyReadingHistory>>()
 
     for (item in items) {
         val diffMs = now - item.lastVisitTime

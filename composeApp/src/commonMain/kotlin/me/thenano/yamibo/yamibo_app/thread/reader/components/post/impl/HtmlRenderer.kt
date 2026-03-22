@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader.post.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke

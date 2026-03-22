@@ -21,6 +21,7 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
             /** Navigator Logic */
             val navigator = remember { ComposableNavigator() }
             onBackPressedDispatcher.addCallback(this) {
-                val exitInterval = 2000L // 2 秒
+                val exitInterval = 2000L // 2 seconds
                 if (navigator.pop()) return@addCallback
 
                 val now = System.currentTimeMillis()
@@ -67,6 +68,7 @@ class MainActivity : ComponentActivity() {
             val dbFactory = remember { DatabaseFactory(context) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }
+            val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient) }
 
             /** Provide Repositories */
             CompositionLocalProvider(
@@ -77,6 +79,7 @@ class MainActivity : ComponentActivity() {
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
                 LocalThemeRepository provides themeRepository,
+                LocalTagRepository provides tagRepository,
             ) {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()

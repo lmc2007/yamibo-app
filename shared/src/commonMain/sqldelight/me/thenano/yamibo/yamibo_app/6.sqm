@@ -1,0 +1,1 @@
+ALTER TABLE MangaTagReadingHistory ADD COLUMN coverUrl TEXT;

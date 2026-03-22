@@ -15,22 +15,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.__info__tag
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.book
+import org.jetbrains.compose.resources.painterResource
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.TagMangaReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 
-/** Single history entry card */
+/** Single history entry card for Tag Manga reader */
 @Composable
-fun ReadHistoryCard(
-    history: ThreadReadingHistory,
+fun TagMangaHistoryCard(
+    history: TagMangaReadingHistory,
     timeLabel: String,
     isSelectMode: Boolean = false,
     isSelected: Boolean = false,
@@ -78,7 +79,7 @@ fun ReadHistoryCard(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            /** Thread cover */
+            /** Fixed Icon for Manga / Image or Cover Image */
             Card(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
@@ -90,37 +91,17 @@ fun ReadHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                Log.i(__info__tag("threadCover"), "${history.threadName} : ${history.threadCover.toString()}")
-                if (!history.threadCover.isNullOrEmpty()) {
+                if (history.coverUrl != null) {
                     SubcomposeAsyncImage(
-                        model = rememberImageRequest(url = history.threadCover!!),
-                        contentDescription = "thread cover",
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop,
-                        error = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = YamiboIcons.History,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(24.dp),
-                                    tint = colors.brownPrimary.copy(alpha = 0.5f)
-                                )
-                            }
-                        },
-                        loading = {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(
-                                    color = colors.brownPrimary,
-                                    modifier = Modifier.size(16.dp),
-                                    strokeWidth = 1.5.dp
-                                )
-                            }
-                        }
+                        model = rememberImageRequest(url = history.coverUrl!!),
+                        contentDescription = "Cover Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = YamiboIcons.History,
+                            painter = painterResource(Res.drawable.book),
                             contentDescription = null,
                             modifier = Modifier.size(24.dp),
                             tint = colors.brownPrimary.copy(alpha = 0.5f)
@@ -134,32 +115,26 @@ fun ReadHistoryCard(
             /** Title + details */
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = history.threadName,
+                    text = history.tagName, // BIG text = Tag Name
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textDark,
                 )
                 Spacer(Modifier.height(4.dp))
                 
-                /** Reading Progress (post title) */
-                val progress = if (history.postTitle.isNotEmpty()) {
-                    "P.${history.page} ${history.postTitle}"
-                } else {
-                    "第 ${history.page} 頁"
-                }
+                /** Reading Progress */
                 Text(
-                    text = progress,
+                    text = history.threadTitle, // SMALL text = Thread Name
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.textDark.copy(alpha = 0.75f),
                 )
+                
                 Spacer(Modifier.height(2.dp))
 
-                /** Forum & Time */
+                /** Details & Time */
                 val metaInfo = buildString {
-                    if (history.forumName != null) {
-                        append("#${history.forumName}  ·  ")
-                    }
+                    append("進度: ${history.threadImagePageIndex + 1} / ${history.threadImageTotalPages}  ·  ")
                     append(timeLabel)
                 }
                 Text(
@@ -211,4 +186,3 @@ fun ReadHistoryCard(
         }
     }
 }
-

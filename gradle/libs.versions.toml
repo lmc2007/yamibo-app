@@ -23,7 +23,7 @@ ktorClientCore = "3.4.1"
 logback = "1.5.20"
 coil3 = "3.4.0"
 securityCrypto = "1.1.0"
-yamiboApi = "1.0.15"
+yamiboApi = "1.0.18"
 sqldelight = "2.2.1"
 
 [libraries]

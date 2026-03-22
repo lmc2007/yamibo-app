@@ -16,12 +16,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
@@ -62,10 +64,10 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                     val avatarUrl = user.avatarUrl
                     if (!avatarUrl.isNullOrEmpty()) {
                         SubcomposeAsyncImage(
-                            model = avatarUrl,
+                            model = rememberImageRequest(url = avatarUrl),
                             contentDescription = "Avatar",
                             modifier = Modifier.size(28.dp).clip(CircleShape),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            contentScale = ContentScale.Crop,
                             error = {
                                 Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
                             },
@@ -152,7 +154,7 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
 
 /** Stat badge (views/replies) */
 @Composable
-private fun StatBadge(icon: ImageVector, value: String) {
+fun StatBadge(icon: ImageVector, value: String) {
     val colors = YamiboTheme.colors
     Surface(shape = RoundedCornerShape(12.dp), color = colors.orangeAccent.copy(alpha = 0.15f)) {
         Row(

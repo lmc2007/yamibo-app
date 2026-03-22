@@ -9,32 +9,64 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import android.graphics.Bitmap
+import coil3.imageLoader
+import coil3.network.NetworkHeaders
+import coil3.network.httpHeaders
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.BitmapImage
 import coil3.PlatformContext
-import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
 
-private val client = HttpClient()
-
 private suspend fun downloadImage(context: Context, url: String, cookie: String, referer: String, fileName: String): File? {
     return withContext(Dispatchers.IO) {
         try {
-            val response: HttpResponse = client.get(url) {
-                headers {
-                    append("Cookie", cookie)
-                    append("Referer", referer)
+            val request = ImageRequest.Builder(context)
+                .data(url)
+                .httpHeaders(
+                    NetworkHeaders.Builder()
+                        .add("Cookie", cookie)
+                        .add("Referer", referer)
+                        .build()
+                )
+                .build()
+
+            val result = context.imageLoader.execute(request)
+            if (result is SuccessResult) {
+                val diskCacheKey = result.diskCacheKey
+                if (diskCacheKey != null) {
+                    val snapshot = context.imageLoader.diskCache?.openSnapshot(diskCacheKey)
+                    if (snapshot != null) {
+                        val sourcePath = snapshot.data
+                        val imagesDir = File(context.cacheDir, "images")
+                        imagesDir.mkdirs()
+                        val file = File(imagesDir, fileName)
+                        val sourceFile = sourcePath.toFile()
+                        sourceFile.copyTo(file, overwrite = true)
+                        snapshot.close()
+                        return@withContext file
+                    }
+                }
+                
+                // Fallback: compress decoded bitmap
+                val image = result.image
+                val bitmap = (image as? BitmapImage)?.bitmap
+                if (bitmap != null) {
+                    val imagesDir = File(context.cacheDir, "images")
+                    imagesDir.mkdirs()
+                    val file = File(imagesDir, fileName)
+                    FileOutputStream(file).use { 
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
+                    }
+                    return@withContext file
                 }
             }
-            val bytes = response.readBytes()
-            val imagesDir = File(context.cacheDir, "images")
-            imagesDir.mkdirs()
-            val file = File(imagesDir, fileName)
-            FileOutputStream(file).use { it.write(bytes) }
-            file
+            withContext(Dispatchers.Main) { Toast.makeText(context, "下載圖片失敗", Toast.LENGTH_SHORT).show() }
+            null
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) { Toast.makeText(context, "下載圖片失敗", Toast.LENGTH_SHORT).show() }
@@ -69,41 +101,76 @@ actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie
 }
 
 actual suspend fun saveImageToGallery(context: PlatformContext, url: String, cookie: String, referer: String) {
-    val androidContext = context as Context
     withContext(Dispatchers.IO) {
         try {
-            val response: HttpResponse = client.get(url) {
-                headers {
-                    append("Cookie", cookie)
-                    append("Referer", referer)
-                }
-            }
-            val bytes = response.readBytes()
-            val fileName = "yamibo_${System.currentTimeMillis()}.jpg"
+            val request = ImageRequest.Builder(context)
+                .data(url)
+                .httpHeaders(
+                    NetworkHeaders.Builder()
+                        .add("Cookie", cookie)
+                        .add("Referer", referer)
+                        .build()
+                )
+                .build()
 
-            val contentValues = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Yamibo")
-            }
+            val result = context.imageLoader.execute(request)
+            if (result is SuccessResult) {
+                val fileName = "yamibo_${System.currentTimeMillis()}.jpg"
 
-            val uri = androidContext.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            if (uri != null) {
-                androidContext.contentResolver.openOutputStream(uri)?.use { 
-                    it.write(bytes) 
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Yamibo")
                 }
-                withContext(Dispatchers.Main) { 
-                    Toast.makeText(androidContext, "已儲存圖片至相簿", Toast.LENGTH_SHORT).show() 
+
+                val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (uri != null) {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        val diskCacheKey = result.diskCacheKey
+                        var handled = false
+                        if (diskCacheKey != null) {
+                            val snapshot = context.imageLoader.diskCache?.openSnapshot(diskCacheKey)
+                            if (snapshot != null) {
+                                val sourceFile = snapshot.data.toFile()
+                                sourceFile.inputStream().use { it.copyTo(outputStream) }
+                                snapshot.close()
+                                handled = true
+                            }
+                        }
+                        
+                        if (!handled) {
+                            val image = result.image
+                            val bitmap = (image as? BitmapImage)?.bitmap
+                            if (bitmap != null) {
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                handled = true
+                            }
+                        }
+                        
+                        if (handled) {
+                            withContext(Dispatchers.Main) { 
+                                Toast.makeText(context, "已儲存圖片至相簿", Toast.LENGTH_SHORT).show()
+                            }
+                        } else {
+                            withContext(Dispatchers.Main) { 
+                                Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    withContext(Dispatchers.Main) { 
+                        Toast.makeText(context, "儲存失敗", Toast.LENGTH_SHORT).show()
+                    }
                 }
             } else {
                 withContext(Dispatchers.Main) { 
-                    Toast.makeText(androidContext, "儲存失敗", Toast.LENGTH_SHORT).show() 
+                    Toast.makeText(context, "下載失敗", Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) { 
-                Toast.makeText(androidContext, "下載失敗", Toast.LENGTH_SHORT).show() 
+                Toast.makeText(context, "下載失敗", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.ProfilePage
 import coil3.compose.SubcomposeAsyncImage
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.YamiboRoute
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
@@ -225,7 +226,7 @@ private fun AvatarPlaceholder(
     avatarUrl: String,
 ) {
     SubcomposeAsyncImage(
-        model = avatarUrl,
+        model = rememberImageRequest(url = avatarUrl),
         contentDescription = null,
         modifier = Modifier.size(72.dp).clip(CircleShape),
         contentScale = ContentScale.Crop,

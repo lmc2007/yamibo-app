@@ -33,7 +33,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderBottomBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
-import me.thenano.yamibo.yamibo_app.thread.reader.post.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 private sealed interface CommentState {
