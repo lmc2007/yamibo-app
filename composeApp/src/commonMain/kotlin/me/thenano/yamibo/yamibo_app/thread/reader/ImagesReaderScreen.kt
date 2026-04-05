@@ -45,6 +45,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -102,10 +103,10 @@ fun ImagesReaderScreen(
 
     val isMangaForum = remember(activeFid, tagId) { tagId != null || (activeFid?.let { YamiboForum.isMangaForum(it) } == true) }
 
-    // TODO: 目前還沒有 settings repository
-    // val settingsRepo = LocalSettingsRepository.current
-    // val readingMode by settingsRepo.readingMode.collectAsState(ReadingMode.SINGLE_LTR)
-    var readingMode by remember { mutableStateOf(ReadingMode.SINGLE_LTR) }
+    val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
+    val mangaSettings by mangaSettingsRepo.settings.collectAsState()
+    
+    val readingMode = runCatching { ReadingMode.valueOf(mangaSettings.readingMode) }.getOrDefault(ReadingMode.SINGLE_LTR)
     val isRtl = readingMode == ReadingMode.SINGLE_RTL
     val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
     val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
@@ -116,7 +117,7 @@ fun ImagesReaderScreen(
     var startFromLastPage by remember { mutableStateOf(false) }
 
     /** State */
-    var touchZoneLayout by remember { mutableStateOf(TouchZoneLayout.L_SHAPE) }
+    val touchZoneLayout = runCatching { TouchZoneLayout.valueOf(mangaSettings.touchZone) }.getOrDefault(TouchZoneLayout.L_SHAPE)
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showTouchZonePreview by remember { mutableStateOf(false) }
@@ -1052,8 +1053,8 @@ fun ImagesReaderScreen(
             visible = showSettings,
             currentReadingMode = readingMode,
             currentTouchZoneLayout = touchZoneLayout,
-            onReadingModeChange = { mode -> readingMode = mode; resetZoom() },
-            onTouchZoneLayoutChange = { layout -> touchZoneLayout = layout; showTouchZonePreview = true },
+            onReadingModeChange = { mode -> mangaSettingsRepo.update { it.copy(readingMode = mode.name) }; resetZoom() },
+            onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.update { it.copy(touchZone = layout.name) }; showTouchZonePreview = true },
             onDismiss = { showSettings = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )

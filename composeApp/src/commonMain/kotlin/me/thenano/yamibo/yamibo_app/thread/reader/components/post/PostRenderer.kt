@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,6 +33,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.CommentRe
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.PollRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.RateRenderer
+import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 
 @Composable
 @Suppress("AssignedValueIsNeverRead")
@@ -47,8 +49,11 @@ fun PostRenderer(
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
     val colors = YamiboTheme.colors
+    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
+    val widthFraction = novelSettings.contentWidthFraction
 
-    Column(modifier = modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+    Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+    Column(modifier = Modifier.fillMaxWidth(widthFraction).padding(horizontal = 16.dp, vertical = 8.dp)) {
         // Title
         if (post.floor == 1 && !threadTitle.isNullOrEmpty()) {
             Text(
@@ -169,6 +174,7 @@ fun PostRenderer(
                 }
             }
         }
+    }
     }
 
     if (showRateDialog) {

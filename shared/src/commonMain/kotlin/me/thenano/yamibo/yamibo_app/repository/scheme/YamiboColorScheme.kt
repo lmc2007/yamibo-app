@@ -281,7 +281,7 @@ sealed class YamiboColorScheme {
 
     companion object {
         /** All available themes, for UI theme picker */
-        val all: List<YamiboColorScheme> =
+        val all: List<YamiboColorScheme> by lazy {
             listOf(
                 Default,
                 DefaultDark,
@@ -300,5 +300,6 @@ sealed class YamiboColorScheme {
                 Yotsuba,
                 Monochrome,
             )
+        }
     }
 }

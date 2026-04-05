@@ -16,6 +16,10 @@ import me.thenano.yamibo.yamibo_app.repository.IOSTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
+import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */
@@ -35,6 +39,10 @@ fun MainViewController() = ComposeUIViewController {
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }
     val tagRepository = remember { IOSTagRepository(cookieStore, yamiboClient) }
+    val settingsStore = remember { IOSSettingsStore() }
+    val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
+    val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
+    val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
     /** Provide Repositories */
     CompositionLocalProvider(
@@ -46,5 +54,8 @@ fun MainViewController() = ComposeUIViewController {
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalThemeRepository provides themeRepository,
         LocalTagRepository provides tagRepository,
+        LocalAppSettingsRepository provides appSettingsRepository,
+        LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
+        LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
     ) { App() }
 }

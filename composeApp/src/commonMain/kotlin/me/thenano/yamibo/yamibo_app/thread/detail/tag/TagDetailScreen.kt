@@ -18,6 +18,7 @@ import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.TagPage
 import io.github.littlesurvival.dto.value.TagId
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -58,8 +59,9 @@ internal fun TagDetailScreen(
     var currentTagName by remember { mutableStateOf(tagName) }
     var isRefreshing by remember { mutableStateOf(false) }
 
-    // Manga mode (TODO: persist to AppSettingRepo)
-    var isMangaMode by remember { mutableStateOf(false) }
+    val appSettingsRepo = LocalAppSettingsRepository.current
+    val appSettings by appSettingsRepo.settings.collectAsState()
+    val isMangaMode = appSettings.isMangaMode
 
     // Reading history
     var mangaTagHistory by remember {
@@ -285,7 +287,7 @@ internal fun TagDetailScreen(
                             tagName = currentTagName,
                             coverUrl = coverUrl(),
                             isMangaMode = isMangaMode,
-                            onMangaModeChange = { isMangaMode = it },
+                            onMangaModeChange = { appSettingsRepo.update { s -> s.copy(isMangaMode = it) } },
                             hasReadingHistory = mangaTagHistory != null,
                             readingProgressText = readingProgressText,
                             onContinueRead = {

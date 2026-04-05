@@ -46,6 +46,8 @@ import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
+import me.thenano.yamibo.yamibo_app.event.AppEventBus
+import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 
 /** Sealed state for the home page */
 private sealed interface HomeState {
@@ -82,9 +84,23 @@ fun HomePageScreen() {
         val cached = forumRepository.getCachedHomePage()
         if (cached != null) {
             state = HomeState.Success(cached)
-            return@LaunchedEffect
+        } else {
+            mapFetchResultState()
         }
-        mapFetchResultState()
+    }
+
+    /** Event listening */
+    LaunchedEffect(Unit) {
+        AppEventBus.events.collect { event ->
+            if (event == LoginSuccessEvent) {
+                isRefreshing = true
+                val result = forumRepository.fetchHomePage()
+                if (result is YamiboResult.Success) {
+                    state = HomeState.Success(result.value)
+                }
+                isRefreshing = false
+            }
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(colors.creamBackground)) {

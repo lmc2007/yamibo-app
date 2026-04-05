@@ -8,6 +8,9 @@ import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 
 val LocalAuthRepository =
     compositionLocalOf<AuthRepository> { error("LocalAuthRepository not provided") }
@@ -29,3 +32,12 @@ val LocalReadHistoryRepository =
 
 val LocalTagRepository =
     compositionLocalOf<TagRepository> { error("LocalTagRepository not provided") }
+
+val LocalAppSettingsRepository =
+    compositionLocalOf<AppSettingsRepository> { error("LocalAppSettingsRepository not provided") }
+
+val LocalNovelReaderSettingsRepository =
+    compositionLocalOf<NovelReaderSettingsRepository> { error("LocalNovelReaderSettingsRepository not provided") }
+
+val LocalMangaReaderSettingsRepository =
+    compositionLocalOf<MangaReaderSettingsRepository> { error("LocalMangaReaderSettingsRepository not provided") }

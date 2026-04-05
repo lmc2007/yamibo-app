@@ -25,6 +25,10 @@ import me.thenano.yamibo.yamibo_app.repository.AndroidTagRepository
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
+import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L
@@ -69,6 +73,10 @@ class MainActivity : ComponentActivity() {
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }
             val tagRepository = remember { AndroidTagRepository(cookieStore, yamiboClient) }
+            val settingsStore = remember { AndroidSettingsStore(context) }
+            val appSettingsRepository = remember { AppSettingsRepository(settingsStore) }
+            val novelReaderSettingsRepository = remember { NovelReaderSettingsRepository(settingsStore) }
+            val mangaReaderSettingsRepository = remember { MangaReaderSettingsRepository(settingsStore) }
 
             /** Provide Repositories */
             CompositionLocalProvider(
@@ -80,6 +88,9 @@ class MainActivity : ComponentActivity() {
                 LocalReadHistoryRepository provides readHistoryRepository,
                 LocalThemeRepository provides themeRepository,
                 LocalTagRepository provides tagRepository,
+                LocalAppSettingsRepository provides appSettingsRepository,
+                LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
+                LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
             ) {
                 /** Color system bars to match active theme */
                 val scheme = LocalThemeRepository.current.getColorScheme()

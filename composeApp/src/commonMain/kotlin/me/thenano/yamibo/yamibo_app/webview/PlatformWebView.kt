@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
-import me.thenano.yamibo.yamibo_app.auth.LoadingOverlay
+import me.thenano.yamibo.yamibo_app.profile.LoadingOverlay
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme

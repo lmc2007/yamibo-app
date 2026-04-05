@@ -1,9 +1,11 @@
 package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
@@ -33,7 +35,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.__info__tag
@@ -46,6 +50,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
+import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
@@ -90,6 +95,7 @@ internal fun ThreadReaderScreen(
     val loadedPostsByPage = remember { mutableStateMapOf<Int, List<Post>>() }
 
     var showMenu by remember { mutableStateOf(false) }
+    var showSettingsPanel by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val authRepo = LocalAuthRepository.current
@@ -749,9 +755,8 @@ internal fun ThreadReaderScreen(
                         }
                     },
                     onSettings = {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("設定功能開發中")
-                        }
+                        showSettingsPanel = true
+                        showMenu = false
                     },
                     showMangaReader = showMangaReader,
                     onMangaReader = {
@@ -772,6 +777,33 @@ internal fun ThreadReaderScreen(
                             )
                         }
                     },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+
+                // Navigation Bar blocking scrim if settings are open
+                if (showSettingsPanel) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) { showSettingsPanel = false }
+                    )
+                }
+
+                val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+                val appSettingsRepo = LocalAppSettingsRepository.current
+                val novelSettings by novelSettingsRepo.settings.collectAsState()
+                val appSettings by appSettingsRepo.settings.collectAsState()
+
+                NovelReaderSettingsPanel(
+                    visible = showSettingsPanel,
+                    settings = novelSettings,
+                    themeSettings = appSettings.theme,
+                    onSettingsChange = { newSettings -> novelSettingsRepo.update { newSettings } },
+                    onThemeChange = { newTheme -> appSettingsRepo.update { it.copy(theme = newTheme) } },
+                    onDismiss = { showSettingsPanel = false },
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }

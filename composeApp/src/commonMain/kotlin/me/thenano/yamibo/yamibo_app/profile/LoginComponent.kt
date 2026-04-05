@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.auth
+package me.thenano.yamibo.yamibo_app.profile
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState

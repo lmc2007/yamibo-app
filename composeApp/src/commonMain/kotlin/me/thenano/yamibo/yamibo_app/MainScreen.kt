@@ -23,7 +23,7 @@ import me.thenano.yamibo.yamibo_app.home.HomePageBottomBar
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
-import me.thenano.yamibo.yamibo_app.auth.ProfilePage
+import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 

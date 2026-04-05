@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.auth
+package me.thenano.yamibo.yamibo_app.profile
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -7,10 +7,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.UIKitView
 import io.github.littlesurvival.YamiboRoute
+import io.github.littlesurvival.core.YamiboResult
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.ObjCSignatureOverride
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.event.AppEventBus
+import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLRequest
 import platform.WebKit.WKNavigation
@@ -77,7 +80,9 @@ actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
         authRepo.startLoginDetect(
             onSuccess = {
                 val status = authRepo.fetchStatus()
-                // Do something on success if needed
+                if (status is YamiboResult.Success) {
+                    AppEventBus.emit(LoginSuccessEvent)
+                }
                 navigator.pop()
             },
             onTimeOut = {

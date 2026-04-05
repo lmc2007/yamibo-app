@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.value.ThreadId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
@@ -73,6 +74,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
     val colors = YamiboTheme.colors
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.current
+    
+    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
 
     when (block) {
         is HtmlBlock.Text -> {
@@ -84,8 +87,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 text = block.annotatedString,
                 style = TextStyle(
                     color = colors.textDark,
-                    fontSize = 16.sp,
-                    lineHeight = 26.sp,
+                    fontSize = novelSettings.fontSize.sp,
+                    lineHeight = (novelSettings.fontSize * novelSettings.lineSpacing).sp,
                     textAlign = block.textAlign
                 ),
                 modifier = Modifier
@@ -378,8 +381,8 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                                 text = innerBlock.annotatedString,
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
-                                                                    fontSize = 13.sp,
-                                                                    lineHeight = 18.sp,
+                                                                    fontSize = (novelSettings.fontSize - 3).coerceAtLeast(10).sp,
+                                                                    lineHeight = ((novelSettings.fontSize - 3).coerceAtLeast(10) * novelSettings.lineSpacing).sp,
                                                                     fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
                                                                     textAlign = innerBlock.textAlign
                                                                 )

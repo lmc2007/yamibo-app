@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.PostComment
+import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
@@ -23,6 +26,7 @@ fun CommentRenderer(
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
+    val novelSettings by LocalNovelReaderSettingsRepository.current.settings.collectAsState()
     if (comments.isEmpty()) return
 
     Card(
@@ -92,8 +96,8 @@ fun CommentRenderer(
                         Text(
                             text = comment.message,
                             color = colors.textDark,
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp
+                            fontSize = (novelSettings.fontSize - 2).coerceAtLeast(10).sp,
+                            lineHeight = ((novelSettings.fontSize - 2).coerceAtLeast(10) * novelSettings.lineSpacing).sp,
                         )
                     }
                 }

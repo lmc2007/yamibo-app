@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.auth
+package me.thenano.yamibo.yamibo_app.profile
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
@@ -17,6 +17,8 @@ import io.github.littlesurvival.core.YamiboResult
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.event.AppEventBus
+import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 
 private const val MobileUserAgent =
     "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
@@ -85,6 +87,8 @@ actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
                 val status = authRepo.fetchStatus()
                 if (status !is YamiboResult.Success) {
                     Toast.makeText(context, status.message(), Toast.LENGTH_LONG).show()
+                } else {
+                    AppEventBus.emit(LoginSuccessEvent)
                 }
                 navigator.pop()
             },
