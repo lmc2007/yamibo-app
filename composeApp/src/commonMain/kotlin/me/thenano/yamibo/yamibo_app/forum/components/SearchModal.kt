@@ -46,7 +46,6 @@ private sealed interface SearchState {
 
 /** Full-screen search modal */
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("AssignedValueIsNeverRead")
 @Composable
 fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSummary) -> Unit) {
     val colors = YamiboTheme.colors

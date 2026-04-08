@@ -256,11 +256,9 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             fid = fid,
             onDismiss = {
                 /** Just for making ide ignore this issue, the code works well */
-                @Suppress("AssignedValueIsNeverRead")
                 showSearch = false
             },
             onThreadClick = { thread ->
-                @Suppress("AssignedValueIsNeverRead")
                 showSearch = false
                 if (YamiboForum.isNovelForum(fid)) {
                     navigator.navigate(

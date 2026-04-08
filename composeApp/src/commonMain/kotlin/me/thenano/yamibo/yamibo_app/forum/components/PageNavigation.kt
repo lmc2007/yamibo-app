@@ -70,13 +70,11 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
             currentPage = current,
             totalPages = total,
             onPageSelected = { page ->
-                //Supress just for ignore ide clean up code warning, it's work fine.
-                @Suppress("AssignedValueIsNeverRead")
+                //supress just for ignore ide clean up code warning, it's work fine.
                 showPagePicker = false
                 onPageChange(page)
             },
             onDismiss = {
-                @Suppress("AssignedValueIsNeverRead")
                 showPagePicker = false
             }
         )

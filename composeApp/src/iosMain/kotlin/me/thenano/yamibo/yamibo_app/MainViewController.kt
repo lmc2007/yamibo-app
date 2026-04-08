@@ -7,6 +7,7 @@ import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.IOSAuthRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSForumRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
@@ -34,6 +35,7 @@ fun MainViewController() = ComposeUIViewController {
     val authRepository = remember { IOSAuthRepository(cookieStore, userStore, yamiboClient) }
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient) }
+    val favoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository() }
     val dbFactory = remember { DatabaseFactory() }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
@@ -50,6 +52,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalAuthRepository provides authRepository,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
+        LocalFavoriteRepository provides favoriteRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalThemeRepository provides themeRepository,

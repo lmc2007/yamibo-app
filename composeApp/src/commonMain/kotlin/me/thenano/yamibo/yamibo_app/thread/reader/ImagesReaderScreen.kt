@@ -66,8 +66,10 @@ import me.thenano.yamibo.yamibo_app.util.state
 import coil3.compose.LocalPlatformContext
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
+import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
+@Suppress("DuplicatedCode")
 @Composable
 fun ImagesReaderScreen(
     tid: ThreadId,
@@ -226,40 +228,41 @@ fun ImagesReaderScreen(
                         
                         // Coerce the initial page against the actual loaded bounds now
                         currentPage = currentPage.coerceIn(minPage(), maxPage())
-                        
+
                         if (startFromLastPage && actualImageList.isNotEmpty()) {
                             snapNextTransition = true
                             currentPage = actualImageList.size - 1
                         } else if (loadHistory) {
                             var didRestore = false
+
+                            fun onRestoreScrollListState(history: ReadHistoryRepository.AnyReadingHistory) {
+                                when(history) {
+                                    is ReadHistoryRepository.TagMangaReadingHistory,is ReadHistoryRepository.TagMangaReadingHistory -> {
+                                        snapNextTransition = true
+                                        val finalPageToRestore = if (history.threadImagePageIndex >= actualImageList.size) 0 else history.threadImagePageIndex.coerceIn(minPage(), totalContentPages())
+                                        currentPage = finalPageToRestore
+                                        if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
+                                            scope.launch {
+                                                while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
+                                                scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
+                                            }
+                                        }
+                                        didRestore = true
+                                    }
+                                    else -> return
+                                }
+                            }
+
                             if (tagId != null) {
                                 val history = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
                                 if (history != null && history.threadId == activeTid) {
-                                    snapNextTransition = true
-                                    val finalPageToRestore = if (history.threadImagePageIndex >= actualImageList.size) 0 else history.threadImagePageIndex.coerceIn(minPage(), totalContentPages())
-                                    currentPage = finalPageToRestore
-                                    if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
-                                        scope.launch {
-                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
-                                            scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
-                                        }
-                                    }
-                                    didRestore = true
+                                    onRestoreScrollListState(history)
                                 }
                             }
                             if (!didRestore) {
                                 val history = historyRepo.getImagePosition(p.pid)
                                 if (history != null) {
-                                    snapNextTransition = true
-                                    val finalPageToRestore = if (history.pageIndex >= actualImageList.size) 0 else history.pageIndex.coerceIn(minPage(), totalContentPages())
-                                    currentPage = finalPageToRestore
-                                    if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
-                                        scope.launch {
-                                            while (scrollListState.layoutInfo.totalItemsCount == 0) delay(20.milliseconds)
-                                            scrollListState.scrollToItem(history.firstVisibleItemIndex!!, history.firstVisibleItemOffset ?: 0)
-                                        }
-                                    }
-                                    didRestore = true
+                                    onRestoreScrollListState(history)
                                 }
                             }
                             
@@ -637,14 +640,14 @@ fun ImagesReaderScreen(
                 // 3. Zoom and Pan Handler
                 .pointerInput(readingMode) {
                     awaitEachGesture {
-                        var pan = Offset.Zero
+                        var pan: Offset
                         val down = awaitFirstDown(requireUnconsumed = false)
                         var currentScale = scaleAnim.value
                         var currentOffsetX = offsetXAnim.value
                         var currentOffsetY = offsetYAnim.value
                         
-                        var boundX = 0f
-                        var boundY = 0f
+                        var boundX: Float
+                        var boundY: Float
                         var lastMoveTime = down.uptimeMillis
                         var isStaleFling = false
                         var isPanning = false
@@ -734,9 +737,9 @@ fun ImagesReaderScreen(
                         // ── Inertia / Fling Animation ──
                         if (currentScale > 1.1f && !isStaleFling) {
                             val velocity = velocityTracker.calculateVelocity()
-                            if (kotlin.math.abs(velocity.x) > 300f || (!isScrollMode && kotlin.math.abs(velocity.y) > 300f)) {
+                            if (abs(velocity.x) > 300f || (!isScrollMode && abs(velocity.y) > 300f)) {
                                 scope.launch {
-                                    if (kotlin.math.abs(velocity.x) > 300f) {
+                                    if (abs(velocity.x) > 300f) {
                                         launch {
                                             offsetXAnim.animateDecay(
                                                 initialVelocity = velocity.x * 0.4f,
@@ -744,7 +747,7 @@ fun ImagesReaderScreen(
                                             )
                                         }
                                     }
-                                    if (!isScrollMode && kotlin.math.abs(velocity.y) > 300f) {
+                                    if (!isScrollMode && abs(velocity.y) > 300f) {
                                         launch {
                                             offsetYAnim.animateDecay(
                                                 initialVelocity = velocity.y * 0.4f,

@@ -100,8 +100,8 @@ interface ReadHistoryRepository {
         val totalPages: Int,
         val firstVisibleItemIndex: Int? = null,
         val firstVisibleItemOffset: Int? = null,
-        val lastVisitTime: Long
-    )
+        override val lastVisitTime: Long
+    ) : AnyReadingHistory
 
     /** Save or update a position for an image reading session */
     suspend fun saveImagePosition(history: ImageReadingHistory)

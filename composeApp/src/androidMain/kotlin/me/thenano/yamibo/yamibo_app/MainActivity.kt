@@ -16,6 +16,7 @@ import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidForumRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
@@ -68,6 +69,7 @@ class MainActivity : ComponentActivity() {
             }
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient) }
+            val favoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository() }
             val dbFactory = remember { DatabaseFactory(context) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
@@ -84,6 +86,7 @@ class MainActivity : ComponentActivity() {
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
+                LocalFavoriteRepository provides favoriteRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
                 LocalThemeRepository provides themeRepository,
