@@ -9,7 +9,13 @@ import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
 
 interface ForumRepository {
-    data class ForumCacheKey(val fid: Int, val page: Int)
+    data class ForumCacheKey(val fid: Int, val page: Int) {
+        fun toCacheKey(): String = "${fid}_${page}"
+
+        companion object {
+            fun keyPrefix(fid: Int): String = "${fid}_"
+        }
+    }
 
     suspend fun fetchHomePage(): YamiboResult<HomePage>
     suspend fun fetchForum(fid: ForumId, page: Int = 1): YamiboResult<ForumPage>

@@ -9,6 +9,7 @@ import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
+import kotlin.time.Duration.Companion.hours
 
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 
@@ -18,15 +19,19 @@ class AndroidForumRepository(
     diskCacheFactory: DiskCacheFactory
 ) : ForumRepository {
 
-    private val homeCache = diskCacheFactory.create<HomePage>("home_page", maxSize = 1, expirationMs = 12 * 60 * 60 * 1000L)
-    private val forumCache = diskCacheFactory.create<ForumPage>("forum_page", maxSize = 20, expirationMs = 24 * 60 * 60 * 1000L)
+    private val homeCache = diskCacheFactory.create<HomePage>("home_page", maxSize = 1, expiration = 12.hours)
+    private val forumCache = diskCacheFactory.create<ForumPage>("forum_page", maxSize = 20, expiration = 24.hours)
+
+    companion object {
+        private const val HOME_CACHE_KEY = "main"
+    }
 
     override suspend fun fetchHomePage(): YamiboResult<HomePage> {
         yamiboClient.setCookie(cookieStore.load() ?: "")
         val result = yamiboClient.fetchHomePage()
 
         if (result is YamiboResult.Success) {
-            homeCache.set("main", result.value)
+            homeCache.set(HOME_CACHE_KEY, result.value)
         }
         return result
     }
@@ -36,7 +41,7 @@ class AndroidForumRepository(
         val result = yamiboClient.fetchForumById(fid, page)
 
         if (result is YamiboResult.Success) {
-            forumCache.set("${fid.value}_$page", result.value)
+            forumCache.set(ForumRepository.ForumCacheKey(fid.value, page).toCacheKey(), result.value)
         }
         return result
     }
@@ -64,16 +69,16 @@ class AndroidForumRepository(
         return yamiboClient.fetchAddFavorite(forumId, formHash)
     }
 
-    override fun getCachedHomePage(): HomePage? = homeCache.get("main")
+    override fun getCachedHomePage(): HomePage? = homeCache.get(HOME_CACHE_KEY)
 
     override fun getCachedForumPage(fid: ForumId, page: Int): ForumPage? =
-        forumCache.get("${fid.value}_$page")
+        forumCache.get(ForumRepository.ForumCacheKey(fid.value, page).toCacheKey())
 
     override fun setCachedForumPage(fid: ForumId, page: Int, forumPage: ForumPage) {
-        forumCache.set("${fid.value}_$page", forumPage)
+        forumCache.set(ForumRepository.ForumCacheKey(fid.value, page).toCacheKey(), forumPage)
     }
 
     override fun clearCachedForum(fid: ForumId) {
-        forumCache.removeByPrefix("${fid.value}_")
+        forumCache.removeByPrefix(ForumRepository.ForumCacheKey.keyPrefix(fid.value))
     }
 }

@@ -45,3 +45,6 @@ val LocalNovelReaderSettingsRepository =
 
 val LocalMangaReaderSettingsRepository =
     compositionLocalOf<MangaReaderSettingsRepository> { error("LocalMangaReaderSettingsRepository not provided") }
+
+val LocalDiskCacheFactory =
+    compositionLocalOf<me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory> { error("LocalDiskCacheFactory not provided") }

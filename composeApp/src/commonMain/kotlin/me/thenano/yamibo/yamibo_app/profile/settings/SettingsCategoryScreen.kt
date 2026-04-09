@@ -1,30 +1,29 @@
 package me.thenano.yamibo.yamibo_app.profile.settings
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
-import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaReadingModeSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaTouchZoneSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelContentWidthSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelReaderPreviewSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
-import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
@@ -42,8 +41,11 @@ internal fun SettingsCategoryScreen(category: String) {
         "appearance" -> "外觀"
         "novel_reader" -> "小說閱讀器"
         "manga_reader" -> "漫畫閱讀器"
+        "storage" -> "數據與存儲"
         else -> "設定"
     }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     Scaffold(
         topBar = {
@@ -69,6 +71,7 @@ internal fun SettingsCategoryScreen(category: String) {
                 )
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = colors.creamBackground
     ) { paddingValues ->
         Column(
@@ -82,6 +85,7 @@ internal fun SettingsCategoryScreen(category: String) {
                 "appearance" -> AppearanceContent()
                 "novel_reader" -> NovelReaderContent()
                 "manga_reader" -> MangaReaderContent()
+                "storage" -> StorageContent(snackbarHostState)
             }
         }
     }
@@ -109,7 +113,7 @@ private fun AppearanceContent() {
 
     ThemeSelectorContent(
         currentMode = themeMode,
-        currentSchemeName = themeScheme,
+        currentScheme = themeScheme,
         onModeChange = { appSettingsRepo.themeMode.setValue(it) },
         onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) }
     )
@@ -119,96 +123,122 @@ private fun AppearanceContent() {
 
 @Composable
 private fun NovelReaderContent() {
-    val colors = YamiboTheme.colors
-    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
-    val fontSize = novelSettingsRepo.fontSize.state()
-    val lineSpacing = novelSettingsRepo.lineSpacing.state()
-    val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
-
     // Preview Area
     SectionLabel("預覽")
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.creamSurface)
-            .padding(16.dp),
-        contentAlignment = Alignment.TopCenter
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(contentWidthFraction)
-        ) {
-            Text(
-                text = PREVIEW_TEXT,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize * lineSpacing).sp,
-                color = colors.textDark
-            )
-        }
-    }
+    NovelReaderPreviewSetting()
 
     Spacer(Modifier.height(24.dp))
 
     // Font Size
     SectionLabel("字體大小")
-    SettingsSlider(
-        label = "文字大小",
-        value = fontSize.toFloat(),
-        valueRange = 10f..40f,
-        steps = 29,
-        valueDisplay = { "${it.toInt()} sp" },
-        onValueChange = { novelSettingsRepo.fontSize.setValue(it.toInt()) }
-    )
+    NovelFontSizeSetting()
 
     Spacer(Modifier.height(24.dp))
 
     // Line Spacing
     SectionLabel("行距")
-    SettingsSlider(
-        label = "行距比例",
-        value = lineSpacing,
-        valueRange = 1.0f..3.0f,
-        steps = 39,
-        valueDisplay = { "${(it * 100f).roundToInt() / 100f}x" },
-        onValueChange = { novelSettingsRepo.lineSpacing.setValue(it) }
-    )
+    NovelLineSpacingSetting()
 
     Spacer(Modifier.height(24.dp))
 
     // Content Width Fraction
     SectionLabel("頁寬")
-    SettingsSlider(
-        label = "內容寬度",
-        value = contentWidthFraction,
-        valueRange = 0.6f..1.0f,
-        steps = 39,
-        valueDisplay = { "${(it * 100f).roundToInt()}%" },
-        onValueChange = { novelSettingsRepo.contentWidthFraction.setValue(it) }
-    )
+    NovelContentWidthSetting()
 }
 
-// ─── Manga Reader ───
+// Manga Reader
 
 @Composable
 private fun MangaReaderContent() {
-    val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
-    val readingMode = mangaSettingsRepo.readingMode.state()
-    val touchZone = mangaSettingsRepo.touchZone.state()
-
     SectionLabel("閱讀模式")
-    SettingsChipRow(
-        options = MangaReaderSettingsRepository.readingModeOptions,
-        selectedValue = readingMode,
-        onSelect = { mangaSettingsRepo.readingMode.setValue(it) }
-    )
+    MangaReadingModeSetting()
 
     Spacer(Modifier.height(24.dp))
 
     SectionLabel("輕觸區域")
-    SettingsChipRow(
-        options = MangaReaderSettingsRepository.touchZoneOptions,
-        selectedValue = touchZone,
-        onSelect = { mangaSettingsRepo.touchZone.setValue(it) }
-    )
+    MangaTouchZoneSetting()
+}
+
+// Storage
+
+@Composable
+private fun StorageContent(snackbarHostState: SnackbarHostState) {
+    val colors = YamiboTheme.colors
+    val appSettingsRepo = LocalAppSettingsRepository.current
+    val diskCacheFactory = LocalDiskCacheFactory.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
+    var cacheSizeText by remember { mutableStateOf("計算中...") }
+    
+    LaunchedEffect(Unit) {
+        val size = diskCacheFactory.getTotalCacheSizeBytes() ?: 0L
+        cacheSizeText = if (size > 1024 * 1024) {
+            "${(size / (1024f * 1024f) * 100).roundToInt() / 100f} MB"
+        } else {
+            "${(size / 1024f * 100).roundToInt() / 100f} kB"
+        }
+    }
+
+    // Clear Cache Action
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                coroutineScope.launch {
+                    diskCacheFactory.clearAllCache()
+                    val newSize = diskCacheFactory.getTotalCacheSizeBytes() ?: 0L
+                    cacheSizeText = "${(newSize / 1024f * 100).roundToInt() / 100f} kB"
+                    snackbarHostState.showSnackbar("快取已清除")
+                }
+            }
+            .padding(vertical = 16.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "清除快取",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.textDark
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "已使用: $cacheSizeText",
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.6f)
+            )
+        }
+    }
+
+    Spacer(Modifier.height(8.dp))
+
+    // Clear on App Launch Switch
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                appSettingsRepo.clearCacheOnAppLaunch.setValue(!clearOnLaunch)
+            }
+            .padding(vertical = 16.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "App啟動時清除快取",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = colors.textDark,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = clearOnLaunch,
+            onCheckedChange = { appSettingsRepo.clearCacheOnAppLaunch.setValue(it) },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colors.brownDeep,
+                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.5f),
+                uncheckedThumbColor = colors.textDark.copy(alpha = 0.5f),
+                uncheckedTrackColor = colors.brownLight.copy(alpha = 0.3f)
+            )
+        )
+    }
 }

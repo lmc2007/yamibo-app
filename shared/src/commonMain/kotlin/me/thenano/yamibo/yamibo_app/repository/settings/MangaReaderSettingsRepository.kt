@@ -23,20 +23,18 @@ enum class TouchZoneLayout(val label: String) {
 
 class MangaReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "mangareadersettings") {
 
-    val readingMode by stringSetting(
+    val readingMode by enumSetting(
         name = "閱讀模式",
-        default = ReadingMode.SINGLE_LTR.name,
-        allowedValues = ReadingMode.entries.map { it.name }
+        default = ReadingMode.SINGLE_LTR
     )
 
-    val touchZone by stringSetting(
+    val touchZone by enumSetting(
         name = "輕觸區域",
-        default = TouchZoneLayout.L_SHAPE.name,
-        allowedValues = TouchZoneLayout.entries.map { it.name }
+        default = TouchZoneLayout.L_SHAPE
     )
 
     companion object {
-        val readingModeOptions = ReadingMode.entries.map { it.name to it.label }
-        val touchZoneOptions = TouchZoneLayout.entries.map { it.name to it.label }
+        val readingModeOptions = ReadingMode.entries.map { it to it.label }
+        val touchZoneOptions = TouchZoneLayout.entries.map { it to it.label }
     }
 }

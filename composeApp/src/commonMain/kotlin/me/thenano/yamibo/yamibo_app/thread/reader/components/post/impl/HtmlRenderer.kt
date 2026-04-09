@@ -80,16 +80,42 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
     val clipboardManager = LocalClipboardManager.current
+    val isDarkTheme = (colors.creamBackground.red + colors.creamBackground.green + colors.creamBackground.blue) < 1.5f
+
+    val adjustAnnotatedString: @Composable (AnnotatedString) -> AnnotatedString = { input ->
+        remember(input, isDarkTheme) {
+            if (!isDarkTheme) {
+                input
+            } else {
+                val newBuilder = AnnotatedString.Builder(input.text)
+                input.spanStyles.forEach { range ->
+                    var style = range.item
+                    if (style.color != Color.Unspecified) {
+                        if (style.color.red <= 0.2f && style.color.green <= 0.2f && style.color.blue <= 0.2f && style.color.alpha > 0f) {
+                            style = style.copy(color = Color.White.copy(alpha = 0.9f))
+                        }
+                    }
+                    newBuilder.addStyle(style, range.start, range.end)
+                }
+                input.paragraphStyles.forEach { newBuilder.addStyle(it.item, it.start, it.end) }
+                input.getStringAnnotations("URL", 0, input.length).forEach { 
+                    newBuilder.addStringAnnotation(it.tag, it.item, it.start, it.end) 
+                }
+                newBuilder.toAnnotatedString()
+            }
+        }
+    }
 
     when (block) {
         is HtmlBlock.Text -> {
             var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
+            val adjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
 
             Text(
-                text = block.annotatedString,
+                text = adjustedAnnotatedString,
                 style = TextStyle(
-                    color = colors.textDark,
+                    color = colors.htmlTextDark,
                     fontSize = fontSize.sp,
                     lineHeight = (fontSize * lineSpacing).sp,
                     textAlign = block.textAlign
@@ -97,7 +123,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 0.dp)
-                    .pointerInput(block.annotatedString) {
+                    .pointerInput(adjustedAnnotatedString) {
                         awaitPointerEventScope {
                             while (true) {
                                 // 1. Initial Pass: Intercept 'down' on links to disable global selection
@@ -108,7 +134,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                     val layout = layoutResult.value
                                     if (layout != null) {
                                         val offset = layout.getOffsetForPosition(down.position)
-                                        val hasLink = block.annotatedString.getStringAnnotations("URL", offset, offset)
+                                        val hasLink = adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
                                             .isNotEmpty()
                                         if (hasLink) {
                                             // Consume down in Initial pass -> Parents/Selection internal won't see it (prevents selection)
@@ -127,10 +153,10 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                 // Long press detected (timeout)
                                                 isLongPress = true
                                                 val link =
-                                                    block.annotatedString.getStringAnnotations("URL", offset, offset)
+                                                    adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
                                                         .firstOrNull()
                                                 if (link != null) {
-                                                    showLongPressMenu = link.item to block.annotatedString.substring(
+                                                    showLongPressMenu = link.item to adjustedAnnotatedString.substring(
                                                         link.start,
                                                         link.end
                                                     )
@@ -168,14 +194,14 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
                                     Text(
                                         text = linkText,
-                                        color = colors.textDark,
+                                        color = colors.htmlTextDark,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = fullUrl,
-                                        color = colors.textDark.copy(alpha = 0.6f),
+                                        color = colors.htmlTextDark.copy(alpha = 0.6f),
                                         fontSize = 12.sp,
                                         lineHeight = 16.sp
                                     )
@@ -367,7 +393,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                         rowIdx % 2 == 0 -> colors.creamSurface
                                         else -> colors.creamBackground
                                     }
-                                    val cellTextColor = if (isHeaderRow) Color.White else colors.textDark
+                                    val cellTextColor = if (isHeaderRow) Color.White else colors.htmlTextDark
 
                                     Box(
                                         modifier = Modifier
@@ -381,7 +407,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                     when (innerBlock) {
                                                         is HtmlBlock.Text -> {
                                                             Text(
-                                                                text = innerBlock.annotatedString,
+                                                                text = adjustAnnotatedString(innerBlock.annotatedString),
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
                                                                     fontSize = (fontSize - 3).coerceAtLeast(10).sp,

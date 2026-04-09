@@ -10,7 +10,13 @@ import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 
 interface ThreadRepository {
-    data class ThreadCacheKey(val tid: Int, val page: Int, val authorId: Int? = null)
+    data class ThreadCacheKey(val tid: Int, val page: Int, val authorId: Int? = null) {
+        fun toCacheKey(): String = "${tid}_${page}_${authorId ?: "all"}"
+
+        companion object {
+            fun keyPrefix(tid: Int): String = "${tid}_"
+        }
+    }
 
     suspend fun fetchThread(
         tid: ThreadId,

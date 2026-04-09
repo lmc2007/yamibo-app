@@ -96,6 +96,21 @@ internal fun SettingsScreen() {
                 modifier = Modifier.padding(horizontal = 16.dp),
                 color = colors.brownLight.copy(alpha = 0.15f)
             )
+
+            SettingsItem(
+                icon = YamiboIcons.Storage,
+                title = "數據與存儲",
+                subtitle = "清除應用快取",
+                onClick = {
+                    navigator.navigate(ISettingsCategoryScreen("storage"))
+                }
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                color = colors.brownLight.copy(alpha = 0.15f)
+            )
         }
     }
 }
+

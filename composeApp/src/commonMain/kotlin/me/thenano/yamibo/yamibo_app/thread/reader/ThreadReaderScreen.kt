@@ -40,7 +40,7 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
-import me.thenano.yamibo.yamibo_app.__info__tag
+import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -234,7 +234,7 @@ internal fun ThreadReaderScreen(
         val forumInfo = threadInfo?.forum
         val firstVisible = listState.firstVisibleItemIndex
         val firstVisibleOffset = listState.firstVisibleItemScrollOffset
-        Log.i(__info__tag("ThreadReaderScreen"), "$title : $coverUrl")
+        Logger.i("ThreadReaderScreen", "$title : $coverUrl")
         return ThreadReadingHistory(
             threadName = title,
             threadId = tid,

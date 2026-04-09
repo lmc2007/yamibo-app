@@ -25,17 +25,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.littlesurvival.dto.page.ProfilePage
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.YamiboRoute
+import io.github.littlesurvival.dto.page.ProfilePage
 import kotlinx.coroutines.launch
-import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
 
 class ILoginScreen : Navigatable {
     override val id: String = buildId(Any().hashCode())
@@ -50,7 +49,7 @@ class ILoginScreen : Navigatable {
 expect fun LoginWebView(onLoadingChanged: (Boolean) -> Unit = {})
 
 @Composable
-@Preview
+@androidx.compose.ui.tooling.preview.Preview
 fun LoginScreen() {
     val navigator = LocalNavigator.current
     var loading by remember { mutableStateOf(false) }
@@ -71,7 +70,7 @@ fun LoginScreen() {
 }
 
 @Composable
-@Preview
+@androidx.compose.ui.tooling.preview.Preview
 fun UserProfileCard(
     userInfo: ProfilePage? = UserStore.Preview,
     isLoading: Boolean = false,

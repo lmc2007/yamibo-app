@@ -2,14 +2,12 @@ package me.thenano.yamibo.yamibo_app.webview.action
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.util.Log
 import android.webkit.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
-import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 
 private const val MobileUserAgent =
@@ -53,7 +51,7 @@ actual fun ActionPlatformWebView(
                         request: WebResourceRequest?,
                         error: WebResourceError?
                     ) {
-                        Log.e(__error_tag("ActionWebView"), error?.description.toString())
+                        me.thenano.yamibo.yamibo_app.Logger.e("ActionWebView", error?.description.toString())
                     }
 
                     override fun shouldOverrideUrlLoading(

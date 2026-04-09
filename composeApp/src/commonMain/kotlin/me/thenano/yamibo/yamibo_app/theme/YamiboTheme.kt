@@ -20,6 +20,7 @@ data class YamiboColors(
     val creamSurface: Color,
     val orangeAccent: Color,
     val textDark: Color,
+    val htmlTextDark: Color,
     val redAccent: Color,
     val pinnedBg: Color,
     val announceBg: Color,
@@ -32,8 +33,8 @@ object YamiboTheme {
     val colors: YamiboColors
         @Composable
         get() {
-            val schemeName = LocalAppSettingsRepository.current.themeScheme.state()
-            val scheme = YamiboColorScheme.all.firstOrNull { it.name == schemeName } ?: YamiboColorScheme.Default
+            val schemeEnum = LocalAppSettingsRepository.current.themeScheme.state()
+            val scheme = schemeEnum.toScheme()
             
             return YamiboColors(
                 brownDeep = Color(scheme.brownDeep),
@@ -43,6 +44,7 @@ object YamiboTheme {
                 creamSurface = Color(scheme.creamSurface),
                 orangeAccent = Color(scheme.orangeAccent),
                 textDark = Color(scheme.textDark),
+                htmlTextDark = Color(scheme.htmlTextDark),
                 redAccent = Color(scheme.redAccent),
                 pinnedBg = Color(scheme.pinnedBg),
                 announceBg = Color(scheme.announceBg),

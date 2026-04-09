@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.profile
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.util.Log
 import android.webkit.*
 import android.widget.Toast
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +14,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
@@ -51,8 +49,8 @@ actual fun LoginWebView(onLoadingChanged: (Boolean) -> Unit) {
                             request: WebResourceRequest?,
                             error: WebResourceError?
                         ) {
-                            Log.e(
-                                __error_tag("LoginWebView"),
+                            me.thenano.yamibo.yamibo_app.Logger.e(
+                                "LoginWebView",
                                 error?.description.toString()
                             )
                         }

@@ -17,10 +17,10 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 /** 自動換行的選項按鈕列（如閱讀模式、觸控區域等） */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun SettingsChipRow(
-    options: List<Pair<String, String>>,
-    selectedValue: String,
-    onSelect: (String) -> Unit,
+fun <T> SettingsChipRow(
+    options: List<Pair<T, String>>,
+    selectedValue: T,
+    onSelect: (T) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors

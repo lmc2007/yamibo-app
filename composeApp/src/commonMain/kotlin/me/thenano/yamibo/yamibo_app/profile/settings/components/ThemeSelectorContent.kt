@@ -20,12 +20,15 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
+import me.thenano.yamibo.yamibo_app.repository.settings.AppThemeMode
+import me.thenano.yamibo.yamibo_app.repository.settings.AppThemeScheme
+
 @Composable
 fun ThemeSelectorContent(
-    currentMode: String,
-    currentSchemeName: String,
-    onModeChange: (String) -> Unit,
-    onSchemeChange: (String) -> Unit,
+    currentMode: AppThemeMode,
+    currentScheme: AppThemeScheme,
+    onModeChange: (AppThemeMode) -> Unit,
+    onSchemeChange: (AppThemeScheme) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
@@ -47,7 +50,7 @@ fun ThemeSelectorContent(
                 .border(1.dp, colors.brownLight.copy(alpha = 0.3f), RoundedCornerShape(20.dp)),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            listOf("SYSTEM" to "系統", "LIGHT" to "淺色", "DARK" to "深色").forEach { (mode, label) ->
+            AppThemeMode.entries.forEach { mode ->
                 val isSelected = currentMode == mode
                 Box(
                     modifier = Modifier
@@ -58,7 +61,7 @@ fun ThemeSelectorContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = label,
+                        text = mode.label,
                         color = if (isSelected) Color.White else colors.textDark.copy(alpha = 0.7f),
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
@@ -74,11 +77,12 @@ fun ThemeSelectorContent(
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             contentPadding = PaddingValues(horizontal = 4.dp)
         ) {
-            items(YamiboColorScheme.all) { scheme ->
+            items(AppThemeScheme.entries) { schemeEnum ->
+                val scheme = schemeEnum.toScheme()
                 ThemeCard(
                     scheme = scheme,
-                    isSelected = scheme.name == currentSchemeName,
-                    onClick = { onSchemeChange(scheme.name) }
+                    isSelected = schemeEnum == currentScheme,
+                    onClick = { onSchemeChange(schemeEnum) }
                 )
             }
         }

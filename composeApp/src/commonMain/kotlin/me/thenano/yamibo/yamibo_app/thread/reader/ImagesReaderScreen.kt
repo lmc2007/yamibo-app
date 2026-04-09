@@ -113,10 +113,9 @@ fun ImagesReaderScreen(
     val isMangaForum = remember(activeFid, tagId) { tagId != null || (activeFid?.let { YamiboForum.isMangaForum(it) } == true) }
 
     val mangaSettingsRepo = LocalMangaReaderSettingsRepository.current
-    val readingModeStr = mangaSettingsRepo.readingMode.state()
-    val touchZoneStr = mangaSettingsRepo.touchZone.state()
+    val readingMode = mangaSettingsRepo.readingMode.state()
+    val touchZoneLayout = mangaSettingsRepo.touchZone.state()
     
-    val readingMode = runCatching { ReadingMode.valueOf(readingModeStr) }.getOrDefault(ReadingMode.SINGLE_LTR)
     val isRtl = readingMode == ReadingMode.SINGLE_RTL
     val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
     val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
@@ -127,7 +126,6 @@ fun ImagesReaderScreen(
     var startFromLastPage by remember { mutableStateOf(false) }
 
     /** State */
-    val touchZoneLayout = runCatching { TouchZoneLayout.valueOf(touchZoneStr) }.getOrDefault(TouchZoneLayout.L_SHAPE)
     var showOverlay by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var showTouchZonePreview by remember { mutableStateOf(false) }
@@ -1068,8 +1066,8 @@ fun ImagesReaderScreen(
             visible = showSettings,
             currentReadingMode = readingMode,
             currentTouchZoneLayout = touchZoneLayout,
-            onReadingModeChange = { mode -> mangaSettingsRepo.readingMode.setValue(mode.name); resetZoom() },
-            onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.touchZone.setValue(layout.name); showTouchZonePreview = true },
+            onReadingModeChange = { mode -> mangaSettingsRepo.readingMode.setValue(mode); resetZoom() },
+            onTouchZoneLayoutChange = { layout -> mangaSettingsRepo.touchZone.setValue(layout); showTouchZonePreview = true },
             onDismiss = { showSettings = false },
             modifier = Modifier.align(Alignment.BottomCenter)
         )

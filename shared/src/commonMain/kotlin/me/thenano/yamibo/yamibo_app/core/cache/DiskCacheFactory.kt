@@ -1,14 +1,12 @@
 package me.thenano.yamibo.yamibo_app.core.cache
 
-import io.ktor.util.date.getTimeMillis
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.launch
+import io.ktor.util.date.*
+import kotlinx.coroutines.*
+import kotlin.time.Duration
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.serializer
 import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import okio.FileSystem
 import okio.Path.Companion.toPath
@@ -29,48 +27,62 @@ class DiskCacheFactory(
      * Create a new DiskCache instance for a specific type <T>
      * @param namespace The separator name to prevent cache key collision
      * @param maxSize Maximum entries before LRU eviction triggers
-     * @param expirationMs How many milliseconds an entry lives (null for no time-based expiration, uses only LRU)
+     * @param expiration How much duration an entry lives (null for no time-based expiration, uses only LRU)
      */
     inline fun <reified T : Any> create(
         namespace: String,
         maxSize: Int = 100,
-        expirationMs: Long? = null
+        expiration: Duration? = null
     ): DiskCache<T> {
+        val serializer = try {
+            kotlinx.serialization.serializer<T>()
+        } catch (e: Exception) {
+            Logger.e("", "DiskCacheFactory: Could not find serializer for ${T::class.simpleName}. Disk cache will be disabled, using L1 MemoryCache only.", e)
+            null
+        }
+
         return DiskCacheImpl(
             namespace = namespace,
             maxSize = maxSize,
-            expirationMs = expirationMs,
+            expirationMs = expiration?.inWholeMilliseconds,
             database = database,
             json = json,
             rootCacheDir = rootCacheDir,
             fileSystem = fileSystem,
-            serializer = json.serializersModule.serializer<T>()
+            serializer = serializer
         )
     }
 
     /** Returns total size of the cache directory in bytes */
-    suspend fun getTotalCacheSizeBytes(): Long = kotlinx.coroutines.withContext(Dispatchers.IO) {
+    suspend fun getTotalCacheSizeBytes(): Long? = withContext(Dispatchers.IO) {
         calculateSize(rootCacheDir)
     }
 
-    private fun calculateSize(path: okio.Path): Long {
-        var size = 0L
-        try {
-            if (!fileSystem.exists(path)) return 0L
+    private fun calculateSize(path: okio.Path): Long? {
+        if (!fileSystem.exists(path)) return 0L
+        return try {
             val meta = fileSystem.metadata(path)
-            if (meta.isRegularFile) {
-                return meta.size ?: 0L
-            } else if (meta.isDirectory) {
-                fileSystem.list(path).forEach { child ->
-                    size += calculateSize(child)
+            when {
+                meta.isRegularFile -> meta.size ?: 0L
+                meta.isDirectory -> {
+                    var total = 0L
+                    for (child in fileSystem.listRecursively(path)) {
+                        val childMeta = runCatching { fileSystem.metadata(child) }.getOrNull() ?: continue
+                        if (childMeta.isRegularFile) {
+                            total += childMeta.size ?: 0L
+                        }
+                    }
+                    total
                 }
+                else -> 0L
             }
-        } catch(_: Exception) {}
-        return size
+        } catch (_: Exception) {
+            null
+        }
     }
 
     /** Clears all disk cache across all namespaces */
-    suspend fun clearAllCache() = kotlinx.coroutines.withContext(Dispatchers.IO) {
+    suspend fun clearAllCache() = withContext(Dispatchers.IO) {
         try {
             database.diskCacheEntryQueries.clearAll()
             if (fileSystem.exists(rootCacheDir)) {
@@ -91,18 +103,23 @@ class DiskCacheImpl<T : Any>(
     private val json: Json,
     rootCacheDir: okio.Path,
     private val fileSystem: FileSystem,
-    private val serializer: KSerializer<T>
+    private val serializer: KSerializer<T>?
 ) : DiskCache<T> {
 
     private val queries = database.diskCacheEntryQueries
     private val scope = CoroutineScope(Dispatchers.IO)
     private val namespaceDir = rootCacheDir / namespace
+    
+    private data class MemoryEntry<T>(val value: T, val createdAt: Long)
+    private val memoryCache = mutableMapOf<String, MemoryEntry<T>>()
 
     init {
-        try {
-            fileSystem.createDirectories(namespaceDir)
-        } catch (e: Exception) {
-            e.printStackTrace()
+        if (serializer != null) {
+            try {
+                fileSystem.createDirectories(namespaceDir)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
@@ -110,21 +127,31 @@ class DiskCacheImpl<T : Any>(
 
     override fun set(key: String, value: T) {
         val now = getTimeMillis()
+        
+        // L1 Cache
+        memoryCache.remove(key) // Ensure it moves to end of LinkedHashMap iteration order if already exists
+        memoryCache[key] = MemoryEntry(value, now)
+        if (memoryCache.size > maxSize) {
+            memoryCache.keys.firstOrNull()?.let { memoryCache.remove(it) }
+        }
+
+        if (serializer == null) return
+
         val serializedValue = try {
             json.encodeToString(serializer, value)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Logger.e("DiskCacheImpl", "Failed to serialize value for key $key", e)
             return
         }
 
-        // Write to File System synchronously (to ensure it's available right after set returns)
+        // Write to File System synchronously
         val file = getFilePath(key)
         try {
             fileSystem.sink(file).buffer().use { sink ->
                 sink.writeUtf8(serializedValue)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Logger.e("DiskCacheImpl", "Failed to write value to file system for key $key", e)
             return
         }
 
@@ -139,23 +166,39 @@ class DiskCacheImpl<T : Any>(
             // Trigger LRU asynchronously
             maintainLRU()
         } catch (e: Exception) {
-            e.printStackTrace()
+            Logger.e("DiskCacheImpl", "Failed to update DB metadata for key $key", e)
             // Cleanup file if DB failed
-            try { fileSystem.delete(file) } catch (ignore: Exception) {}
+            try { fileSystem.delete(file) } catch (_: Exception) {}
         }
     }
 
     override fun get(key: String): T? {
         val now = getTimeMillis()
+        
+        // Try L1 Memory Cache
+        val memEntry = memoryCache[key]
+        if (memEntry != null) {
+            if (expirationMs != null && now - memEntry.createdAt > expirationMs) {
+                remove(key) // clear from both mem and disk
+                return null
+            }
+            // Update LRU position
+            memoryCache.remove(key)
+            memoryCache[key] = memEntry
+            return memEntry.value
+        }
+
+        if (serializer == null) return null
+
+        // 2. Try L2 Disk Cache
         val entry = try {
             queries.get(namespace, key).executeAsOneOrNull()
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         } ?: return null
 
         // Check Expiration
         if (expirationMs != null && now - entry.createdAt > expirationMs) {
-            // Expired
             remove(key)
             return null
         }
@@ -168,9 +211,7 @@ class DiskCacheImpl<T : Any>(
                     namespace = namespace,
                     cacheKey = key
                 )
-            } catch (e: Exception) {
-                // Ignore update failure
-            }
+            } catch (_: Exception) {}
         }
 
         val file = getFilePath(key)
@@ -191,7 +232,13 @@ class DiskCacheImpl<T : Any>(
         }
 
         return try {
-            json.decodeFromString(serializer, jsonString)
+            val decoded = json.decodeFromString(serializer, jsonString)
+            // Populate L1 cache
+            memoryCache[key] = MemoryEntry(decoded, entry.createdAt)
+            if (memoryCache.size > maxSize) {
+                memoryCache.keys.firstOrNull()?.let { memoryCache.remove(it) }
+            }
+            decoded
         } catch (e: Exception) {
             e.printStackTrace()
             remove(key)
@@ -200,6 +247,8 @@ class DiskCacheImpl<T : Any>(
     }
 
     override fun remove(key: String) {
+        memoryCache.remove(key)
+        if (serializer == null) return
         try {
             queries.delete(namespace, key)
             fileSystem.delete(getFilePath(key))
@@ -209,13 +258,17 @@ class DiskCacheImpl<T : Any>(
     }
 
     override fun removeByPrefix(prefix: String) {
+        val memMatching = memoryCache.keys.filter { it.startsWith(prefix) }
+        memMatching.forEach { memoryCache.remove(it) }
+        
+        if (serializer == null) return
         try {
             val matchingKeys = queries.getKeysByPrefix(namespace, "$prefix%").executeAsList()
             queries.deleteByPrefix(namespace, "$prefix%")
             matchingKeys.forEach { key ->
                 try {
                     fileSystem.delete(getFilePath(key))
-                } catch (ignore: Exception) {}
+                } catch (_: Exception) {}
             }
         } catch (e: Exception) {
             e.printStackTrace()
@@ -223,6 +276,8 @@ class DiskCacheImpl<T : Any>(
     }
 
     override fun clear() {
+        memoryCache.clear()
+        if (serializer == null) return
         try {
             queries.clearNamespace(namespace)
             if (fileSystem.exists(namespaceDir)) {
@@ -235,6 +290,7 @@ class DiskCacheImpl<T : Any>(
     }
 
     private fun maintainLRU() {
+        if (serializer == null) return
         scope.launch {
             try {
                 val targets = queries.getLRUTargets(namespace, maxSize.toLong()).executeAsList()

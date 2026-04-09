@@ -69,7 +69,15 @@ fun MainViewController() = ComposeUIViewController {
         LocalThemeRepository provides themeRepository,
         LocalTagRepository provides tagRepository,
         LocalAppSettingsRepository provides appSettingsRepository,
+        LocalDiskCacheFactory provides diskCacheFactory,
         LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
         LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
-    ) { App() }
+    ) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
+                diskCacheFactory.clearAllCache()
+            }
+        }
+        App()
+    }
 }

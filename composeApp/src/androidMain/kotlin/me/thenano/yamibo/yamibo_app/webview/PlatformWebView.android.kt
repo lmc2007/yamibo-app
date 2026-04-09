@@ -2,14 +2,12 @@ package me.thenano.yamibo.yamibo_app.webview
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
-import android.util.Log
 import android.webkit.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.__error_tag
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 
 @SuppressLint("SetJavaScriptEnabled")
@@ -73,7 +71,7 @@ actual fun PlatformWebViewContent(
                         request: WebResourceRequest?,
                         error: WebResourceError?
                     ) {
-                        Log.e(__error_tag("WebView"), error?.description.toString())
+                        me.thenano.yamibo.yamibo_app.Logger.e("WebView", error?.description.toString())
                     }
 
                     override fun shouldOverrideUrlLoading(

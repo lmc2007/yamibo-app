@@ -10,6 +10,7 @@ import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
+import kotlin.time.Duration.Companion.hours
 
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 
@@ -19,7 +20,7 @@ class AndroidThreadRepository(
     diskCacheFactory: DiskCacheFactory
 ) : ThreadRepository {
 
-    private val threadCache = diskCacheFactory.create<ThreadPage>("thread_page", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
+    private val threadCache = diskCacheFactory.create<ThreadPage>("thread_page", maxSize = 50, expiration = 24.hours)
 
     override suspend fun fetchThread(
         tid: ThreadId,
@@ -30,7 +31,7 @@ class AndroidThreadRepository(
         val result = yamiboClient.fetchThreadById(tid, authorId, page)
 
         if (result is YamiboResult.Success) {
-            val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+            val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
             threadCache.set(key, result.value)
         }
         return result
@@ -65,16 +66,16 @@ class AndroidThreadRepository(
     }
 
     override fun getCachedThread(tid: ThreadId, authorId: UserId?, page: Int): ThreadPage? {
-        val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+        val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
         return threadCache.get(key)
     }
 
     override fun setCachedThread(tid: ThreadId, authorId: UserId?, page: Int, threadPage: ThreadPage) {
-        val key = "${tid.value}_${page}_${authorId?.value ?: "all"}"
+        val key = ThreadRepository.ThreadCacheKey(tid.value, page, authorId?.value).toCacheKey()
         threadCache.set(key, threadPage)
     }
 
     override fun clearCachedThread(tid: ThreadId) {
-        threadCache.removeByPrefix("${tid.value}_")
+        threadCache.removeByPrefix(ThreadRepository.ThreadCacheKey.keyPrefix(tid.value))
     }
 }

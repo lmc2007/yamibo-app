@@ -30,6 +30,9 @@ sealed class YamiboColorScheme {
     /** Primary text on backgrounds */
     abstract val textDark: Long
 
+    /** Primary text inside HTML viewer (threads) */
+    open val htmlTextDark: Long get() = textDark
+
     /** Red accent for stats, warnings */
     abstract val redAccent: Long
 
@@ -58,6 +61,7 @@ sealed class YamiboColorScheme {
         override val creamSurface = 0xFFFFF7E0
         override val orangeAccent = 0xFFF59E2A
         override val textDark = 0xFF2E1A0E
+        override val htmlTextDark = 0xFF6E2B19
         override val redAccent = 0xFFFF5656
         override val pinnedBg = 0xFFFFF0C8
         override val announceBg = 0xFFFFE8B0

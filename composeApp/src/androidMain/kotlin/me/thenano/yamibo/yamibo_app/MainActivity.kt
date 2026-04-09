@@ -1,7 +1,6 @@
 package me.thenano.yamibo.yamibo_app
 
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
@@ -48,8 +47,8 @@ class MainActivity : ComponentActivity() {
 
                 val now = System.currentTimeMillis()
                 if (now - lastBackTime < exitInterval) {
-                    Log.i(
-                        __info__tag("AndroidBackHandler"),
+                    me.thenano.yamibo.yamibo_app.Logger.i(
+                        "AndroidBackHandler",
                         "Double Tapped(Interval=${now - lastBackTime}) , Exit."
                     )
                     finish()
@@ -94,6 +93,7 @@ class MainActivity : ComponentActivity() {
                 LocalThemeRepository provides themeRepository,
                 LocalTagRepository provides tagRepository,
                 LocalAppSettingsRepository provides appSettingsRepository,
+                LocalDiskCacheFactory provides diskCacheFactory,
                 LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
                 LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
             ) {
@@ -109,6 +109,13 @@ class MainActivity : ComponentActivity() {
                         isAppearanceLightNavigationBars = false
                     }
                 }
+                
+                androidx.compose.runtime.LaunchedEffect(Unit) {
+                    if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
+                        diskCacheFactory.clearAllCache()
+                    }
+                }
+
                 App()
             }
         }

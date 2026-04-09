@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.__info__tag
+import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -90,7 +90,7 @@ fun ReadHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                Log.i(__info__tag("threadCover"), "${history.threadName} : ${history.threadCover.toString()}")
+                Logger.i("threadCover", "${history.threadName} : ${history.threadCover.toString()}")
                 if (!history.threadCover.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
                         model = rememberImageRequest(url = history.threadCover!!),

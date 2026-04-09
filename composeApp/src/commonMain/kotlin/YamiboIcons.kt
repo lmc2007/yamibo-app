@@ -9,6 +9,53 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 object YamiboIcons {
+    val Storage: ImageVector =
+        ImageVector.Builder(
+            name = "Storage",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 36f,
+            viewportHeight = 36f
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(33f, 6.69f)
+                horizontalLineToRelative(0f)
+                curveToRelative(-0.18f, -3.41f, -9.47f, -4.33f, -15f, -4.33f)
+                reflectiveCurveTo(3f, 3.29f, 3f, 6.78f)
+                verticalLineToRelative(22.59f)
+                curveToRelative(0f, 3.49f, 9.43f, 4.43f, 15f, 4.43f)
+                reflectiveCurveToRelative(15f, -0.93f, 15f, -4.43f)
+                lineTo(33f, 6.78f)
+                reflectiveCurveToRelative(0f, 0f, 0f, 0f)
+                reflectiveCurveTo(33f, 6.7f, 33f, 6.69f)
+                close()
+                moveTo(31f, 14.25f)
+                curveToRelative(-0.33f, 0.86f, -5.06f, 2.45f, -13f, 2.45f)
+                arcToRelative(37.45f, 37.45f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = -11f, dy1 = -1.36f)
+                verticalLineToRelative(2.08f)
+                arcToRelative(43.32f, 43.32f, 0f, isMoreThanHalf = false, isPositiveArc = false, dx1 = 11f, dy1 = 1.28f)
+                curveToRelative(4f, 0f, 9.93f, -0.48f, 13f, -2f)
+                verticalLineToRelative(5.17f)
+                curveToRelative(-0.33f, 0.86f, -5.06f, 2.45f, -13f, 2.45f)
+                arcToRelative(37.45f, 37.45f, 0f, isMoreThanHalf = false, isPositiveArc = true, dx1 = -11f, dy1 = -1.4f)
+                lineTo(7f, 25f)
+                arcToRelative(43.32f, 43.32f, 0f, isMoreThanHalf = false, isPositiveArc = false, dx1 = 11f, dy1 = 1.28f)
+                curveToRelative(4f, 0f, 9.93f, -0.48f, 13f, -2f)
+                verticalLineToRelative(5.1f)
+                curveToRelative(-0.35f, 0.86f, -5.08f, 2.45f, -13f, 2.45f)
+                reflectiveCurveTo(5.3f, 30.2f, 5f, 29.37f)
+                lineTo(5f, 6.82f)
+                curveTo(5.3f, 6f, 10f, 4.36f, 18f, 4.36f)
+                curveToRelative(7.77f, 0f, 12.46f, 1.53f, 13f, 2.37f)
+                curveToRelative(-0.52f, 0.87f, -5.21f, 2.39f, -13f, 2.39f)
+                arcTo(37.6f, 37.6f, 0f, isMoreThanHalf = false, isPositiveArc = true, x1 = 7f, y1 = 7.76f)
+                lineTo(7f, 9.85f)
+                arcToRelative(43.53f, 43.53f, 0f, isMoreThanHalf = false, isPositiveArc = false, dx1 = 11f, dy1 = 1.27f)
+                curveToRelative(4f, 0f, 9.93f, -0.48f, 13f, -2f)
+                close()
+            }
+        }.build()
+
     val Home =
         ImageVector.Builder(
             name = "Home",

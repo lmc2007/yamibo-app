@@ -9,8 +9,8 @@ import kotlin.reflect.KProperty
  * Manages the prefix binding and provides DSL for creating settings delegates.
  */
 abstract class SettingsRegistry(
-    protected val store: SettingsStore,
-    protected val prefix: String,
+    @PublishedApi internal val store: SettingsStore,
+    @PublishedApi internal val prefix: String,
 ) {
     /** Helper class for delegation */
     class SettingDelegateProvider<T, out S : SettingItem<T>>(

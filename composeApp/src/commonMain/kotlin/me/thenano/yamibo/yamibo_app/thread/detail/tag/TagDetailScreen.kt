@@ -116,7 +116,7 @@ internal fun TagDetailScreen(
         loadPage(1)
     }
 
-    val stackSize = navigator.stack?.size
+    val stackSize = navigator.stack.size
     // Load reading history for manga tags (hot reload on resume/back navigation)
     LaunchedEffect(tagId, stackSize) {
         mangaTagHistory = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)

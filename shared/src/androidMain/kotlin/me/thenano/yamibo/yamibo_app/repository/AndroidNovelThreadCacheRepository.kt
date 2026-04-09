@@ -4,6 +4,7 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
+import kotlin.time.Duration.Companion.hours
 
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 
@@ -11,9 +12,9 @@ class AndroidNovelThreadCacheRepository(
     diskCacheFactory: DiskCacheFactory
 ) : NovelPrePostCommentsCacheRepository {
 
-    private val fullPageCache = diskCacheFactory.create<ThreadPage>("novel_full_page", maxSize = 10, expirationMs = 24 * 60 * 60 * 1000L)
-    private val commentCache = diskCacheFactory.create<List<Post>>("novel_comments", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
-    private val commentCompleteFlags = diskCacheFactory.create<Boolean>("novel_comment_complete", maxSize = 50, expirationMs = 24 * 60 * 60 * 1000L)
+    private val fullPageCache = diskCacheFactory.create<ThreadPage>("novel_full_page", maxSize = 10, expiration = 24.hours)
+    private val commentCache = diskCacheFactory.create<List<Post>>("novel_comments", maxSize = 50, expiration = 24.hours)
+    private val commentCompleteFlags = diskCacheFactory.create<Boolean>("novel_comment_complete", maxSize = 50, expiration = 24.hours)
 
     override fun getCachedFullPage(tid: ThreadId, page: Int): ThreadPage? =
         fullPageCache.get("${tid.value}_$page")
