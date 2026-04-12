@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
 
+import YamiboIcons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,13 +30,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
-/** Tag Detail Header Card — cover image + tag info + actions (similar to novel ThreadHeader) */
 @Composable
 fun TagDetailHeaderCard(
     tagName: String,
@@ -45,20 +46,23 @@ fun TagDetailHeaderCard(
     hasReadingHistory: Boolean,
     readingProgressText: String?,
     onContinueRead: () -> Unit,
+    isFavorited: Boolean,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit
 ) {
     val colors = YamiboTheme.colors
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                // Cover image
                 Card(
                     modifier = Modifier.size(width = 100.dp, height = 130.dp),
                     shape = RoundedCornerShape(12.dp),
@@ -73,38 +77,9 @@ fun TagDetailHeaderCard(
                             contentDescription = "cover",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
-                            loading = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(Res.drawable.book),
-                                        contentDescription = "loading",
-                                        modifier = Modifier.size(32.dp),
-                                        tint = colors.brownPrimary.copy(alpha = 0.2f)
-                                    )
-                                }
-                            },
-                            error = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(Res.drawable.book),
-                                        contentDescription = "error",
-                                        modifier = Modifier.size(48.dp),
-                                        tint = colors.brownPrimary.copy(alpha = 0.4f)
-                                    )
-                                }
-                            }
                         )
                     } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Icon(
                                 painter = painterResource(Res.drawable.book),
                                 contentDescription = "cover",
@@ -117,37 +92,35 @@ fun TagDetailHeaderCard(
 
                 Spacer(Modifier.width(14.dp))
 
-                // Info column
                 Column(modifier = Modifier.weight(1f)) {
-                    // Tag name
                     Text(
-                        text = "🏷️ $tagName",
+                        text = "#$tagName",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textDark
                     )
+
                     Spacer(Modifier.height(8.dp))
 
-                    // Tag label
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = colors.brownDeep.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = "#標籤",
+                            text = "#標籤漫畫",
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 11.sp,
                             color = colors.brownDeep
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
 
-                    // Manga mode toggle
+                    Spacer(Modifier.height(10.dp))
+
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = "漫畫閱讀模式",
+                            text = "漫畫模式",
                             fontSize = 13.sp,
-                            color = colors.brownPrimary.copy(alpha = 0.8f)
+                            color = colors.brownPrimary.copy(alpha = 0.85f)
                         )
                         Spacer(Modifier.width(8.dp))
                         Switch(
@@ -155,7 +128,7 @@ fun TagDetailHeaderCard(
                             onCheckedChange = onMangaModeChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = colors.brownDeep,
-                                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.5f)
+                                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.45f)
                             ),
                             modifier = Modifier.height(24.dp)
                         )
@@ -165,41 +138,31 @@ fun TagDetailHeaderCard(
 
             Spacer(Modifier.height(14.dp))
 
-            // Action row: [fav] [share] [continue / start reading]
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Favorite button
                 Surface(
-                    onClick = onFavorite,
                     shape = RoundedCornerShape(12.dp),
                     color = colors.brownPrimary.copy(alpha = 0.1f)
                 ) {
-                    Box(
-                        modifier = Modifier.padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = YamiboIcons.StarOutline,
-                            contentDescription = "收藏",
-                            modifier = Modifier.size(22.dp),
-                            tint = colors.brownDeep
-                        )
-                    }
+                    FavoriteActionButton(
+                        onClick = onFavorite,
+                        onLongClick = onFavoriteLongPress,
+                        tint = colors.brownDeep,
+                        iconSize = 22,
+                        modifier = Modifier.size(42.dp),
+                        filled = isFavorited
+                    )
                 }
 
-                // Share button
                 Surface(
                     onClick = onShare,
                     shape = RoundedCornerShape(12.dp),
                     color = colors.brownPrimary.copy(alpha = 0.1f)
                 ) {
-                    Box(
-                        modifier = Modifier.padding(10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
                             contentDescription = "分享",
@@ -209,7 +172,6 @@ fun TagDetailHeaderCard(
                     }
                 }
 
-                // Continue / Start reading button
                 Surface(
                     onClick = onContinueRead,
                     modifier = Modifier.weight(1f),
@@ -234,22 +196,27 @@ fun TagDetailHeaderCard(
                             Text(
                                 text = readingProgressText,
                                 modifier = Modifier.weight(1f),
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.65f),
                                 fontSize = 11.sp,
-                                lineHeight = 14.sp,
                                 maxLines = 1,
-                                overflow = TextOverflow.StartEllipsis
+                                overflow = TextOverflow.Ellipsis
                             )
                             Spacer(Modifier.width(8.dp))
                         } else {
                             Spacer(Modifier.weight(1f))
                         }
 
-                        // Play icon
                         Text(text = "▶", color = Color.White, fontSize = 16.sp)
                     }
                 }
             }
+
+            Text(
+                text = "星星按鈕可直接收藏，長按可指定小集合",
+                modifier = Modifier.padding(top = 8.dp),
+                fontSize = 10.sp,
+                color = colors.brownPrimary.copy(alpha = 0.45f)
+            )
         }
     }
 }

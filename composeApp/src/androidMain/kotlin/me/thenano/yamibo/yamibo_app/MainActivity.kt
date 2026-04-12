@@ -12,11 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidForumRepository
+import me.thenano.yamibo.yamibo_app.repository.AndroidLocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
@@ -47,7 +49,7 @@ class MainActivity : ComponentActivity() {
 
                 val now = System.currentTimeMillis()
                 if (now - lastBackTime < exitInterval) {
-                    me.thenano.yamibo.yamibo_app.Logger.i(
+                    Logger.i(
                         "AndroidBackHandler",
                         "Double Tapped(Interval=${now - lastBackTime}) , Exit."
                     )
@@ -67,11 +69,16 @@ class MainActivity : ComponentActivity() {
                 AndroidAuthRepository(cookieStore, userStore, yamiboClient)
             }
             val dbFactory = remember { DatabaseFactory(context) }
-            val diskCacheFactory = remember { me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory(dbFactory, cacheDirPath = context.cacheDir.absolutePath) }
+            val diskCacheFactory = remember {
+                DiskCacheFactory(
+                    dbFactory,
+                    cacheDirPath = context.cacheDir.absolutePath
+                )
+            }
             
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
-            val favoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
+            val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val themeRepository = remember { AndroidThemeRepository() }

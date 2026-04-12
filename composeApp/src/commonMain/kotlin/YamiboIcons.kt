@@ -1098,4 +1098,6 @@ object YamiboIcons {
                 horizontalLineTo(9.0f)
             }
         }.build()
+
+    val Back: String = "◀"
 }

@@ -85,7 +85,7 @@ internal fun TagListScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = { navigator.pop() }) {
-                        Text("◀", color = Color.White, fontSize = 20.sp)
+                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

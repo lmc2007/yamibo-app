@@ -473,6 +473,7 @@ internal fun CommentReaderScreen(
             // Always-visible bottom bar (Reply, Favorite, Share)
             ReaderBottomBar(
                 visible = true,
+                isFavorited = false,
                 onReply = {
                     val replyUrl = YamiboRoute.ThreadReply(tid, currentFullPage).build()
                     navigator.navigate(

@@ -3,22 +3,35 @@ package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.AnnotatedString
@@ -26,22 +39,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.layout.ContentScale
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.book
 
-/** Thread header — cover + info + actions */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ThreadHeader(
     threadPage: ThreadPage,
+    isFavorited: Boolean,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
     onContinueRead: () -> Unit = {},
     readingProgressText: String? = null,
@@ -52,28 +66,39 @@ internal fun ThreadHeader(
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
     val firstPost = threadPage.posts.firstOrNull()
-    
+
     val coverUrl = remember(firstPost) {
         val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
-
-        if (attachedImage.contains("none.gif") || attachedImage.contains("smiley/") || attachedImage.contains("face")) return@remember null
-        if (attachedImage.startsWith("http")) attachedImage else "${YamiboRoute.Domain.build()}$attachedImage"
+        if (
+            attachedImage.contains("none.gif") ||
+            attachedImage.contains("smiley/") ||
+            attachedImage.contains("face")
+        ) {
+            null
+        } else if (attachedImage.startsWith("http")) {
+            attachedImage
+        } else {
+            "${YamiboRoute.Domain.build()}$attachedImage"
+        }
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
         shape = RoundedCornerShape(20.dp),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth()) {
-                /** Cover image */
                 Card(
                     modifier = Modifier.size(width = 100.dp, height = 130.dp),
                     shape = RoundedCornerShape(12.dp),
                     elevation = CardDefaults.cardElevation(2.dp),
-                    colors = CardDefaults.cardColors(containerColor = colors.brownPrimary.copy(alpha = 0.1f))
+                    colors = CardDefaults.cardColors(
+                        containerColor = colors.brownPrimary.copy(alpha = 0.1f)
+                    )
                 ) {
                     if (coverUrl != null) {
                         SubcomposeAsyncImage(
@@ -82,10 +107,7 @@ internal fun ThreadHeader(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize(),
                             loading = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Icon(
                                         painter = painterResource(Res.drawable.book),
                                         contentDescription = "loading",
@@ -95,10 +117,7 @@ internal fun ThreadHeader(
                                 }
                             },
                             error = {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                     Icon(
                                         painter = painterResource(Res.drawable.book),
                                         contentDescription = "error",
@@ -109,10 +128,7 @@ internal fun ThreadHeader(
                             }
                         )
                     } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Icon(
                                 painter = painterResource(Res.drawable.book),
                                 contentDescription = "cover",
@@ -125,41 +141,20 @@ internal fun ThreadHeader(
 
                 Spacer(Modifier.width(14.dp))
 
-                /** Info column */
                 Column(modifier = Modifier.weight(1f)) {
-                    /** Title (long-press to copy) */
-                    val titleInteractionSource = remember { MutableInteractionSource() }
-                    val isTitlePressed by titleInteractionSource.collectIsPressedAsState()
-                    val titleScale by animateFloatAsState(targetValue = if (isTitlePressed) 0.95f else 1f)
-
-                    Text(
+                    CopyableLabel(
                         text = thread.title,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textDark,
-                        modifier =
-                            Modifier.graphicsLayer {
-                                scaleX = titleScale
-                                scaleY = titleScale
-                            }
-                                .combinedClickable(
-                                    interactionSource = titleInteractionSource,
-                                    indication = null,
-                                    onClick = {},
-                                    onLongClick = {
-                                        haptic.performHapticFeedback(
-                                            HapticFeedbackType.LongPress
-                                        )
-                                        clipboardManager.setText(
-                                            AnnotatedString(thread.title)
-                                        )
-                                        onCopy("已複製標題：${thread.title}")
-                                    }
-                                )
+                        onCopy = {
+                            clipboardManager.setText(AnnotatedString(thread.title))
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onCopy("已複製標題")
+                        }
                     )
                     Spacer(Modifier.height(6.dp))
 
-                    /** Author (long-press to copy) */
                     if (firstPost != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -169,42 +164,20 @@ internal fun ThreadHeader(
                                 tint = colors.brownPrimary.copy(alpha = 0.7f)
                             )
                             Spacer(Modifier.width(4.dp))
-                            val authorInteractionSource = remember { MutableInteractionSource() }
-                            val isAuthorPressed by authorInteractionSource.collectIsPressedAsState()
-                            val authorScale by animateFloatAsState(targetValue = if (isAuthorPressed) 0.95f else 1f)
-
-                            Text(
+                            CopyableLabel(
                                 text = firstPost.author.name,
                                 fontSize = 13.sp,
+                                fontWeight = FontWeight.Normal,
                                 color = colors.brownPrimary.copy(alpha = 0.8f),
-                                modifier =
-                                    Modifier.graphicsLayer {
-                                        scaleX = authorScale
-                                        scaleY = authorScale
-                                    }
-                                        .combinedClickable(
-                                            interactionSource = authorInteractionSource,
-                                            indication = null,
-                                            onClick = {},
-                                            onLongClick = {
-                                                haptic.performHapticFeedback(
-                                                    HapticFeedbackType.LongPress
-                                                )
-                                                clipboardManager.setText(
-                                                    AnnotatedString(
-                                                        firstPost.author.name
-                                                    )
-                                                )
-                                                onCopy("已複製作者：${firstPost.author.name}")
-                                            }
-                                        )
+                                onCopy = {
+                                    clipboardManager.setText(AnnotatedString(firstPost.author.name))
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onCopy("已複製作者名稱")
+                                }
                             )
                         }
                         Spacer(Modifier.height(3.dp))
-                    }
 
-                    /** Time */
-                    if (firstPost != null) {
                         Text(
                             text = firstPost.timeText,
                             fontSize = 12.sp,
@@ -213,9 +186,8 @@ internal fun ThreadHeader(
                         Spacer(Modifier.height(3.dp))
                     }
 
-                    /** View + reply counts */
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (thread.totalViews != null) {
+                        thread.totalViews?.let { totalViews ->
                             Icon(
                                 imageVector = YamiboIcons.Views,
                                 contentDescription = null,
@@ -224,13 +196,13 @@ internal fun ThreadHeader(
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
-                                text = "${thread.totalViews}",
+                                text = totalViews.toString(),
                                 fontSize = 12.sp,
                                 color = colors.brownPrimary.copy(alpha = 0.6f)
                             )
                             Spacer(Modifier.width(10.dp))
                         }
-                        if (thread.totalReplies != null) {
+                        thread.totalReplies?.let { totalReplies ->
                             Icon(
                                 imageVector = YamiboIcons.Comment,
                                 contentDescription = null,
@@ -239,15 +211,15 @@ internal fun ThreadHeader(
                             )
                             Spacer(Modifier.width(3.dp))
                             Text(
-                                text = "${thread.totalReplies}",
+                                text = totalReplies.toString(),
                                 fontSize = 12.sp,
                                 color = colors.brownPrimary.copy(alpha = 0.6f)
                             )
                         }
                     }
-                    Spacer(Modifier.height(3.dp))
 
-                    /** Forum name tag */
+                    Spacer(Modifier.height(6.dp))
+
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = colors.brownDeep.copy(alpha = 0.12f)
@@ -264,35 +236,31 @@ internal fun ThreadHeader(
 
             Spacer(Modifier.height(14.dp))
 
-            /** Action row: [onFavorite] [onShare] [continue read + progress] */
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                /** Favorite button */
                 Surface(
-                    onClick = onFavorite,
                     shape = RoundedCornerShape(12.dp),
                     color = colors.brownPrimary.copy(alpha = 0.1f)
                 ) {
-                    Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = YamiboIcons.StarOutline,
-                            contentDescription = "收藏",
-                            modifier = Modifier.size(22.dp),
-                            tint = colors.brownDeep
-                        )
-                    }
+                    FavoriteActionButton(
+                        onClick = onFavorite,
+                        onLongClick = onFavoriteLongPress,
+                        tint = colors.brownDeep,
+                        iconSize = 22,
+                        modifier = Modifier.size(42.dp),
+                        filled = isFavorited
+                    )
                 }
 
-                /** Share button */
                 Surface(
                     onClick = onShare,
                     shape = RoundedCornerShape(12.dp),
                     color = colors.brownPrimary.copy(alpha = 0.1f)
                 ) {
-                    Box(modifier = Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
                             contentDescription = "分享",
@@ -302,7 +270,6 @@ internal fun ThreadHeader(
                     }
                 }
 
-                /** Continue / Start reading button */
                 Surface(
                     onClick = onContinueRead,
                     modifier = Modifier.weight(1f),
@@ -310,9 +277,9 @@ internal fun ThreadHeader(
                     color = colors.brownDeep
                 ) {
                     Row(
-                        modifier =
-                            Modifier.fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
@@ -327,7 +294,7 @@ internal fun ThreadHeader(
                             Text(
                                 text = readingProgressText,
                                 modifier = Modifier.weight(1f),
-                                color = Color.White.copy(alpha = 0.6f),
+                                color = Color.White.copy(alpha = 0.65f),
                                 fontSize = 11.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -337,19 +304,49 @@ internal fun ThreadHeader(
                             Spacer(Modifier.weight(1f))
                         }
 
-                        /** Play icon */
                         Text(text = "▶", color = Color.White, fontSize = 16.sp)
                     }
                 }
             }
 
-            /** Tip bar */
             Text(
-                text = "💡 長按標題或作者可以複製",
+                text = "星星按鈕可直接收藏，長按可指定小集合",
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
-                color = colors.brownPrimary.copy(alpha = 0.4f)
+                color = colors.brownPrimary.copy(alpha = 0.45f)
             )
         }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CopyableLabel(
+    text: String,
+    fontSize: androidx.compose.ui.unit.TextUnit,
+    fontWeight: FontWeight,
+    color: Color,
+    onCopy: () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(targetValue = if (isPressed) 0.96f else 1f)
+
+    Text(
+        text = text,
+        fontSize = fontSize,
+        fontWeight = fontWeight,
+        color = color,
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {},
+                onLongClick = onCopy
+            )
+    )
 }

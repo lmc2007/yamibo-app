@@ -305,7 +305,7 @@ private fun ForumTopBar(
             )
         },
         navigationIcon = {
-            IconButton(onClick = onBack) { Text("◀", color = Color.White, fontSize = 20.sp) }
+            IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp) }
         },
         actions = {
             IconButton(onClick = onSearch, modifier = Modifier.offset(y = 5.dp)) {

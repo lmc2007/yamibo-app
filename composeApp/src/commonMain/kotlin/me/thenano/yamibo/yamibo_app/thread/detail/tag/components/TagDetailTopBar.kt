@@ -32,7 +32,7 @@ fun TagDetailTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Text("◀", color = Color.White, fontSize = 20.sp)
+                Text(YamiboIcons.Back, color = Color.White, fontSize = 18.sp)
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(

@@ -1,20 +1,20 @@
 package me.thenano.yamibo.yamibo_app.repository.settings
 
+import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingsRegistry
 import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
-import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 
 enum class AppThemeMode(val label: String) {
     SYSTEM("跟隨系統"),
     LIGHT("淺色模式"),
-    DARK("深色模式")
+    DARK("深色模式"),
 }
 
 enum class AppThemeScheme(val label: String) {
-    DEFAULT("百合會"),
-    DEFAULT_DARK("百合會(暗色)"),
-    CLASSIC_BLACK("傳統黑"),
-    CLASSIC_WHITE("傳統白"),
+    DEFAULT("預設"),
+    DEFAULT_DARK("預設（深色）"),
+    CLASSIC_BLACK("經典黑"),
+    CLASSIC_WHITE("經典白"),
     CATPPUCCIN("Catppuccin"),
     GREEN_APPLE("Green Apple"),
     LAVENDER("Lavender"),
@@ -28,7 +28,7 @@ enum class AppThemeScheme(val label: String) {
     YOTSUBA("Yotsuba"),
     MONOCHROME("Monochrome");
 
-    fun toScheme(): YamiboColorScheme = when(this) {
+    fun toScheme(): YamiboColorScheme = when (this) {
         DEFAULT -> YamiboColorScheme.Default
         DEFAULT_DARK -> YamiboColorScheme.DefaultDark
         CLASSIC_BLACK -> YamiboColorScheme.ClassicBlack
@@ -48,30 +48,46 @@ enum class AppThemeScheme(val label: String) {
     }
 }
 
+enum class FavoriteGridMode(val label: String) {
+    FIXED_GRID("固定網格"),
+    STAGGERED("瀑布貼齊"),
+}
+
 class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
 
     val themeMode by enumSetting(
-        name = "顏色主題",
-        default = AppThemeMode.SYSTEM
+        name = "主題模式",
+        default = AppThemeMode.SYSTEM,
     )
 
     val themeScheme by enumSetting(
-        name = "配色風格",
-        default = AppThemeScheme.DEFAULT
+        name = "配色方案",
+        default = AppThemeScheme.DEFAULT,
     )
 
     val isMangaMode by boolSetting(
         name = "漫畫模式",
-        default = false
+        default = false,
     )
 
     val clearCacheOnAppLaunch by boolSetting(
-        name = "App啟動時清除快取",
-        default = false
+        name = "App 啟動時清除緩存",
+        default = false,
+    )
+
+    val skipFavoriteRemovalConfirm by boolSetting(
+        name = "取消收藏時略過確認",
+        default = false,
+    )
+
+    val favoriteGridMode by enumSetting(
+        name = "收藏排列方式",
+        default = FavoriteGridMode.FIXED_GRID,
     )
 
     companion object {
         val themeModeOptions = AppThemeMode.entries.map { it to it.label }
         val themeSchemeOptions = AppThemeScheme.entries.map { it to it.label }
+        val favoriteGridModeOptions = FavoriteGridMode.entries.map { it to it.label }
     }
 }

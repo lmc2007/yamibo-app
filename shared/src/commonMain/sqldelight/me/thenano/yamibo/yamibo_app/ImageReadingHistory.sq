@@ -16,3 +16,12 @@ DELETE FROM ImageReadingHistory WHERE threadId = ?;
 
 deleteAll:
 DELETE FROM ImageReadingHistory;
+
+trimToLatest:
+DELETE FROM ImageReadingHistory
+WHERE postId IN (
+    SELECT postId
+    FROM ImageReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

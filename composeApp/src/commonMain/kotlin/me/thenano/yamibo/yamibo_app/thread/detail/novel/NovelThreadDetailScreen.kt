@@ -22,10 +22,25 @@ import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
+import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
+import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.FirstFloorPreview
@@ -49,7 +64,9 @@ internal sealed interface ThreadState {
 @Composable
 internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: UserId? = null) {
     val colors = YamiboTheme.colors
+    val appSettingsRepo = LocalAppSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
+    val favoriteRepository = LocalFavoriteRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -61,12 +78,77 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val pagePostsCache = remember { mutableStateMapOf<Int, List<Post>>() }
     var expandedPages by remember { mutableStateOf(setOf(1)) }
     var readHistory by remember { mutableStateOf<ThreadReadingHistory?>(null) }
+    var showFavoriteDialog by remember { mutableStateOf(false) }
+    var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogCategories by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+    }
+    var favoriteDialogOptions by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+    }
+    var isFavorited by remember { mutableStateOf(false) }
+    var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }
+    var favoriteRefreshToken by remember { mutableStateOf(0) }
+    var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
+    var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
 
     /** Load reading history for this thread */
     LaunchedEffect(tid) {
         try {
-            readHistory = readHistoryRepo.getPosition(tid)
+            readHistory = readHistoryRepo.getPosition(tid, ReadHistoryRepository.ThreadEntryType.Novel, authorId)
         } catch (_: Exception) { }
+    }
+
+    fun favoriteTarget(): FavoriteTargetPayload.Thread {
+        val currentTitle = (state as? ThreadState.Success)?.page?.thread?.title ?: title
+        val currentForumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid
+        val currentForumName = (state as? ThreadState.Success)?.page?.thread?.forum?.name
+        return FavoriteTargetPayload.Thread(
+            tid = tid,
+            title = currentTitle,
+            threadType = ReadHistoryRepository.ThreadEntryType.Novel,
+            authorId = authorId,
+            coverUrl = readHistory?.threadCover,
+            forumId = currentForumId,
+            forumName = currentForumName
+        )
+    }
+
+    suspend fun refreshFavoriteState() {
+        val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+        isFavorited = selection.item != null
+        favoritePaths = selection.paths
+    }
+
+    suspend fun toggleFavorite() {
+        val target = favoriteTarget()
+        val selection = favoriteRepository.getFavoriteLocationSelection(target)
+        if (selection.item != null) {
+            pendingFavoriteRemovalSelection = selection
+            if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
+                if (selection.paths.size > 1) {
+                    showFavoriteMultiPathDialog = true
+                } else {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(target) }
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            } else {
+                showFavoriteRemovalConfirm = true
+            }
+            return
+        }
+
+        favoriteRepository.saveFavorite(target)
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar("已加入收藏")
+    }
+
+    LaunchedEffect(tid, authorId, favoriteRefreshToken, (state as? ThreadState.Success)?.page?.thread?.title) {
+        refreshFavoriteState()
     }
 
     suspend fun loadThread(page: Int = 1) {
@@ -88,7 +170,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             }
     }
 
-    /** initial load — use cache if available, only fetch on cold start */
+    /** initial load ??use cache if available, only fetch on cold start */
     LaunchedEffect(tid) {
         val cached = threadRepository.getCachedThread(tid, authorId)
         if (cached != null) {
@@ -169,7 +251,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     else -> {
                                         val msg = result.message()
                                         snackbarHostState.showSnackbar(
-                                            message = "刷新失敗：$msg",
+                                            message = "??雓???謏??????揭???msg",
                                             duration = SnackbarDuration.Short
                                         )
                                     }
@@ -207,7 +289,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                             pagePostsCache[page] = result.value.posts
                                         } else {
                                             snackbarHostState.showSnackbar(
-                                                message = "載入第 $page 頁失敗 : ${result.message()}",
+                                                message = "?雓丐?????$page ??雓?????: ${result.message()}",
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -219,19 +301,22 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                     IThreadReaderScreen(
                                         tid = tid,
                                         title = current.page.thread.title,
+                                        threadType = ReadHistoryRepository.ThreadEntryType.Novel,
                                         authorId = authorId,
                                         initialPage = page,
-                                        targetPid = post.pid,
-                                        isAuthorOnly = authorId != null
+                                        targetPid = post.pid
                                     )
                                 )
                             },
-                            onFavorite = {
+                            onFavorite = { scope.launch { toggleFavorite() } },
+                            onFavoriteLongPress = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(
-                                        message = "收藏功能開發中",
-                                        duration = SnackbarDuration.Short
-                                    )
+                                    val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+                                    favoriteDialogCategories = favoriteRepository.getCategories()
+                                    favoriteDialogOptions = favoriteRepository.getCollectionOptions()
+                                    favoriteDialogCategorySelection = selection.categoryIds
+                                    favoriteDialogSelection = selection.collectionIds
+                                    showFavoriteDialog = true
                                 }
                             },
                             onContinueRead = {
@@ -241,9 +326,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                         IThreadReaderScreen(
                                             tid = tid,
                                             title = current.page.thread.title,
+                                            threadType = ReadHistoryRepository.ThreadEntryType.Novel,
                                             authorId = authorId,
-                                            initialPage = history.page,
-                                            isAuthorOnly = authorId != null
+                                            initialPage = history.page
                                         )
                                     )
                                 } else {
@@ -251,21 +336,22 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                                         IThreadReaderScreen(
                                             tid = tid,
                                             title = current.page.thread.title,
+                                            threadType = ReadHistoryRepository.ThreadEntryType.Novel,
                                             authorId = authorId,
-                                            initialPage = 1,
-                                            isAuthorOnly = authorId != null
+                                            initialPage = 1
                                         )
                                     )
                                 }
                             },
                             readingProgressText = readHistory?.let { h ->
                                 buildString {
-                                    append("第${h.page}頁")
+                                    append("第 ${h.page} 頁")
                                     if (h.postTitle.isNotEmpty()) {
-                                        append(" · ${h.postTitle}")
+                                        append(" 繚 ${h.postTitle}")
                                     }
                                 }
                             },
+                            isFavorited = isFavorited,
                             snackbarHostState = snackbarHostState,
                             scope = scope,
                             platformContext = platformContext
@@ -274,6 +360,90 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             }
         }
     }
+
+if (showFavoriteDialog) {
+        val target = FavoriteTargetPayload.Thread(
+            tid = tid,
+            title = (state as? ThreadState.Success)?.page?.thread?.title ?: title,
+            threadType = ReadHistoryRepository.ThreadEntryType.Novel,
+            authorId = authorId,
+            coverUrl = readHistory?.threadCover,
+            forumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid,
+            forumName = (state as? ThreadState.Success)?.page?.thread?.forum?.name
+        )
+        FavoriteCollectionPickerDialog(
+            categories = favoriteDialogCategories,
+            options = favoriteDialogOptions,
+            initialCategorySelection = favoriteDialogCategorySelection,
+            initialCollectionSelection = favoriteDialogSelection,
+            onDismiss = { showFavoriteDialog = false },
+            onEdit = {
+                showFavoriteDialog = false
+                navigator.navigate(IFavoriteCategoryManageScreen())
+            },
+            onConfirm = { selectedCategories, selectedCollections ->
+                scope.launch {
+                    val existing = favoriteRepository.findFavoriteItem(target)
+                    if (existing == null) {
+                        favoriteRepository.saveFavorite(
+                            target,
+                            categoryIds = selectedCategories.toList(),
+                            collectionIds = selectedCollections.toList()
+                        )
+                    } else {
+                        favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                    }
+                    showFavoriteDialog = false
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已更新收藏路徑")
+                }
+            }
+    )
+}
+
+if (showFavoriteRemovalConfirm) {
+    FavoriteRemovalConfirmDialog(
+        onDismiss = {
+            showFavoriteRemovalConfirm = false
+            pendingFavoriteRemovalSelection = null
+        },
+        onConfirm = { skipNextTime ->
+            appSettingsRepo.skipFavoriteRemovalConfirm.setValue(skipNextTime)
+            showFavoriteRemovalConfirm = false
+            scope.launch {
+                val selection = pendingFavoriteRemovalSelection
+                if ((selection?.paths?.size ?: 0) > 1) {
+                    showFavoriteMultiPathDialog = true
+                } else {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                    favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已取消收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            }
+        },
+    )
+}
+
+if (showFavoriteMultiPathDialog) {
+    FavoriteMultiPathRemoveDialog(
+        paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
+            tip = "tip：長按可詳細編輯收藏路徑",
+        onDismiss = {
+            showFavoriteMultiPathDialog = false
+            pendingFavoriteRemovalSelection = null
+        },
+        onRemoveAll = {
+            showFavoriteMultiPathDialog = false
+            scope.launch {
+                withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消全部收藏")
+                pendingFavoriteRemovalSelection = null
+            }
+        },
+    )
+}
 }
 
 /** Thread content body */
@@ -286,6 +456,8 @@ private fun ThreadContent(
     onLoadPage: (Int) -> Unit,
     onPostClick: (Int, Post) -> Unit,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: () -> Unit,
+    isFavorited: Boolean,
     onContinueRead: () -> Unit,
     readingProgressText: String?,
     snackbarHostState: SnackbarHostState,
@@ -302,7 +474,9 @@ private fun ThreadContent(
         item {
             ThreadHeader(
                 threadPage = threadPage,
+                isFavorited = isFavorited,
                 onFavorite = onFavorite,
+                onFavoriteLongPress = onFavoriteLongPress,
                 onShare = {
                     val url = YamiboRoute.Thread(thread.tid).build()
                     shareText(platformContext, url, thread.title)

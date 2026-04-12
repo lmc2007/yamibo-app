@@ -36,3 +36,12 @@ WHERE tagName LIKE '%' || ? || '%' OR threadTitle LIKE '%' || ? || '%';
 
 deleteByTagIds:
 DELETE FROM MangaTagReadingHistory WHERE tagId IN ?;
+
+trimToLatest:
+DELETE FROM MangaTagReadingHistory
+WHERE tagId IN (
+    SELECT tagId
+    FROM MangaTagReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

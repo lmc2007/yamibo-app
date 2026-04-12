@@ -7,9 +7,22 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -22,22 +35,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.Logger
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 
-/** Single history entry card */
 @Composable
 fun ReadHistoryCard(
     history: ThreadReadingHistory,
     timeLabel: String,
     isSelectMode: Boolean = false,
     isSelected: Boolean = false,
+    isFavorited: Boolean = false,
     onClick: () -> Unit,
     onCoverClick: () -> Unit,
     onDelete: () -> Unit,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
@@ -78,7 +92,6 @@ fun ReadHistoryCard(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            /** Thread cover */
             Card(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
@@ -90,12 +103,13 @@ fun ReadHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                Logger.i("threadCover", "${history.threadName} : ${history.threadCover.toString()}")
                 if (!history.threadCover.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
                         model = rememberImageRequest(url = history.threadCover!!),
                         contentDescription = "thread cover",
-                        modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(12.dp)),
                         contentScale = ContentScale.Crop,
                         error = {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -129,9 +143,8 @@ fun ReadHistoryCard(
                 }
             }
 
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.size(12.dp))
 
-            /** Title + details */
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = history.threadName,
@@ -139,9 +152,9 @@ fun ReadHistoryCard(
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textDark,
                 )
-                Spacer(Modifier.height(4.dp))
-                
-                /** Reading Progress (post title) */
+
+                Spacer(Modifier.size(6.dp))
+
                 val progress = if (history.postTitle.isNotEmpty()) {
                     "P.${history.page} ${history.postTitle}"
                 } else {
@@ -153,12 +166,12 @@ fun ReadHistoryCard(
                     fontWeight = FontWeight.Medium,
                     color = colors.textDark.copy(alpha = 0.75f),
                 )
-                Spacer(Modifier.height(2.dp))
 
-                /** Forum & Time */
+                Spacer(Modifier.size(2.dp))
+
                 val metaInfo = buildString {
                     if (history.forumName != null) {
-                        append("#${history.forumName}  ·  ")
+                        append("#${history.forumName}  ・  ")
                     }
                     append(timeLabel)
                 }
@@ -169,32 +182,22 @@ fun ReadHistoryCard(
                 )
             }
 
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.size(4.dp))
 
-            /** Action buttons — star + trashcan */
             if (!isSelectMode) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(0.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    /** Star (favorite) button */
-                    IconButton(
-                        onClick = onCoverClick,
-                        modifier = Modifier.size(0.dp)
-                    ) {}
-                    IconButton(
+                    FavoriteActionButton(
                         onClick = onFavorite,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            imageVector = YamiboIcons.StarOutline,
-                            contentDescription = "收藏",
-                            modifier = Modifier.size(16.dp),
-                            tint = colors.brownPrimary.copy(alpha = 0.6f)
-                        )
-                    }
+                        onLongClick = onFavoriteLongPress,
+                        modifier = Modifier.size(32.dp),
+                        tint = colors.brownPrimary.copy(alpha = 0.75f),
+                        iconSize = 16,
+                        filled = isFavorited
+                    )
 
-                    /** Trashcan (delete) button */
                     IconButton(
                         onClick = onDelete,
                         modifier = Modifier.size(32.dp)
@@ -211,4 +214,3 @@ fun ReadHistoryCard(
         }
     }
 }
-

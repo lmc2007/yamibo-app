@@ -9,6 +9,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.IOSAuthRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSForumRepository
+import me.thenano.yamibo.yamibo_app.repository.IOSLocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
 import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
@@ -47,7 +48,7 @@ fun MainViewController() = ComposeUIViewController {
 
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
-    val favoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
+    val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val themeRepository = remember { IOSThemeRepository() }

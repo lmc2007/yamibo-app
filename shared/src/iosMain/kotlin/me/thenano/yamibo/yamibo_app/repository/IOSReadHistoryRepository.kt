@@ -11,6 +11,10 @@ import me.thenano.yamibo.yamiboapp.MangaTagReadingHistory
 import me.thenano.yamibo.yamiboapp.ReadingHistory
 
 class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepository {
+    private companion object {
+        const val COMBINED_HISTORY_BATCH_SIZE = 500L
+        const val MAX_HISTORY_ITEMS = 2000L
+    }
 
     private val db = Database(dbFactory.createDriver())
     private val queries = db.readingHistoryQueries
@@ -18,11 +22,12 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
     override suspend fun savePosition(history: ReadHistoryRepository.ThreadReadingHistory) {
         queries.upsert(
             threadId = history.threadId.value.toLong(),
+            threadType = history.threadType.name,
             threadName = history.threadName,
             threadCover = history.threadCover,
             forumName = history.forumName,
             forumId = history.forumId?.value?.toLong(),
-            authorId = history.authorId?.value?.toLong(),
+            authorId = history.authorId?.value?.toLong() ?: 0L,
             page = history.page.toLong(),
             postId = history.postId.value.toLong(),
             postTitle = history.postTitle,
@@ -37,10 +42,19 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
             lastVisitTime = history.lastVisitTime
         )
+        queries.trimToLatest(MAX_HISTORY_ITEMS)
     }
 
-    override suspend fun getPosition(tid: ThreadId): ReadHistoryRepository.ThreadReadingHistory? {
-        return queries.getByThreadId(tid.value.toLong()).executeAsOneOrNull()?.toHistory()
+    override suspend fun getPosition(
+        tid: ThreadId,
+        threadType: ReadHistoryRepository.ThreadEntryType,
+        authorId: UserId?
+    ): ReadHistoryRepository.ThreadReadingHistory? {
+        return queries.getByThreadKey(
+            threadId = tid.value.toLong(),
+            threadType = threadType.name,
+            authorId = authorId?.value?.toLong() ?: 0L
+        ).executeAsOneOrNull()?.toHistory()
     }
 
     override suspend fun getHistoryPage(
@@ -57,8 +71,16 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
         return queries.countAll().executeAsOne()
     }
 
-    override suspend fun deleteHistory(tid: ThreadId) {
-        queries.deleteByThreadId(tid.value.toLong())
+    override suspend fun deleteHistory(
+        tid: ThreadId,
+        threadType: ReadHistoryRepository.ThreadEntryType,
+        authorId: UserId?
+    ) {
+        queries.deleteByThreadKey(
+            threadId = tid.value.toLong(),
+            threadType = threadType.name,
+            authorId = authorId?.value?.toLong() ?: 0L
+        )
     }
 
     override suspend fun deleteAll() {
@@ -80,19 +102,28 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
         return queries.countByName(query).executeAsOne()
     }
 
-    override suspend fun deleteHistoryBatch(tids: List<ThreadId>) {
-        if (tids.isEmpty()) return
-        queries.deleteByThreadIds(tids.map { it.value.toLong() })
+    override suspend fun deleteHistoryBatch(items: List<ReadHistoryRepository.ThreadReadingHistory>) {
+        if (items.isEmpty()) return
+        db.transaction {
+            items.forEach { item ->
+                queries.deleteByThreadKey(
+                    threadId = item.threadId.value.toLong(),
+                    threadType = item.threadType.name,
+                    authorId = item.authorId?.value?.toLong() ?: 0L
+                )
+            }
+        }
     }
 
     private fun ReadingHistory.toHistory(): ReadHistoryRepository.ThreadReadingHistory {
         return ReadHistoryRepository.ThreadReadingHistory(
+            threadType = ReadHistoryRepository.ThreadEntryType.fromStorage(threadType),
             threadName = threadName,
             threadId = ThreadId(threadId.toInt()),
             threadCover = threadCover,
             forumName = forumName,
             forumId = forumId?.toInt()?.let { ForumId(it) },
-            authorId = authorId?.toInt()?.let { UserId(it) },
+            authorId = authorId.takeIf { it != 0L }?.toInt()?.let { UserId(it) },
             page = page.toInt(),
             postId = PostId(postId.toInt()),
             postTitle = postTitle,
@@ -103,6 +134,7 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             anchorBlockRatio = anchorBlockRatio?.toFloat(),
             globalScrollY = globalScrollY?.toInt(),
             viewportHeight = viewportHeight?.toInt(),
+            firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
             firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
             lastVisitTime = lastVisitTime
         )
@@ -120,6 +152,7 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
             lastVisitTime = history.lastVisitTime
         )
+        imageQueries.trimToLatest(MAX_HISTORY_ITEMS)
     }
 
     override suspend fun getImagePosition(postId: PostId): ReadHistoryRepository.ImageReadingHistory? {
@@ -152,6 +185,7 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
             lastVisitTime = history.lastVisitTime
         )
+        mangaTagQueries.trimToLatest(MAX_HISTORY_ITEMS)
     }
 
     override suspend fun getTagMangaReaderModeHistoryPosition(tagId: TagId): ReadHistoryRepository.TagMangaReadingHistory? {
@@ -166,7 +200,8 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
                 threadImageTotalPages = it.threadImageTotalPages.toInt(),
                 firstVisibleItemIndex = it.firstVisibleItemIndex?.toInt(),
                 firstVisibleItemOffset = it.firstVisibleItemOffset?.toInt(),
-                lastVisitTime = it.lastVisitTime
+                lastVisitTime = it.lastVisitTime,
+                coverUrl = it.coverUrl
             )
         }
     }
@@ -186,7 +221,8 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
             threadImageTotalPages = threadImageTotalPages.toInt(),
             firstVisibleItemIndex = firstVisibleItemIndex?.toInt(),
             firstVisibleItemOffset = firstVisibleItemOffset?.toInt(),
-            lastVisitTime = lastVisitTime
+            lastVisitTime = lastVisitTime,
+            coverUrl = coverUrl
         )
     }
 
@@ -195,8 +231,8 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
         pageSize: Int
     ): List<ReadHistoryRepository.AnyReadingHistory> {
         val offset = (page - 1).coerceAtLeast(0) * pageSize
-        val threads = queries.getPage(2000, 0).executeAsList().map { it.toHistory() }
-        val tags = mangaTagQueries.getPage(2000, 0).executeAsList().map { it.toHistory() }
+        val threads = loadAllThreadHistory()
+        val tags = loadAllTagHistory()
         return (threads + tags)
             .sortedByDescending { it.lastVisitTime }
             .drop(offset)
@@ -213,8 +249,8 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
         pageSize: Int
     ): List<ReadHistoryRepository.AnyReadingHistory> {
         val offset = (page - 1).coerceAtLeast(0) * pageSize
-        val threads = queries.searchByName(query, 2000, 0).executeAsList().map { it.toHistory() }
-        val tags = mangaTagQueries.searchByName(query, query, 2000, 0).executeAsList().map { it.toHistory() }
+        val threads = loadAllThreadHistory(query)
+        val tags = loadAllTagHistory(query)
         return (threads + tags)
             .sortedByDescending { it.lastVisitTime }
             .drop(offset)
@@ -226,11 +262,14 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
     }
 
     override suspend fun deleteCombinedHistoryBatch(items: List<ReadHistoryRepository.AnyReadingHistory>) {
-        val threadIds = items.filterIsInstance<ReadHistoryRepository.ThreadReadingHistory>().map { it.threadId.value.toLong() }
         val tagIds = items.filterIsInstance<ReadHistoryRepository.TagMangaReadingHistory>().map { it.tagId.value.toLong() }
-        
-        if (threadIds.isNotEmpty()) {
-            queries.deleteByThreadIds(threadIds)
+
+        items.filterIsInstance<ReadHistoryRepository.ThreadReadingHistory>().forEach { item ->
+            queries.deleteByThreadKey(
+                threadId = item.threadId.value.toLong(),
+                threadType = item.threadType.name,
+                authorId = item.authorId?.value?.toLong() ?: 0L
+            )
         }
         if (tagIds.isNotEmpty()) {
             mangaTagQueries.deleteByTagIds(tagIds)
@@ -240,5 +279,45 @@ class IOSReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryReposito
     override suspend fun deleteAllCombinedHistory() {
         queries.deleteAll()
         mangaTagQueries.deleteAll()
+    }
+
+    private fun loadAllThreadHistory(query: String? = null): List<ReadHistoryRepository.ThreadReadingHistory> {
+        val histories = mutableListOf<ReadHistoryRepository.ThreadReadingHistory>()
+        var offset = 0L
+
+        while (true) {
+            val batch = if (query.isNullOrBlank()) {
+                queries.getPage(COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            } else {
+                queries.searchByName(query, COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            }
+
+            if (batch.isEmpty()) break
+            histories += batch.map { it.toHistory() }
+            if (batch.size < COMBINED_HISTORY_BATCH_SIZE.toInt()) break
+            offset += batch.size
+        }
+
+        return histories
+    }
+
+    private fun loadAllTagHistory(query: String? = null): List<ReadHistoryRepository.TagMangaReadingHistory> {
+        val histories = mutableListOf<ReadHistoryRepository.TagMangaReadingHistory>()
+        var offset = 0L
+
+        while (true) {
+            val batch = if (query.isNullOrBlank()) {
+                mangaTagQueries.getPage(COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            } else {
+                mangaTagQueries.searchByName(query, query, COMBINED_HISTORY_BATCH_SIZE, offset).executeAsList()
+            }
+
+            if (batch.isEmpty()) break
+            histories += batch.map { it.toHistory() }
+            if (batch.size < COMBINED_HISTORY_BATCH_SIZE.toInt()) break
+            offset += batch.size
+        }
+
+        return histories
     }
 }

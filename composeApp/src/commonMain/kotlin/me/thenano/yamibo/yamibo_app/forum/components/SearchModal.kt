@@ -112,7 +112,7 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Text("◀", color = Color.White, fontSize = 20.sp)
+                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
                     }
 
                     OutlinedTextField(

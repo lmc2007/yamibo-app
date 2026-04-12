@@ -60,7 +60,7 @@ fun WebViewTopBar(
             ) {
                 // Exit button (X or Back Arrow)
                 Text(
-                    text = if (useBackIcon) "◀" else "✖",
+                text = if (useBackIcon) YamiboIcons.Back else "✖",
                     modifier = Modifier
                         .padding(end = 12.dp)
                         .clickable { onCloseClick() },

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -31,17 +31,31 @@ import io.github.littlesurvival.dto.value.PollOptionId
 import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.Logger
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
+import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
+import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -72,18 +86,21 @@ internal sealed interface ReaderState {
 internal fun ThreadReaderScreen(
     tid: ThreadId,
     title: String,
+    threadType: ReadHistoryRepository.ThreadEntryType = ReadHistoryRepository.ThreadEntryType.Normal,
     authorId: UserId? = null,
     initialPage: Int = 1,
-    targetPid: PostId? = null,
-    isAuthorOnly: Boolean = false
+    targetPid: PostId? = null
 ) {
     val colors = YamiboTheme.colors
+    val appSettingsRepository = LocalAppSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
+    val favoriteRepository = LocalFavoriteRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    val isNovelThread = threadType == ReadHistoryRepository.ThreadEntryType.Novel
 
     var state by remember { mutableStateOf<ReaderState>(ReaderState.Loading) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -108,6 +125,20 @@ internal fun ThreadReaderScreen(
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
+    var showFavoriteDialog by remember { mutableStateOf(false) }
+    var favoriteDialogCategories by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+    }
+    var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogOptions by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+    }
+    var isFavorited by remember { mutableStateOf(false) }
+    var favoriteRefreshToken by remember { mutableIntStateOf(0) }
+    var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
+    var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(loadedPostsByPage[1], threadInfo) {
         if (coverUrl != null) return@LaunchedEffect // Lock once found for stability
@@ -133,6 +164,52 @@ internal fun ThreadReaderScreen(
 
         if (attachedImageUrl.contains("none.gif") || attachedImageUrl.contains("smiley/") || attachedImageUrl.contains("face")) return@LaunchedEffect
         coverUrl = if (attachedImageUrl.startsWith("http")) attachedImageUrl else "${YamiboRoute.Domain.build()}$attachedImageUrl"
+    }
+
+    fun favoriteTarget(): FavoriteTargetPayload.Thread {
+        return FavoriteTargetPayload.Thread(
+            tid = tid,
+            title = title,
+            threadType = threadType,
+            authorId = authorId,
+            coverUrl = coverUrl,
+            forumId = threadInfo?.forum?.fid,
+            forumName = threadInfo?.forum?.name,
+        )
+    }
+
+    suspend fun refreshFavoriteState() {
+        val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+        isFavorited = selection.item != null
+    }
+
+    suspend fun toggleFavoriteQuickWithFeedback() {
+        val target = favoriteTarget()
+        val selection = favoriteRepository.getFavoriteLocationSelection(target)
+        if (selection.item != null) {
+            pendingFavoriteRemovalSelection = selection
+            if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
+                if (selection.paths.size > 1) {
+                    showFavoriteMultiPathDialog = true
+                } else {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(target) }
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            } else {
+                showFavoriteRemovalConfirm = true
+            }
+            return
+        }
+
+        favoriteRepository.saveFavorite(target)
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar("已加入收藏")
+    }
+
+    LaunchedEffect(tid, threadType, authorId, coverUrl, threadInfo?.forum?.fid, threadInfo?.forum?.name, title, favoriteRefreshToken) {
+        refreshFavoriteState()
     }
 
     fun getFormHash(): FormHash? {
@@ -236,6 +313,7 @@ internal fun ThreadReaderScreen(
         val firstVisibleOffset = listState.firstVisibleItemScrollOffset
         Logger.i("ThreadReaderScreen", "$title : $coverUrl")
         return ThreadReadingHistory(
+            threadType = threadType,
             threadName = title,
             threadId = tid,
             threadCover = coverUrl,
@@ -302,7 +380,7 @@ internal fun ThreadReaderScreen(
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
                 is YamiboResult.Success -> updatePage(result)
                 else -> {
-                    snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取快取")
+                    snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取緩存")
                     if (!loadFromCache() && (page == initialPage || page == 1)) {
                         state = ReaderState.Error(result.message())
                     }
@@ -367,7 +445,7 @@ internal fun ThreadReaderScreen(
         /** Restore position from history if no explicit targetPid */
         if (!hasRestoredPosition && targetPid == null) {
             try {
-                val savedPosition = readHistoryRepo.getPosition(tid)
+                val savedPosition = readHistoryRepo.getPosition(tid, threadType, authorId)
                 if (savedPosition != null) {
                     // Ensure the saved page is loaded
                     if (savedPosition.page != initialPage) {
@@ -605,7 +683,7 @@ internal fun ThreadReaderScreen(
                                     val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
 
                                     // Manga forum / Other forum (non-novel, non-authorOnly): Place after PostRenderer
-                                    if (isManga || (!isNovel && !isAuthorOnly)) {
+                                    if (isManga || (!isNovel && !isNovelThread)) {
                                         CommentBanner(
                                             text = "查看標籤列表",
                                             icon = "🏷️",
@@ -622,7 +700,7 @@ internal fun ThreadReaderScreen(
                                 }
 
                                 // Author-only mode: tag banner + comment banner
-                                if (isAuthorOnly) {
+                                if (isNovelThread) {
                                     // Novel forum: Tag Banner is above the comments button
                                     if (post.floor == 1 && currentPage == 1) {
                                         val fid = threadInfo?.forum?.fid
@@ -647,14 +725,14 @@ internal fun ThreadReaderScreen(
                                         text = "點擊跳轉到評論區",
                                         onClick = {
                                             navigator.navigate(
-                                                ICommentReaderScreen(
-                                                    tid = tid,
-                                                    postTitle = post.title.ifEmpty { "第${post.floor}樓" },
-                                                    oPostId = post.pid,
-                                                    authorId = authorId!!
+                                                    ICommentReaderScreen(
+                                                        tid = tid,
+                                                        postTitle = post.title.ifEmpty { "第${post.floor}樓" },
+                                                        oPostId = post.pid,
+                                                        authorId = authorId ?: post.author.uid
+                                                    )
                                                 )
-                                            )
-                                        }
+                                            }
                                     )
                                 }
 
@@ -713,11 +791,19 @@ internal fun ThreadReaderScreen(
                     visible = showMenu,
                     title = title,
                     snackbarHostState = snackbarHostState,
+                    isFavorited = isFavorited,
                     onBack = { navigator.pop() },
                     onCatalog = { scope.launch { drawerState.open() } },
-                    onFavorite = {
+                    onFavorite = { scope.launch { toggleFavoriteQuickWithFeedback() } },
+                    onFavoriteLongPress = {
                         scope.launch {
-                            snackbarHostState.showSnackbar("收藏功能開發中")
+                            val target = favoriteTarget()
+                            favoriteDialogCategories = favoriteRepository.getCategories()
+                            favoriteDialogOptions = favoriteRepository.getCollectionOptions()
+                            val selection = favoriteRepository.getFavoriteLocationSelection(target)
+                            favoriteDialogCategorySelection = selection.categoryIds
+                            favoriteDialogSelection = selection.collectionIds
+                            showFavoriteDialog = true
                         }
                     },
                     onShare = {
@@ -760,6 +846,7 @@ internal fun ThreadReaderScreen(
                                     tid = tid,
                                     postId = firstPost.pid,
                                     fid = threadInfo?.forum?.fid,
+                                    authorId = authorId,
                                     threadTitle = title,
                                     imageList = firstPostImages,
                                     loadHistory = true,
@@ -794,5 +881,81 @@ internal fun ThreadReaderScreen(
                 )
             }
         }
+    }
+
+    if (showFavoriteDialog) {
+        val target = favoriteTarget()
+        FavoriteCollectionPickerDialog(
+            categories = favoriteDialogCategories,
+            options = favoriteDialogOptions,
+            initialCategorySelection = favoriteDialogCategorySelection,
+            initialCollectionSelection = favoriteDialogSelection,
+            onDismiss = { showFavoriteDialog = false },
+            onEdit = {
+                showFavoriteDialog = false
+                navigator.navigate(IFavoriteCategoryManageScreen())
+            },
+            onConfirm = { selectedCategories, selectedCollections ->
+                scope.launch {
+                    val existing = favoriteRepository.findFavoriteItem(target)
+                    if (existing == null) {
+                        favoriteRepository.saveFavorite(
+                            target,
+                            categoryIds = selectedCategories.toList(),
+                            collectionIds = selectedCollections.toList()
+                        )
+                    } else {
+                        favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                    }
+                    showFavoriteDialog = false
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已更新收藏路徑")
+                }
+            }
+        )
+    }
+
+    if (showFavoriteRemovalConfirm) {
+        FavoriteRemovalConfirmDialog(
+            onDismiss = {
+                showFavoriteRemovalConfirm = false
+                pendingFavoriteRemovalSelection = null
+            },
+            onConfirm = { skipNextTime ->
+                appSettingsRepository.skipFavoriteRemovalConfirm.setValue(skipNextTime)
+                showFavoriteRemovalConfirm = false
+                scope.launch {
+                    val selection = pendingFavoriteRemovalSelection
+                    if ((selection?.paths?.size ?: 0) > 1) {
+                        showFavoriteMultiPathDialog = true
+                    } else {
+                        withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已取消收藏")
+                        pendingFavoriteRemovalSelection = null
+                    }
+                }
+            },
+        )
+    }
+
+    if (showFavoriteMultiPathDialog) {
+        FavoriteMultiPathRemoveDialog(
+            paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
+            tip = "tip：長按可詳細編輯收藏路徑",
+            onDismiss = {
+                showFavoriteMultiPathDialog = false
+                pendingFavoriteRemovalSelection = null
+            },
+            onRemoveAll = {
+                showFavoriteMultiPathDialog = false
+                scope.launch {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消所有收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            },
+        )
     }
 }

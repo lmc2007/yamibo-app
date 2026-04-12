@@ -26,9 +26,11 @@ internal fun ReaderOverlayMenu(
     visible: Boolean,
     title: String,
     snackbarHostState: SnackbarHostState,
+    isFavorited: Boolean,
     onBack: () -> Unit,
     onCatalog: () -> Unit,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
     onReply: () -> Unit,
     onRefresh: () -> Unit,
@@ -62,8 +64,10 @@ internal fun ReaderOverlayMenu(
         // Bottom action bar (Comment, Favorite, Share)
         ReaderBottomBar(
             visible = visible,
+            isFavorited = isFavorited,
             onReply = onReply,
             onFavorite = onFavorite,
+            onFavoriteLongPress = onFavoriteLongPress,
             onShare = onShare,
             modifier = Modifier.align(Alignment.BottomCenter)
         )

@@ -1,16 +1,17 @@
 upsert:
 INSERT OR REPLACE INTO ReadingHistory(
-    threadId, threadName, threadCover, forumName, forumId, authorId,
+    threadId, threadType, threadName, threadCover, forumName, forumId, authorId,
     page, postId, postTitle,
     anchorPostId, anchorPostRatio,
     anchorBlockId, anchorBlockType, anchorBlockRatio,
     globalScrollY, viewportHeight,
     firstVisibleItemIndex, firstVisibleItemOffset,
     lastVisitTime
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
-getByThreadId:
-SELECT * FROM ReadingHistory WHERE threadId = ?;
+getByThreadKey:
+SELECT * FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ?;
 
 getPage:
 SELECT * FROM ReadingHistory
@@ -20,8 +21,9 @@ LIMIT ? OFFSET ?;
 countAll:
 SELECT COUNT(*) FROM ReadingHistory;
 
-deleteByThreadId:
-DELETE FROM ReadingHistory WHERE threadId = ?;
+deleteByThreadKey:
+DELETE FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ?;
 
 deleteAll:
 DELETE FROM ReadingHistory;
@@ -36,5 +38,11 @@ countByName:
 SELECT COUNT(*) FROM ReadingHistory
 WHERE threadName LIKE '%' || ? || '%';
 
-deleteByThreadIds:
-DELETE FROM ReadingHistory WHERE threadId IN ?;
+trimToLatest:
+DELETE FROM ReadingHistory
+WHERE (threadId, threadType, authorId) IN (
+    SELECT threadId, threadType, authorId
+    FROM ReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

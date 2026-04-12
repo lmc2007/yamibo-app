@@ -1,0 +1,37 @@
+insertFavoriteItem:
+INSERT INTO LocalFavoriteItem(
+    targetType, targetId, title, coverUrl, forumId, forumName, authorId, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+findByTarget:
+SELECT * FROM LocalFavoriteItem
+WHERE targetType = ? AND targetId = ? AND authorId = ?;
+
+updateFavoriteItem:
+UPDATE LocalFavoriteItem
+SET title = ?, coverUrl = ?, forumId = ?, forumName = ?, authorId = ?, updatedAt = ?
+WHERE id = ?;
+
+touchFavoriteItem:
+UPDATE LocalFavoriteItem
+SET updatedAt = ?
+WHERE id = ?;
+
+getByCollectionId:
+SELECT LocalFavoriteItem.*
+FROM LocalFavoriteItem
+INNER JOIN LocalFavoriteItemCollectionCrossRef
+    ON LocalFavoriteItem.id = LocalFavoriteItemCollectionCrossRef.itemId
+WHERE LocalFavoriteItemCollectionCrossRef.collectionId = ?
+ORDER BY LocalFavoriteItem.updatedAt DESC, LocalFavoriteItem.id DESC;
+
+getByCategoryId:
+SELECT LocalFavoriteItem.*
+FROM LocalFavoriteItem
+INNER JOIN LocalFavoriteItemCategoryCrossRef
+    ON LocalFavoriteItem.id = LocalFavoriteItemCategoryCrossRef.itemId
+WHERE LocalFavoriteItemCategoryCrossRef.categoryId = ?
+ORDER BY LocalFavoriteItem.updatedAt DESC, LocalFavoriteItem.id DESC;
+
+deleteById:
+DELETE FROM LocalFavoriteItem WHERE id = ?;

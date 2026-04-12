@@ -19,10 +19,23 @@ import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.TagPage
 import io.github.littlesurvival.dto.value.TagId
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
+import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
+import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.removeFavorite
+import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -53,6 +66,7 @@ internal fun TagDetailScreen(
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     val tagRepository = LocalTagRepository.current
+    val favoriteRepository = LocalFavoriteRepository.current
     val historyRepo = LocalReadHistoryRepository.current
     val platformContext = LocalPlatformContext.current
 
@@ -63,6 +77,21 @@ internal fun TagDetailScreen(
     var currentPage by remember { mutableIntStateOf(initialPage ?: 1) }
     var currentTagName by remember { mutableStateOf(tagName) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var showFavoriteDialog by remember { mutableStateOf(false) }
+    var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoriteDialogCategories by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
+    }
+    var favoriteDialogOptions by remember {
+        mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollectionOption>>(emptyList())
+    }
+    var isFavorited by remember { mutableStateOf(false) }
+    var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }
+    var favoriteRefreshToken by remember { mutableStateOf(0) }
+    var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
+    var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
@@ -121,17 +150,60 @@ internal fun TagDetailScreen(
     LaunchedEffect(tagId, stackSize) {
         mangaTagHistory = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
     }
+
+    fun favoriteTarget(): FavoriteTargetPayload.TagManga {
+        return FavoriteTargetPayload.TagManga(
+            tagId = tagId,
+            tagName = currentTagName,
+            coverUrl = coverUrl()
+        )
+    }
+
+    suspend fun refreshFavoriteState() {
+        val selection = favoriteRepository.getFavoriteLocationSelection(favoriteTarget())
+        isFavorited = selection.item != null
+        favoritePaths = selection.paths
+    }
+
+    suspend fun toggleFavorite() {
+        val target = favoriteTarget()
+        val selection = favoriteRepository.getFavoriteLocationSelection(target)
+        if (selection.item != null) {
+            pendingFavoriteRemovalSelection = selection
+            if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
+                if (selection.paths.size > 1) {
+                    showFavoriteMultiPathDialog = true
+                } else {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(target) }
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            } else {
+                showFavoriteRemovalConfirm = true
+            }
+            return
+        }
+
+        favoriteRepository.saveFavorite(target)
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar("已加入收藏")
+    }
+
+    LaunchedEffect(tagId, currentTagName, favoriteRefreshToken) {
+        refreshFavoriteState()
+    }
     
     // Reading progress text
     val readingProgressText = remember(mangaTagHistory, isMangaMode) {
         val h = mangaTagHistory ?: return@remember null
         if (isMangaMode) {
-            "第${h.tagPage}頁 · ${h.threadTitle} · ${h.threadImagePageIndex+1}/${h.threadImageTotalPages}"
+            "第 ${h.tagPage} 頁 繚 ${h.threadTitle} 繚 ${h.threadImagePageIndex + 1}/${h.threadImageTotalPages}"
         } else {
-            "第${h.tagPage}頁 · ${h.threadTitle}"
+            "第 ${h.tagPage} 頁 繚 ${h.threadTitle}"
         }
     }
-    /** Handle thread click — manga mode opens TagMangaReaderScreen */
+    /** Handle thread click ??manga mode opens TagMangaReaderScreen */
     fun navigateToThread(thread: ThreadSummary, threads: List<ThreadSummary>, pageNav: PageNav?) {
         val fid = thread.fid
         val isManga = fid?.let { YamiboForum.isMangaForum(it) } == true
@@ -161,13 +233,16 @@ internal fun TagDetailScreen(
                 INovelThreadDetailScreen(
                     tid = thread.tid,
                     title = thread.title
+                    ,
+                    authorId = thread.author?.uid
                 )
             )
         } else {
             navigator.navigate(
                 IThreadReaderScreen(
                     tid = thread.tid,
-                    title = thread.title
+                    title = thread.title,
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal
                 )
             )
         }
@@ -177,7 +252,7 @@ internal fun TagDetailScreen(
     fun handleContinueRead(threads: List<ThreadSummary>, pageNav: PageNav?) {
         val history = mangaTagHistory
         if (history != null && isMangaMode) {
-            // 有歷史紀錄 + 漫畫模式：進入 TagMangaReaderScreen 的替代方案 ImagesReaderScreen
+            // ?嚙賣風?嚙踝蕭???+ 瞍怎璅∴蕭?嚗脣 TagMangaReaderScreen ?嚙賣嚙?嚙踝蕭嚙?ImagesReaderScreen
             val threadIndex = threads.indexOfFirst { it.tid == history.threadId }
             val authorId = if (threadIndex >= 0) threads[threadIndex].author?.uid else null
             navigator.navigate(
@@ -198,15 +273,16 @@ internal fun TagDetailScreen(
                 )
             )
         } else if (history != null) {
-            // 有歷史紀錄 + 非漫畫模式：進入普通閱讀
+            // ?嚙賣風?嚙踝蕭???+ ?嚙賣憤?嚙賣芋撘蕭??嚙賢?嚙賡霈
             navigator.navigate(
                 IThreadReaderScreen(
                     tid = history.threadId,
-                    title = history.threadTitle
+                    title = history.threadTitle,
+                    threadType = ReadHistoryRepository.ThreadEntryType.Normal
                 )
             )
         } else {
-            // 無歷史紀錄：開始第一個 thread
+            // ?嚙賣風?嚙踝蕭??嚙踝蕭??嚙踝蕭?蝚穿蕭???thread
             val first = threads.firstOrNull() ?: return
             navigateToThread(first, threads, pageNav)
         }
@@ -276,7 +352,7 @@ internal fun TagDetailScreen(
                                     else -> {
                                         val msg = result.message()
                                         snackbarHostState.showSnackbar(
-                                            message = "刷新失敗：$msg",
+                                            message = "?嚙賣憭梧蕭?嚙?msg",
                                             duration = SnackbarDuration.Short
                                         )
                                     }
@@ -297,7 +373,19 @@ internal fun TagDetailScreen(
                             onContinueRead = {
                                 handleContinueRead(currentState.page.threadSummaries, currentState.page.pageNav)
                             },
-                            onFavorite = { /* TODO: tag favorite */ },
+                            onFavorite = { scope.launch { toggleFavorite() } },
+                            onFavoriteLongPress = {
+                                scope.launch {
+                                    val target = favoriteTarget()
+                                    val selection = favoriteRepository.getFavoriteLocationSelection(target)
+                                    favoriteDialogCategories = favoriteRepository.getCategories()
+                                    favoriteDialogOptions = favoriteRepository.getCollectionOptions()
+                                    favoriteDialogCategorySelection = selection.categoryIds
+                                    favoriteDialogSelection = selection.collectionIds
+                                    showFavoriteDialog = true
+                                    return@launch
+                                }
+                            },
                             onShare = {
                                 val url = YamiboRoute.TagPage(tagId).build()
                                 shareText(platformContext, url, currentTagName)
@@ -306,6 +394,7 @@ internal fun TagDetailScreen(
                                 state = TagDetailState.Loading
                                 scope.launch { loadPage(page) }
                             },
+                            isFavorited = isFavorited,
                             onThreadClick = { thread ->
                                 navigateToThread(
                                     thread,
@@ -318,5 +407,85 @@ internal fun TagDetailScreen(
                 }
             }
         }
+    }
+
+    if (showFavoriteDialog) {
+        val target = FavoriteTargetPayload.TagManga(
+            tagId = tagId,
+            tagName = currentTagName,
+            coverUrl = coverUrl()
+        )
+        FavoriteCollectionPickerDialog(
+            categories = favoriteDialogCategories,
+            options = favoriteDialogOptions,
+            initialCategorySelection = favoriteDialogCategorySelection,
+            initialCollectionSelection = favoriteDialogSelection,
+            onDismiss = { showFavoriteDialog = false },
+            onEdit = {
+                showFavoriteDialog = false
+                navigator.navigate(IFavoriteCategoryManageScreen())
+            },
+            onConfirm = { selectedCategories, selectedCollections ->
+                scope.launch {
+                    val existing = favoriteRepository.findFavoriteItem(target)
+                    if (existing == null) {
+                        favoriteRepository.saveFavorite(
+                            target,
+                            categoryIds = selectedCategories.toList(),
+                            collectionIds = selectedCollections.toList()
+                        )
+                    } else {
+                        favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
+                    }
+                    showFavoriteDialog = false
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已更新收藏路徑")
+                }
+            }
+        )
+    }
+
+    if (showFavoriteRemovalConfirm) {
+        FavoriteRemovalConfirmDialog(
+            onDismiss = {
+                showFavoriteRemovalConfirm = false
+                pendingFavoriteRemovalSelection = null
+            },
+            onConfirm = { skipNextTime ->
+                appSettingsRepo.skipFavoriteRemovalConfirm.setValue(skipNextTime)
+                showFavoriteRemovalConfirm = false
+                scope.launch {
+                    val selection = pendingFavoriteRemovalSelection
+                    if ((selection?.paths?.size ?: 0) > 1) {
+                        showFavoriteMultiPathDialog = true
+                    } else {
+                        withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                        favoriteRefreshToken += 1
+                        snackbarHostState.showSnackbar("已取消收藏")
+                        pendingFavoriteRemovalSelection = null
+                    }
+                }
+            },
+        )
+    }
+
+    if (showFavoriteMultiPathDialog) {
+        FavoriteMultiPathRemoveDialog(
+            paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
+            tip = "tip：長按可詳細編輯收藏路徑",
+            onDismiss = {
+                showFavoriteMultiPathDialog = false
+                pendingFavoriteRemovalSelection = null
+            },
+            onRemoveAll = {
+                showFavoriteMultiPathDialog = false
+                scope.launch {
+                    withContext(Dispatchers.Default) { favoriteRepository.removeFavorite(favoriteTarget()) }
+                    favoriteRefreshToken += 1
+                    snackbarHostState.showSnackbar("已取消全部收藏")
+                    pendingFavoriteRemovalSelection = null
+                }
+            },
+        )
     }
 }

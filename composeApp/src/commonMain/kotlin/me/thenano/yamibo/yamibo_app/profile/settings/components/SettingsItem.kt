@@ -1,8 +1,14 @@
 package me.thenano.yamibo.yamibo_app.profile.settings.components
 
-import YamiboIcons
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,14 +20,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
-/** 設定頁的可點擊列表項，統一風格 */
 @Composable
 fun SettingsItem(
     icon: ImageVector,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val colors = YamiboTheme.colors
 
@@ -30,29 +35,20 @@ fun SettingsItem(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 18.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = title,
             tint = colors.brownPrimary,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(24.dp),
         )
         Spacer(Modifier.width(20.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.textDark
-            )
+            Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.textDark)
             Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 13.sp,
-                color = colors.textDark.copy(alpha = 0.6f)
-            )
+            Text(text = subtitle, fontSize = 13.sp, color = colors.textDark.copy(alpha = 0.6f))
         }
-        Text("▶", color = colors.textDark.copy(alpha = 0.3f), fontSize = 14.sp)
+        Text(">", color = colors.textDark.copy(alpha = 0.3f), fontSize = 14.sp)
     }
 }

@@ -2,8 +2,8 @@ package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.runtime.compositionLocalOf
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
-import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
@@ -23,7 +23,7 @@ val LocalThreadRepository =
     compositionLocalOf<ThreadRepository> { error("LocalThreadRepository not provided") }
 
 val LocalFavoriteRepository =
-    compositionLocalOf<FavoriteRepository> { error("LocalFavoriteRepository not provided") }
+    compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
 
 val LocalThemeRepository =
     compositionLocalOf<ThemeRepository> { error("LocalThemeRepository not provided") }

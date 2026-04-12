@@ -23,7 +23,9 @@ fun TagDetailContent(
     hasReadingHistory: Boolean,
     readingProgressText: String?,
     onContinueRead: () -> Unit,
+    isFavorited: Boolean,
     onFavorite: () -> Unit,
+    onFavoriteLongPress: (() -> Unit)? = null,
     onShare: () -> Unit,
     onPageChange: (Int) -> Unit,
     onThreadClick: (ThreadSummary) -> Unit
@@ -45,7 +47,9 @@ fun TagDetailContent(
                 hasReadingHistory = hasReadingHistory,
                 readingProgressText = readingProgressText,
                 onContinueRead = onContinueRead,
+                isFavorited = isFavorited,
                 onFavorite = onFavorite,
+                onFavoriteLongPress = onFavoriteLongPress,
                 onShare = onShare
             )
         }

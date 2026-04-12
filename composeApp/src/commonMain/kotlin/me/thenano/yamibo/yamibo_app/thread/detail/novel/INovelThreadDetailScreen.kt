@@ -11,7 +11,7 @@ class INovelThreadDetailScreen(
     private val title: String,
     private val authorId: UserId? = null
 ) : Navigatable {
-    override val id = buildId(tid.value, authorId?.value ?: "none")
+    override val id = buildId(tid.value, "Novel", authorId?.value ?: "none")
 
     @Composable
     override fun Content() {

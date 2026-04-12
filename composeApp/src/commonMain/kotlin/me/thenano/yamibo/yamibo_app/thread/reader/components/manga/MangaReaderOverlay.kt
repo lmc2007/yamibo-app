@@ -90,7 +90,7 @@ fun MangaReaderOverlay(
                         .padding(horizontal = 4.dp, vertical = 8.dp)
                 ) {
                     IconButton(onClick = onBack) {
-                        Text("◀", color = Color.White, fontSize = 20.sp)
+                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
                     }
 
                     // Title area: support subtitle (two-line mode)
@@ -163,7 +163,7 @@ fun MangaReaderOverlay(
                                     onClick = { onPageChange(0) },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                                    Text("◀", color = Color.White, fontSize = 14.sp)
+                    Text(YamiboIcons.Back, color = Color.White, fontSize = 14.sp)
                                 }
 
                                 // Current page

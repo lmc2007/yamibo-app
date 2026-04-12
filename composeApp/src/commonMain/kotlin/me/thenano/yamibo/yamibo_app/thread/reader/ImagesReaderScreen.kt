@@ -989,7 +989,14 @@ fun ImagesReaderScreen(
                 if (activeFid != null && YamiboForum.isNovelForum(activeFid)) {
                     navigator.navigate(INovelThreadDetailScreen(activeTid, activeTitle, activeAuthorId))
                 } else {
-                    navigator.navigate(IThreadReaderScreen(tid = activeTid, title = activeTitle, authorId = activeAuthorId))
+                    navigator.navigate(
+                        IThreadReaderScreen(
+                            tid = activeTid,
+                            title = activeTitle,
+                            threadType = ReadHistoryRepository.ThreadEntryType.Normal,
+                            authorId = activeAuthorId
+                        )
+                    )
                 }
             } } else null,
             subtitle = tagName,

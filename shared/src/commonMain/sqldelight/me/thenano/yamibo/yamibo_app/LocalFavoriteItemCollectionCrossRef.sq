@@ -1,0 +1,28 @@
+insertCrossRef:
+INSERT OR IGNORE INTO LocalFavoriteItemCollectionCrossRef(
+    itemId, collectionId, createdAt
+) VALUES (?, ?, ?);
+
+getCollectionIdsByItemId:
+SELECT collectionId FROM LocalFavoriteItemCollectionCrossRef
+WHERE itemId = ?;
+
+getItemIdsByCollectionId:
+SELECT itemId FROM LocalFavoriteItemCollectionCrossRef
+WHERE collectionId = ?;
+
+deleteByItemId:
+DELETE FROM LocalFavoriteItemCollectionCrossRef
+WHERE itemId = ?;
+
+deleteByItemIdAndCollectionId:
+DELETE FROM LocalFavoriteItemCollectionCrossRef
+WHERE itemId = ? AND collectionId = ?;
+
+countByItemId:
+SELECT COUNT(*) FROM LocalFavoriteItemCollectionCrossRef
+WHERE itemId = ?;
+
+deleteByCollectionId:
+DELETE FROM LocalFavoriteItemCollectionCrossRef
+WHERE collectionId = ?;

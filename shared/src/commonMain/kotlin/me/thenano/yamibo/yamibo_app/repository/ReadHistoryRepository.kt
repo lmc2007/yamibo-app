@@ -18,8 +18,20 @@ interface ReadHistoryRepository {
         val lastVisitTime: Long
     }
 
+    enum class ThreadEntryType {
+        Normal,
+        Novel;
+
+        companion object {
+            fun fromStorage(value: String?): ThreadEntryType {
+                return entries.firstOrNull { it.name == value } ?: Normal
+            }
+        }
+    }
+
     /** Full reading history entry with anchor-based positioning data */
     data class ThreadReadingHistory(
+        val threadType: ThreadEntryType,
         val threadName: String,
         val threadId: ThreadId,
         val threadCover: String?,
@@ -49,7 +61,11 @@ interface ReadHistoryRepository {
     suspend fun savePosition(history: ThreadReadingHistory)
 
     /** Get saved position for a given thread */
-    suspend fun getPosition(tid: ThreadId): ThreadReadingHistory?
+    suspend fun getPosition(
+        tid: ThreadId,
+        threadType: ThreadEntryType,
+        authorId: UserId? = null,
+    ): ThreadReadingHistory?
 
     /** Get a page of history entries (newest first) */
     suspend fun getHistoryPage(page: Int, pageSize: Int = 20): List<ThreadReadingHistory>
@@ -58,7 +74,11 @@ interface ReadHistoryRepository {
     suspend fun getHistoryCount(): Long
 
     /** Delete a single history entry */
-    suspend fun deleteHistory(tid: ThreadId)
+    suspend fun deleteHistory(
+        tid: ThreadId,
+        threadType: ThreadEntryType,
+        authorId: UserId? = null,
+    )
 
     /** Delete all history entries */
     suspend fun deleteAll()
@@ -70,7 +90,7 @@ interface ReadHistoryRepository {
     suspend fun searchHistoryCount(query: String): Long
 
     /** Delete multiple history entries by thread IDs */
-    suspend fun deleteHistoryBatch(tids: List<ThreadId>)
+    suspend fun deleteHistoryBatch(items: List<ThreadReadingHistory>)
 
     // Combined History Queries
 
