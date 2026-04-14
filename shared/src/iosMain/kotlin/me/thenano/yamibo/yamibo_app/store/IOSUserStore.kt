@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.store
 
 import io.github.littlesurvival.dto.page.ProfilePage
+import io.github.littlesurvival.dto.model.TimeInfo
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
@@ -20,8 +21,8 @@ class IOSUserStore : UserStore {
         defaults.setObject(userInfo.gender, forKey = "gender")
         defaults.setObject(userInfo.birthday, forKey = "birthday")
         defaults.setInteger(userInfo.onlineHours.toLong(), forKey = "onlineHours")
-        defaults.setObject(userInfo.registerTime, forKey = "registerTime")
-        defaults.setObject(userInfo.lastVisit, forKey = "lastVisit")
+        defaults.setObject(userInfo.registerTime?.specialText ?: userInfo.registerTime?.text, forKey = "registerTime")
+        defaults.setObject(userInfo.lastVisit?.specialText ?: userInfo.lastVisit?.text, forKey = "lastVisit")
         defaults.setObject(userInfo.formHash?.value, forKey = "formHash")
     }
 
@@ -54,8 +55,8 @@ class IOSUserStore : UserStore {
             gender = gender,
             birthday = birthday,
             onlineHours = onlineHours,
-            registerTime = registerTime,
-            lastVisit = lastVisit,
+            registerTime = registerTime?.let(TimeInfo::parse),
+            lastVisit = lastVisit?.let(TimeInfo::parse),
             formHash = formHash?.let { FormHash(it) }
         )
     }

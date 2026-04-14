@@ -90,9 +90,9 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
                         color = colors.brownPrimary
                     )
                 }
-                thread.lastUpdateText?.let { time ->
+                thread.lastUpdate?.let { time ->
                     Spacer(Modifier.width(8.dp))
-                    Text(text = time, fontSize = 11.sp, color = colors.brownLight)
+                    Text(text = time.text, fontSize = 11.sp, color = colors.brownLight)
                 }
             }
 

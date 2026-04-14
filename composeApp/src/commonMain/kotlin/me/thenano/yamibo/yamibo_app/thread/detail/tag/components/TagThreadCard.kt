@@ -63,9 +63,10 @@ fun TagThreadCard(
                         fontWeight = FontWeight.Medium
                     )
                 }
-                if (thread.lastUpdateText != null) {
+                val lastUpdate = thread.lastUpdate
+                if (lastUpdate != null) {
                     Text(
-                        text = " · ${thread.lastUpdateText}",
+                        text = " · ${lastUpdate.text}",
                         fontSize = 12.sp,
                         color = colors.textDark.copy(alpha = 0.4f)
                     )

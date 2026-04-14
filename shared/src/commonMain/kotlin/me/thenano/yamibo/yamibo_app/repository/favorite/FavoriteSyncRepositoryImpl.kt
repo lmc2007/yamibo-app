@@ -17,6 +17,7 @@ import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncActionResult
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncBulkDeleteResult
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncDeleteResult
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncPhase
@@ -26,6 +27,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSy
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamiboapp.FavoriteSyncTask
 import kotlin.random.Random
 
@@ -48,6 +50,7 @@ class FavoriteSyncRepositoryImpl(
         val now = currentTimeMillis()
         taskQueries.markRunningTasksInterrupted(
             updatedAt = now,
+            elapsedDurationMs = 0L,
             message = "上次同步在 App 關閉時中斷，可重新同步。",
         )
         stateFlow.value = taskQueries
@@ -68,6 +71,8 @@ class FavoriteSyncRepositoryImpl(
             targetCategoryId = targetCategoryId,
             startedAt = now,
             updatedAt = now,
+            lastCompletedAt = null,
+            elapsedDurationMs = 0L,
             currentPage = 0,
             totalPages = null,
             scannedCount = 0,
@@ -129,6 +134,78 @@ class FavoriteSyncRepositoryImpl(
 
     override suspend fun getLatestSnapshot(): FavoriteSyncSnapshot? {
         return taskQueries.getLatestRecoverable().executeAsOneOrNull()?.toSnapshot()
+    }
+
+
+    override suspend fun syncLocalFavoriteItem(itemId: Long): FavoriteSyncActionResult {
+        val item = itemQueries.getById(itemId).executeAsOneOrNull()
+            ?: return FavoriteSyncActionResult(false, "找不到要同步的收藏。")
+        val threadId = item.asThreadIdOrNull()
+            ?: return FavoriteSyncActionResult(false, "這種類型的收藏目前不支援同步到百合會。")
+        val existingMapping = mappingQueries.getByThreadId(threadId.value.toLong()).executeAsOneOrNull()
+        if (existingMapping?.remoteFavoriteId != null) {
+            upsertRemoteMapping(
+                threadId = threadId,
+                remoteFavoriteId = FavoriteId(existingMapping.remoteFavoriteId.toInt()),
+                remoteFavoritedOrder = existingMapping.remoteFavoritedOrder ?: existingMapping.remoteFavoriteId,
+                itemId = item.id,
+            )
+            return FavoriteSyncActionResult(true, "此收藏已同步到百合會。")
+        }
+
+        val formHash = when (val formHashResult = ensureFormHash()) {
+            is YamiboResult.Success -> formHashResult.value
+            is YamiboResult.NotLoggedIn -> return FavoriteSyncActionResult(false, "目前未登入百合會，無法同步收藏。")
+            is YamiboResult.NoPermission -> return FavoriteSyncActionResult(false, formHashResult.reason)
+            is YamiboResult.Maintenance -> return FavoriteSyncActionResult(false, "百合會目前維護中，請稍後再試。")
+            is YamiboResult.Failure -> return FavoriteSyncActionResult(false, truncateLogLine(formHashResult.reason))
+        }
+
+        when (val addResult = threadRepository.addFavorite(threadId, formHash)) {
+            is YamiboResult.Success -> Unit
+            is YamiboResult.NotLoggedIn -> return FavoriteSyncActionResult(false, "目前未登入百合會，無法同步收藏。")
+            is YamiboResult.NoPermission -> return FavoriteSyncActionResult(false, addResult.reason)
+            is YamiboResult.Maintenance -> return FavoriteSyncActionResult(false, "百合會目前維護中，請稍後再試。")
+            is YamiboResult.Failure -> return FavoriteSyncActionResult(false, truncateLogLine(addResult.reason))
+        }
+
+        return when (val reconcile = fetchRemoteFavoritesSilently()) {
+            is RemoteFetchResult.Success -> {
+                val remoteItem = reconcile.items[threadId]
+                if (remoteItem != null) {
+                    upsertRemoteMapping(
+                        threadId = threadId,
+                        remoteFavoriteId = remoteItem.favoriteId,
+                        remoteFavoritedOrder = remoteItem.favoriteId.value.toLong(),
+                        itemId = item.id,
+                    )
+                    FavoriteSyncActionResult(true, "已同步到百合會。")
+                } else {
+                    FavoriteSyncActionResult(true, "已同步到百合會，但暫時無法回填收藏順序，下一次同步會補齊。")
+                }
+            }
+
+            is RemoteFetchResult.Failure -> FavoriteSyncActionResult(
+                true,
+                "已同步到百合會，但暫時無法回填收藏順序：${truncateLogLine(reconcile.reason)}",
+            )
+        }
+    }
+
+    override suspend fun hasRemoteFavorite(itemId: Long): Boolean {
+        return mappingQueries.getByItemId(itemId).executeAsOneOrNull()?.remoteFavoriteId != null
+    }
+
+    override suspend fun getRemoteFavoriteOrderMap(itemIds: Set<Long>): Map<Long, Long> {
+        if (itemIds.isEmpty()) return emptyMap()
+        return mappingQueries.getAll().executeAsList()
+            .mapNotNull { mapping ->
+                val itemId = mapping.itemId ?: return@mapNotNull null
+                if (itemId !in itemIds) return@mapNotNull null
+                val order = mapping.remoteFavoritedOrder ?: mapping.remoteFavoriteId ?: return@mapNotNull null
+                itemId to order
+            }
+            .toMap()
     }
 
     override suspend fun runImport(runId: String) {
@@ -351,6 +428,7 @@ class FavoriteSyncRepositoryImpl(
             upsertRemoteMapping(
                 threadId = remoteItem.threadId,
                 remoteFavoriteId = remoteItem.favoriteId,
+                remoteFavoritedOrder = remoteItem.favoriteId.value.toLong(),
                 itemId = itemId,
             )
         }
@@ -453,6 +531,7 @@ class FavoriteSyncRepositoryImpl(
                         upsertRemoteMapping(
                             threadId = remoteItem.threadId,
                             remoteFavoriteId = remoteItem.favoriteId,
+                            remoteFavoritedOrder = remoteItem.favoriteId.value.toLong(),
                             itemId = localItem?.id,
                         )
                     }
@@ -464,10 +543,13 @@ class FavoriteSyncRepositoryImpl(
             }
         }
 
+        val completedAt = currentTimeMillis()
         val completed = current.copy(
             status = FavoriteSyncStatus.COMPLETED,
             phase = FavoriteSyncPhase.COMPLETED,
-            updatedAt = currentTimeMillis(),
+            updatedAt = completedAt,
+            lastCompletedAt = completedAt,
+            elapsedDurationMs = (completedAt - current.startedAt).coerceAtLeast(0L),
             warningMessage = warnings.takeIf { it.isNotEmpty() }?.joinToString("\n"),
             logMessage = logs.takeIf { it.isNotEmpty() }?.joinToString("\n"),
             errorMessage = null,
@@ -477,53 +559,69 @@ class FavoriteSyncRepositoryImpl(
         interruptRequestedRunIds.remove(runId)
     }
 
-    override suspend fun removeLocalFavoriteItem(itemId: Long): FavoriteSyncDeleteResult {
+    override suspend fun removeLocalFavoriteItem(itemId: Long, removeRemote: Boolean): FavoriteSyncDeleteResult {
         val item = itemQueries.getById(itemId).executeAsOneOrNull()
             ?: return FavoriteSyncDeleteResult(success = true)
         val mapping = mappingQueries.getByItemId(itemId).executeAsOneOrNull()
 
-        if (mapping?.remoteFavoriteId != null) {
-            val formHash = when (val formHashResult = ensureFormHash()) {
-                is YamiboResult.Success -> formHashResult.value
-                is YamiboResult.NotLoggedIn ->
-                    return FavoriteSyncDeleteResult(false, "目前未登入百合會，無法同步刪除網站收藏。")
-                is YamiboResult.NoPermission ->
-                    return FavoriteSyncDeleteResult(false, formHashResult.reason)
-                is YamiboResult.Maintenance ->
-                    return FavoriteSyncDeleteResult(false, "百合會目前維護中，請稍後再試。")
-                is YamiboResult.Failure ->
-                    return FavoriteSyncDeleteResult(false, truncateLogLine(formHashResult.reason))
-            }
+        if (removeRemote) {
+            if (mapping?.remoteFavoriteId != null) {
+                val formHash = when (val formHashResult = ensureFormHash()) {
+                    is YamiboResult.Success -> formHashResult.value
+                    is YamiboResult.NotLoggedIn ->
+                        return FavoriteSyncDeleteResult(false, "目前未登入百合會，無法同步刪除網站收藏。")
+                    is YamiboResult.NoPermission ->
+                        return FavoriteSyncDeleteResult(false, formHashResult.reason)
+                    is YamiboResult.Maintenance ->
+                        return FavoriteSyncDeleteResult(false, "百合會目前維護中，請稍後再試。")
+                    is YamiboResult.Failure ->
+                        return FavoriteSyncDeleteResult(false, truncateLogLine(formHashResult.reason))
+                }
 
-            when (val remoteResult =
-                favoriteRepository.removeFavorite(FavoriteId(mapping.remoteFavoriteId.toInt()), formHash)) {
-                is YamiboResult.Success -> Unit
-                is YamiboResult.NotLoggedIn ->
-                    return FavoriteSyncDeleteResult(false, "目前未登入百合會，無法同步刪除網站收藏。")
-                is YamiboResult.NoPermission ->
-                    return FavoriteSyncDeleteResult(false, remoteResult.reason)
-                is YamiboResult.Maintenance ->
-                    return FavoriteSyncDeleteResult(false, "百合會目前維護中，請稍後再試。")
-                is YamiboResult.Failure ->
-                    return FavoriteSyncDeleteResult(false, truncateLogLine(remoteResult.reason))
+                when (val remoteResult =
+                    favoriteRepository.removeFavorite(FavoriteId(mapping.remoteFavoriteId.toInt()), formHash)) {
+                    is YamiboResult.Success -> Unit
+                    is YamiboResult.NotLoggedIn ->
+                        return FavoriteSyncDeleteResult(false, "目前未登入百合會，無法同步刪除網站收藏。")
+                    is YamiboResult.NoPermission ->
+                        return FavoriteSyncDeleteResult(false, remoteResult.reason)
+                    is YamiboResult.Maintenance ->
+                        return FavoriteSyncDeleteResult(false, "百合會目前維護中，請稍後再試。")
+                    is YamiboResult.Failure ->
+                        return FavoriteSyncDeleteResult(false, truncateLogLine(remoteResult.reason))
+                }
+            } else if (mapping != null) {
+                return FavoriteSyncDeleteResult(
+                    success = false,
+                    message = "這筆收藏缺少網站 favorite id，暫時無法同步刪除網站端資料。",
+                )
             }
-        } else if (mapping != null) {
-            return FavoriteSyncDeleteResult(
-                success = false,
-                message = "這筆收藏缺少網站 favorite id，暫時無法同步刪除網站端資料。",
-            )
         }
 
         localFavoriteRepository.deleteFavoriteItems(setOf(item.id))
-        mappingQueries.deleteByItemId(item.id)
+        if (!removeRemote && mapping?.remoteFavoriteId != null) {
+            mappingQueries.upsertMapping(
+                threadId = mapping.threadId,
+                remoteFavoriteId = mapping.remoteFavoriteId,
+                remoteFavoritedOrder = mapping.remoteFavoritedOrder,
+                itemId = null,
+                lastSeenAt = mapping.lastSeenAt,
+                lastSyncedAt = currentTimeMillis(),
+            )
+        } else {
+            mappingQueries.deleteByItemId(item.id)
+        }
         return FavoriteSyncDeleteResult(success = true)
     }
 
-    override suspend fun removeLocalFavoriteItems(itemIds: Set<Long>): FavoriteSyncBulkDeleteResult {
+    override suspend fun removeLocalFavoriteItems(
+        itemIds: Set<Long>,
+        removeRemote: Boolean,
+    ): FavoriteSyncBulkDeleteResult {
         var deletedCount = 0
         val messages = mutableListOf<String>()
         for (itemId in itemIds) {
-            val result = removeLocalFavoriteItem(itemId)
+            val result = removeLocalFavoriteItem(itemId, removeRemote = removeRemote)
             if (result.success) {
                 deletedCount += 1
             } else {
@@ -541,12 +639,14 @@ class FavoriteSyncRepositoryImpl(
         val isNovel = YamiboForum.isNovelForum(threadPage.thread.forum.fid)
         val authorId = threadPage.posts.firstOrNull()?.author?.uid
         val coverUrl = extractCoverUrl(threadPage)
+        val lastUpdatedTime = extractLastUpdatedTime(threadPage)
         if (isNovel) {
             localFavoriteRepository.addNovelThreadFavorite(
                 tid = threadPage.thread.tid,
                 title = threadPage.thread.title,
                 authorId = authorId,
                 coverUrl = coverUrl,
+                lastUpdatedTime = lastUpdatedTime,
                 forumId = threadPage.thread.forum.fid,
                 forumName = threadPage.thread.forum.name,
                 categoryIds = listOf(categoryId),
@@ -556,6 +656,7 @@ class FavoriteSyncRepositoryImpl(
                 tid = threadPage.thread.tid,
                 title = threadPage.thread.title,
                 coverUrl = coverUrl,
+                lastUpdatedTime = lastUpdatedTime,
                 forumId = threadPage.thread.forum.fid,
                 forumName = threadPage.thread.forum.name,
                 categoryIds = listOf(categoryId),
@@ -618,6 +719,11 @@ class FavoriteSyncRepositoryImpl(
         }
     }
 
+    private fun extractLastUpdatedTime(threadPage: ThreadPage): Long? {
+        val firstPost = threadPage.posts.firstOrNull { it.floor == 1 } ?: threadPage.posts.firstOrNull()
+        return firstPost?.lastEditedTime?.epochMillisOrNull() ?: firstPost?.timeCreate?.epochMillisOrNull()
+    }
+
     private suspend fun fetchThreadSummary(threadId: ThreadId): YamiboResult<ThreadPage> {
         repeat(2) { attempt ->
             val result = threadRepository.fetchThread(threadId)
@@ -665,12 +771,14 @@ class FavoriteSyncRepositoryImpl(
     private fun upsertRemoteMapping(
         threadId: ThreadId,
         remoteFavoriteId: FavoriteId?,
+        remoteFavoritedOrder: Long? = remoteFavoriteId?.value?.toLong(),
         itemId: Long?,
     ) {
         val now = currentTimeMillis()
         mappingQueries.upsertMapping(
             threadId = threadId.value.toLong(),
             remoteFavoriteId = remoteFavoriteId?.value?.toLong(),
+            remoteFavoritedOrder = remoteFavoritedOrder,
             itemId = itemId,
             lastSeenAt = now,
             lastSyncedAt = now,
@@ -724,8 +832,10 @@ class FavoriteSyncRepositoryImpl(
         warnings: Set<String>? = null,
         logs: List<String>? = null,
     ): FavoriteSyncSnapshot {
+        val now = currentTimeMillis()
         val updated = snapshot.copy(
-            updatedAt = currentTimeMillis(),
+            updatedAt = now,
+            elapsedDurationMs = (now - snapshot.startedAt).coerceAtLeast(0L),
             warningMessage = warnings?.takeIf { it.isNotEmpty() }?.joinToString("\n") ?: snapshot.warningMessage,
             logMessage = logs?.takeIf { it.isNotEmpty() }?.joinToString("\n") ?: snapshot.logMessage,
         )
@@ -735,10 +845,12 @@ class FavoriteSyncRepositoryImpl(
     }
 
     private fun interruptRun(snapshot: FavoriteSyncSnapshot, reason: String) {
+        val now = currentTimeMillis()
         val interrupted = snapshot.copy(
             status = FavoriteSyncStatus.INTERRUPTED,
             phase = FavoriteSyncPhase.INTERRUPTED,
-            updatedAt = currentTimeMillis(),
+            updatedAt = now,
+            elapsedDurationMs = (now - snapshot.startedAt).coerceAtLeast(0L),
             errorMessage = reason,
         )
         persistSnapshot(interrupted)
@@ -747,10 +859,12 @@ class FavoriteSyncRepositoryImpl(
     }
 
     private fun failRun(snapshot: FavoriteSyncSnapshot, reason: String) {
+        val now = currentTimeMillis()
         val failed = snapshot.copy(
             status = FavoriteSyncStatus.FAILED,
             phase = FavoriteSyncPhase.FAILED,
-            updatedAt = currentTimeMillis(),
+            updatedAt = now,
+            elapsedDurationMs = (now - snapshot.startedAt).coerceAtLeast(0L),
             errorMessage = reason,
         )
         persistSnapshot(failed)
@@ -764,6 +878,8 @@ class FavoriteSyncRepositoryImpl(
             targetCategoryId = snapshot.targetCategoryId,
             startedAt = snapshot.startedAt,
             updatedAt = snapshot.updatedAt,
+            lastCompletedAt = snapshot.lastCompletedAt,
+            elapsedDurationMs = snapshot.elapsedDurationMs,
             phase = snapshot.phase.name,
             currentPage = snapshot.currentPage.toLong(),
             totalPages = snapshot.totalPages?.toLong(),
@@ -787,6 +903,8 @@ class FavoriteSyncRepositoryImpl(
             targetCategoryId = targetCategoryId,
             startedAt = startedAt,
             updatedAt = updatedAt,
+            lastCompletedAt = lastCompletedAt,
+            elapsedDurationMs = elapsedDurationMs,
             currentPage = currentPage.toInt(),
             totalPages = totalPages?.toInt(),
             scannedCount = scannedCount.toInt(),
@@ -807,6 +925,16 @@ class FavoriteSyncRepositoryImpl(
             FavoriteSyncStatus.INTERRUPTED -> FavoriteSyncState.Interrupted(this)
             FavoriteSyncStatus.FAILED -> FavoriteSyncState.Failed(this)
             FavoriteSyncStatus.COMPLETED -> FavoriteSyncState.Completed(this)
+        }
+    }
+
+
+
+    private fun me.thenano.yamibo.yamiboapp.LocalFavoriteItem.asThreadIdOrNull(): ThreadId? {
+        return when (LocalFavoriteRepository.FavoriteTargetType.fromStorage(targetType)) {
+            LocalFavoriteRepository.FavoriteTargetType.ThreadNormal,
+            LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> ThreadId(targetId.toInt())
+            LocalFavoriteRepository.FavoriteTargetType.TagManga -> null
         }
     }
 

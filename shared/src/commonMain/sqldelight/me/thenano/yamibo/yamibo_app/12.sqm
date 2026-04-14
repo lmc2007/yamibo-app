@@ -1,0 +1,8 @@
+ALTER TABLE FavoriteSyncTask
+ADD COLUMN lastCompletedAt INTEGER;
+
+ALTER TABLE FavoriteSyncTask
+ADD COLUMN elapsedDurationMs INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE FavoriteSyncRemoteThread
+ADD COLUMN remoteFavoritedOrder INTEGER;

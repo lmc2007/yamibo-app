@@ -298,6 +298,7 @@ class LocalFavoriteRepositoryImpl(
         tid: ThreadId,
         title: String,
         coverUrl: String?,
+        lastUpdatedTime: Long?,
         forumId: ForumId?,
         forumName: String?,
         categoryIds: List<Long>,
@@ -309,6 +310,7 @@ class LocalFavoriteRepositoryImpl(
             title = title,
             authorId = null,
             coverUrl = coverUrl,
+            lastUpdatedTime = lastUpdatedTime,
             forumId = forumId,
             forumName = forumName,
             categoryIds = categoryIds,
@@ -321,6 +323,7 @@ class LocalFavoriteRepositoryImpl(
         title: String,
         authorId: UserId?,
         coverUrl: String?,
+        lastUpdatedTime: Long?,
         forumId: ForumId?,
         forumName: String?,
         categoryIds: List<Long>,
@@ -332,6 +335,7 @@ class LocalFavoriteRepositoryImpl(
             title = title,
             authorId = authorId,
             coverUrl = coverUrl,
+            lastUpdatedTime = lastUpdatedTime,
             forumId = forumId,
             forumName = forumName,
             categoryIds = categoryIds,
@@ -360,6 +364,7 @@ class LocalFavoriteRepositoryImpl(
             itemQueries.updateFavoriteItem(
                 title = tagName,
                 coverUrl = coverUrl,
+                lastUpdatedTime = null,
                 forumId = null,
                 forumName = null,
                 authorId = 0L,
@@ -373,6 +378,7 @@ class LocalFavoriteRepositoryImpl(
                 targetId = tagId.value.toLong(),
                 title = tagName,
                 coverUrl = coverUrl,
+                lastUpdatedTime = null,
                 forumId = null,
                 forumName = null,
                 authorId = 0L,
@@ -596,6 +602,7 @@ class LocalFavoriteRepositoryImpl(
         title: String,
         authorId: UserId?,
         coverUrl: String?,
+        lastUpdatedTime: Long?,
         forumId: ForumId?,
         forumName: String?,
         categoryIds: List<Long>,
@@ -611,11 +618,13 @@ class LocalFavoriteRepositoryImpl(
             targetId = tid.value.toLong(),
             authorId = storedAuthorId
         ).executeAsOneOrNull()
+        val effectiveLastUpdatedTime = lastUpdatedTime ?: existing?.lastUpdatedTime
 
         val itemId = if (existing != null) {
             itemQueries.updateFavoriteItem(
                 title = title,
                 coverUrl = coverUrl,
+                lastUpdatedTime = effectiveLastUpdatedTime,
                 forumId = forumId?.value?.toLong(),
                 forumName = forumName,
                 authorId = storedAuthorId,
@@ -629,6 +638,7 @@ class LocalFavoriteRepositoryImpl(
                 targetId = tid.value.toLong(),
                 title = title,
                 coverUrl = coverUrl,
+                lastUpdatedTime = effectiveLastUpdatedTime,
                 forumId = forumId?.value?.toLong(),
                 forumName = forumName,
                 authorId = storedAuthorId,
@@ -764,6 +774,7 @@ class LocalFavoriteRepositoryImpl(
             targetId = targetId,
             title = title,
             coverUrl = coverUrl,
+            lastUpdatedTime = lastUpdatedTime,
             forumId = forumId?.toInt()?.let(::ForumId),
             forumName = forumName,
             authorId = authorId.takeIf { it != 0L }?.toInt()?.let(::UserId),

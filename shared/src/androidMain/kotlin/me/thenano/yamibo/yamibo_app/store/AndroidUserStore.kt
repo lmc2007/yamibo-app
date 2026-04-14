@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import io.github.littlesurvival.dto.model.TimeInfo
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.UserId
@@ -32,8 +33,8 @@ class AndroidUserStore(context: Context) : UserStore {
             putString("gender", userInfo.gender)
             putString("birthday", userInfo.birthday)
             putInt("onlineHours", userInfo.onlineHours)
-            putString("registerTime", userInfo.registerTime)
-            putString("lastVisit", userInfo.lastVisit)
+            putString("registerTime", userInfo.registerTime?.specialText ?: userInfo.registerTime?.text)
+            putString("lastVisit", userInfo.lastVisit?.specialText ?: userInfo.lastVisit?.text)
             putString("formHash", userInfo.formHash?.value)
             apply()
         }
@@ -68,8 +69,8 @@ class AndroidUserStore(context: Context) : UserStore {
                 gender = gender,
                 birthday = birthday,
                 onlineHours = onlineHours,
-                registerTime = registerTime,
-                lastVisit = lastVisit,
+                registerTime = registerTime?.let(TimeInfo::parse),
+                lastVisit = lastVisit?.let(TimeInfo::parse),
                 formHash = formHash?.let { FormHash(it) }
             )
         }

@@ -2,10 +2,11 @@ upsertMapping:
 INSERT OR REPLACE INTO FavoriteSyncRemoteThread(
     threadId,
     remoteFavoriteId,
+    remoteFavoritedOrder,
     itemId,
     lastSeenAt,
     lastSyncedAt
-) VALUES (?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?);
 
 getByThreadId:
 SELECT * FROM FavoriteSyncRemoteThread
@@ -16,6 +17,9 @@ getByItemId:
 SELECT * FROM FavoriteSyncRemoteThread
 WHERE itemId = ?
 LIMIT 1;
+
+getAll:
+SELECT * FROM FavoriteSyncRemoteThread;
 
 deleteByItemId:
 DELETE FROM FavoriteSyncRemoteThread

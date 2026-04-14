@@ -65,7 +65,7 @@ internal fun ThreadHeader(
     val haptic = LocalHapticFeedback.current
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
-    val firstPost = threadPage.posts.firstOrNull()
+    val firstPost = threadPage.posts.firstOrNull { it.floor == 1 } ?: threadPage.posts.firstOrNull()
 
     val coverUrl = remember(firstPost) {
         val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
@@ -179,7 +179,13 @@ internal fun ThreadHeader(
                         Spacer(Modifier.height(3.dp))
 
                         Text(
-                            text = firstPost.timeText,
+                            text = "發表於 ${firstPost.timeCreate.text}",
+                            fontSize = 12.sp,
+                            color = colors.brownPrimary.copy(alpha = 0.5f)
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "最後更新於 ${(firstPost.lastEditedTime ?: firstPost.timeCreate).text}",
                             fontSize = 12.sp,
                             color = colors.brownPrimary.copy(alpha = 0.5f)
                         )

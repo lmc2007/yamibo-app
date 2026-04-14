@@ -26,14 +26,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.SearchPage
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
+import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
+import io.github.littlesurvival.parse.util.ParseUtils
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
+import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Search result state */
@@ -44,13 +49,26 @@ private sealed interface SearchState {
     data class Error(val message: String) : SearchState
 }
 
+data class SearchDirectThreadTarget(
+    val tid: ThreadId,
+    val title: String,
+    val isNovel: Boolean,
+    val authorId: UserId?,
+)
+
 /** Full-screen search modal */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSummary) -> Unit) {
+fun SearchModal(
+    fid: ForumId?,
+    onDismiss: () -> Unit,
+    onThreadClick: (ThreadSummary) -> Unit,
+    onDirectThreadClick: (SearchDirectThreadTarget) -> Unit,
+) {
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val authRepository = LocalAuthRepository.current
+    val threadRepository = LocalThreadRepository.current
     val scope = rememberCoroutineScope()
 
     var query by remember { mutableStateOf("") }
@@ -65,10 +83,41 @@ fun SearchModal(fid: ForumId?, onDismiss: () -> Unit, onThreadClick: (ThreadSumm
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return
 
-        val formHash = authRepository.currentUser()?.formHash ?: return
         state = SearchState.Loading
         currentPage = page
         scope.launch {
+            val directThreadId = ParseUtils.extractTid(trimmed)
+            val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
+            if (page == 1 && looksLikeUrl) {
+                if (directThreadId == null) {
+                    state = SearchState.Error("無法識別的百合會帖子連結")
+                    return@launch
+                }
+                state = when (val result = threadRepository.fetchThread(directThreadId)) {
+                    is YamiboResult.Success -> {
+                        val threadPage = result.value
+                        onDirectThreadClick(
+                            SearchDirectThreadTarget(
+                                tid = directThreadId,
+                                title = threadPage.thread.title,
+                                isNovel = YamiboForum.isNovelForum(threadPage.thread.forum.fid),
+                                authorId = threadPage.posts.firstOrNull()?.author?.uid,
+                            )
+                        )
+                        SearchState.Idle
+                    }
+
+                    else -> SearchState.Error(result.message())
+                }
+                return@launch
+            }
+
+            val formHash = authRepository.currentUser()?.formHash
+            if (formHash == null) {
+                state = SearchState.Error("目前未登入，無法使用站內搜尋")
+                return@launch
+            }
+
             val result =
                 if (page == 1 || currentSearchId == null) {
                     forumRepository.fetchSearch(trimmed, fid, formHash)

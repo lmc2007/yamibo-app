@@ -89,7 +89,7 @@ fun CommentRenderer(
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = comment.timeText,
+                                text = comment.time.text,
                                 color = colors.textDark.copy(alpha = 0.5f),
                                 fontSize = 11.sp
                             )

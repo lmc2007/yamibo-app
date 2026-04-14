@@ -101,7 +101,7 @@ fun PostRenderer(
             Column(modifier = Modifier.weight(1f)) {
                 Text(post.author.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = YamiboTheme.colors.brownPrimary)
                 Spacer(modifier = Modifier.height(2.dp))
-                Text(post.timeText, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
+                Text(post.timeCreate.text, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
             }
 
             Text("${post.floor}#", fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
@@ -111,10 +111,11 @@ fun PostRenderer(
         HtmlRenderer(post.contentHtml)
 
         // Edited Text
-        if (!post.editedText.isNullOrEmpty()) {
+        val lastEditedTime = post.lastEditedTime
+        if (lastEditedTime != null) {
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = post.editedText!!,
+                text = lastEditedTime.specialText ?: "最後編輯於 ${lastEditedTime.text}",
                 fontSize = 12.sp,
                 color = YamiboTheme.colors.textDark.copy(alpha = 0.5f)
             )

@@ -276,6 +276,25 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                         )
                     )
                 }
+            },
+            onDirectThreadClick = { target ->
+                showSearch = false
+                if (target.isNovel) {
+                    navigator.navigate(
+                        INovelThreadDetailScreen(
+                            target.tid,
+                            target.title,
+                            target.authorId
+                        )
+                    )
+                } else {
+                    navigator.navigate(
+                        IThreadReaderScreen(
+                            tid = target.tid,
+                            title = target.title
+                        )
+                    )
+                }
             }
         )
     }

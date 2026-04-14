@@ -1,45 +1,17 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite
 
-import YamiboIcons
-import androidx.compose.animation.*
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
-import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import kotlinx.coroutines.Dispatchers
@@ -47,14 +19,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.favorite.components.ActionChip
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteGridScrollbar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteHeaderMenuRow
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteListScrollbar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSearchTopBar
-import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteStaggeredScrollbar
 import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSyncCategoryDialog
-import me.thenano.yamibo.yamibo_app.favorite.components.HeaderRow
-import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
+import me.thenano.yamibo.yamibo_app.favorite.components.CollectionEditorDialog
+import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteGridModeDialog
+import me.thenano.yamibo.yamibo_app.favorite.components.FavoriteSortDialog
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -62,30 +30,27 @@ import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.util.state
-import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
-import androidx.compose.foundation.lazy.grid.items as gridItems
-import androidx.compose.foundation.lazy.staggeredgrid.items as staggeredItems
 
-private sealed interface FavoritePageState {
+internal sealed interface FavoritePageState {
     data object Loading : FavoritePageState
     data class Ready(
         val categories: List<FavoriteCategory>,
         val selectedCategoryId: Long,
         val content: FavoriteCategoryContent,
+        val lastReadMap: Map<Long, Long>,
+        val remoteFavoriteOrderMap: Map<Long, Long>,
     ) : FavoritePageState
 }
 
-private enum class FavoritePageMode { Normal, Search, Select }
+internal enum class FavoritePageMode { Normal, Search, Select }
 
-private data class FavoriteCollectionDraft(
+internal data class FavoriteCollectionDraft(
     val collectionId: Long? = null,
     val parentCategoryId: Long? = null,
     val title: String = "合成集合",
@@ -106,6 +71,7 @@ private data class FavoriteDeleteRequest(
     val categoryId: Long,
     val collectionId: Long?,
     val hasMultiPathItems: Boolean,
+    val hasRemoteSyncedItems: Boolean,
 )
 
 sealed interface FavoriteGridEntry {
@@ -159,6 +125,7 @@ fun FavoritePage() {
     var deleteRequest by remember { mutableStateOf<FavoriteDeleteRequest?>(null) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteScopeDialog by remember { mutableStateOf(false) }
+    var showDeleteRemoteSyncDialog by remember { mutableStateOf(false) }
     var showSyncConfirmDialog by remember { mutableStateOf(false) }
     var showSyncCategoryDialog by remember { mutableStateOf(false) }
     var syncTargetCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -183,13 +150,31 @@ fun FavoritePage() {
             } else {
                 favoriteRepository.getCategoryContent(selectedCategoryId)
             }
-            Triple(categories, selectedCategoryId, content)
+            val allSortItems = buildList {
+                content.directItems.forEach(::add)
+                content.collections.forEach { addAll(it.items) }
+            }.distinctBy { it.id }
+            val lastReadMap = buildMap {
+                allSortItems.forEach { item ->
+                    put(item.id, favoriteItemLastReadAt(item, readHistoryRepository))
+                }
+            }
+            val remoteFavoriteOrderMap = favoriteSyncRepository.getRemoteFavoriteOrderMap(
+                allSortItems.map { it.id }.toSet()
+            )
+            FavoritePageState.Ready(
+                categories = categories,
+                selectedCategoryId = selectedCategoryId,
+                content = content,
+                lastReadMap = lastReadMap,
+                remoteFavoriteOrderMap = remoteFavoriteOrderMap,
+            )
         }
-        val (categories, selectedCategoryId, content) = snapshot
+        val content = snapshot.content
         if (openedCollectionId != null && content.collections.none { it.collection.id == openedCollectionId }) {
             openedCollectionId = null
         }
-        state = FavoritePageState.Ready(categories, selectedCategoryId, content)
+        state = snapshot
     }
 
     suspend fun loadSelectionIntersection(itemIds: Set<Long>) {
@@ -252,40 +237,9 @@ fun FavoritePage() {
         }
     }
 
-    fun requestDeleteFavorites(itemIds: Set<Long>, categoryId: Long, collectionId: Long?) {
-        scope.launch {
-            val hasMultiPathItems = withContext(Dispatchers.Default) {
-                itemIds.any { favoriteRepository.getFavoritePaths(it).size > 1 }
-            }
-            deleteRequest = FavoriteDeleteRequest(
-                itemIds = itemIds,
-                categoryId = categoryId,
-                collectionId = collectionId,
-                hasMultiPathItems = hasMultiPathItems,
-            )
-            if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
-                if (hasMultiPathItems) {
-                    showDeleteScopeDialog = true
-                } else {
-                    withContext(Dispatchers.Default) {
-                        favoriteRepository.deleteFavoriteItems(itemIds)
-                    }
-                    selectedItemIds = emptySet()
-                    selectedCollectionIds = emptySet()
-                    mode = FavoritePageMode.Normal
-                    reload(categoryId)
-                    showSnackbarMessage("已刪除收藏")
-                    deleteRequest = null
-                }
-            } else {
-                showDeleteConfirmDialog = true
-            }
-        }
-    }
-
-    suspend fun performDeleteAllFavorites(request: FavoriteDeleteRequest) {
+    suspend fun performDeleteAllFavorites(request: FavoriteDeleteRequest, removeRemote: Boolean) {
         val deleteResult = withContext(Dispatchers.Default) {
-            favoriteSyncRepository.removeLocalFavoriteItems(request.itemIds)
+            favoriteSyncRepository.removeLocalFavoriteItems(request.itemIds, removeRemote = removeRemote)
         }
         if (deleteResult.deletedCount > 0) {
             selectedItemIds = emptySet()
@@ -301,6 +255,39 @@ fun FavoritePage() {
             }
         )
         deleteRequest = null
+    }
+
+    fun requestDeleteFavorites(itemIds: Set<Long>, categoryId: Long, collectionId: Long?) {
+        scope.launch {
+            val flags = withContext(Dispatchers.Default) {
+                val hasMultiPath = itemIds.any { favoriteRepository.getFavoritePaths(it).size > 1 }
+                val hasRemoteSynced = itemIds.any { favoriteSyncRepository.hasRemoteFavorite(it) }
+                hasMultiPath to hasRemoteSynced
+            }
+            deleteRequest = FavoriteDeleteRequest(
+                itemIds = itemIds,
+                categoryId = categoryId,
+                collectionId = collectionId,
+                hasMultiPathItems = flags.first,
+                hasRemoteSyncedItems = flags.second,
+            )
+            if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
+                if (flags.first) {
+                    showDeleteScopeDialog = true
+                } else {
+                    if (flags.second && appSettingsRepository.favoriteRemoveSyncPromptEnabled.getValue()) {
+                        showDeleteRemoteSyncDialog = true
+                    } else {
+                        performDeleteAllFavorites(
+                            deleteRequest ?: return@launch,
+                            removeRemote = flags.second && appSettingsRepository.favoriteRemoveSyncDefault.getValue(),
+                        )
+                    }
+                }
+            } else {
+                showDeleteConfirmDialog = true
+            }
+        }
     }
 
     suspend fun performDeleteCurrentDirectory(request: FavoriteDeleteRequest) {
@@ -325,26 +312,18 @@ fun FavoritePage() {
     }
     val openedCollection = ready?.content?.collections?.firstOrNull { it.collection.id == openedCollectionId }
     val visibleItems = openedCollection?.items ?: ready?.content?.directItems.orEmpty()
-    var lastReadMap by remember { mutableStateOf<Map<Long, Long>>(emptyMap()) }
-    LaunchedEffect(ready?.selectedCategoryId, openedCollectionId, visibleItems.map { it.id }) {
-        lastReadMap = withContext(Dispatchers.Default) {
-            buildMap {
-                visibleItems.forEach { item ->
-                    put(item.id, favoriteItemLastReadAt(item, readHistoryRepository))
-                }
-            }
-        }
-    }
-
     val trimmedSearchQuery = searchQuery.trim()
     val searchEnabled = mode == FavoritePageMode.Search && trimmedSearchQuery.isNotBlank()
+    val resolvedLastReadMap = ready?.lastReadMap.orEmpty()
+    val resolvedRemoteFavoriteOrderMap = ready?.remoteFavoriteOrderMap.orEmpty()
     val collections = sortCollections(
         ready?.content?.collections.orEmpty().filter {
             !searchEnabled || collectionMatchesQuery(it, trimmedSearchQuery)
         },
         sortMode,
         sortDescending,
-        lastReadMap,
+        resolvedLastReadMap,
+        resolvedRemoteFavoriteOrderMap,
     )
     val items = sortItems(
         visibleItems.filter {
@@ -352,7 +331,8 @@ fun FavoritePage() {
         },
         sortMode,
         sortDescending,
-        lastReadMap,
+        resolvedLastReadMap,
+        resolvedRemoteFavoriteOrderMap,
     )
     val gridEntries = buildList {
         if (openedCollection == null) addAll(collections.map(FavoriteGridEntry::Collection))
@@ -377,7 +357,7 @@ fun FavoritePage() {
                 openedCollection = openedCollection,
                 selectedItemIds = selectedItemIds,
                 selectedCollectionIds = selectedCollectionIds,
-                lastReadMap = lastReadMap,
+                lastReadMap = resolvedLastReadMap,
                 syncState = syncState,
                 hiddenFavoritePageRuns = hiddenFavoritePageRuns,
                 onCreateCategory = { navigator.navigate(IFavoriteCategoryEditorScreen()) },
@@ -651,7 +631,10 @@ fun FavoritePage() {
                                         collectionIds = setOf(createdCollection.id),
                                     )
                                     if (removeOriginal) {
-                                        favoriteRepository.removeItemsFromCategory(selectedItemIds, draft.parentCategoryId)
+                                        favoriteRepository.removeItemsFromCategory(
+                                            selectedItemIds,
+                                            draft.parentCategoryId
+                                        )
                                     }
                                 }
                                 collectionDraft = null
@@ -729,9 +712,34 @@ fun FavoritePage() {
                     if (request.hasMultiPathItems) {
                         showDeleteScopeDialog = true
                     } else {
-                        performDeleteAllFavorites(request)
+                        if (request.hasRemoteSyncedItems && appSettingsRepository.favoriteRemoveSyncPromptEnabled.getValue()) {
+                            showDeleteRemoteSyncDialog = true
+                        } else {
+                            performDeleteAllFavorites(
+                                request,
+                                removeRemote = request.hasRemoteSyncedItems && appSettingsRepository.favoriteRemoveSyncDefault.getValue(),
+                            )
+                        }
                     }
                 }
+            },
+        )
+    }
+
+    if (showDeleteRemoteSyncDialog) {
+        FavoriteRemoveSyncConfirmDialog(
+            onDismiss = {
+                showDeleteRemoteSyncDialog = false
+                deleteRequest = null
+            },
+            onConfirm = { rememberChoice, syncRemote ->
+                if (rememberChoice) {
+                    appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(false)
+                    appSettingsRepository.favoriteRemoveSyncDefault.setValue(syncRemote)
+                }
+                showDeleteRemoteSyncDialog = false
+                val request = deleteRequest ?: return@FavoriteRemoveSyncConfirmDialog
+                scope.launch { performDeleteAllFavorites(request, removeRemote = syncRemote) }
             },
         )
     }
@@ -753,7 +761,16 @@ fun FavoritePage() {
                     ActionChip("是") {
                         val request = deleteRequest ?: return@ActionChip
                         showDeleteScopeDialog = false
-                        scope.launch { performDeleteAllFavorites(request) }
+                        scope.launch {
+                            if (request.hasRemoteSyncedItems && appSettingsRepository.favoriteRemoveSyncPromptEnabled.getValue()) {
+                                showDeleteRemoteSyncDialog = true
+                            } else {
+                                performDeleteAllFavorites(
+                                    request,
+                                    removeRemote = request.hasRemoteSyncedItems && appSettingsRepository.favoriteRemoveSyncDefault.getValue(),
+                                )
+                            }
+                        }
                     }
                     Surface(
                         onClick = {
@@ -780,903 +797,6 @@ fun FavoritePage() {
     }
 }
 
-@Composable
-private fun FavoritePageContent(
-    ready: FavoritePageState.Ready,
-    mode: FavoritePageMode,
-    searchQuery: String,
-    searchCategoryMatchCounts: Map<Long, Int>,
-    sortMode: FavoriteSortMode,
-    sortDescending: Boolean,
-    favoriteGridMode: FavoriteGridMode,
-    gridEntries: List<FavoriteGridEntry>,
-    openedCollection: FavoriteCollectionWithItems?,
-    selectedItemIds: Set<Long>,
-    selectedCollectionIds: Set<Long>,
-    lastReadMap: Map<Long, Long>,
-    syncState: FavoriteSyncState,
-    hiddenFavoritePageRuns: Set<String>,
-    onCreateCategory: () -> Unit,
-    onManageCategory: () -> Unit,
-    onEnterSearch: () -> Unit,
-    onSearchQueryChange: (String) -> Unit,
-    onSearchSubmit: () -> Unit,
-    onExitSearch: () -> Unit,
-    onSyncFavorites: () -> Unit,
-    onOpenSyncProgress: () -> Unit,
-    onHideSyncCard: () -> Unit,
-    onResumeSync: () -> Unit,
-    onInterruptSync: () -> Unit,
-    onSelectCategory: (Long) -> Unit,
-    onShowGridMode: () -> Unit,
-    onShowSort: () -> Unit,
-    onBackToTab: () -> Unit,
-    onSelectAll: () -> Unit,
-    onClearSelection: () -> Unit,
-    onCancelSelection: () -> Unit,
-    onOpenMoveDialog: () -> Unit,
-    onOpenMergeDialog: () -> Unit,
-    onEditSelectedCollection: () -> Unit,
-    onDissolveSelectedCollections: () -> Unit,
-    onDeleteSelectedItems: () -> Unit,
-    onOpenCollection: (Long) -> Unit,
-    onToggleItem: (Long) -> Unit,
-    onToggleCollection: (Long) -> Unit,
-    onEnterSelectItem: (Long) -> Unit,
-    onEnterSelectCollection: (Long) -> Unit,
-    onOpenItem: (FavoriteItem) -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    val selectedCount = selectedItemIds.size + selectedCollectionIds.size
-    Column(Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = mode,
-            transitionSpec = {
-                (fadeIn(animationSpec = spring(stiffness = 500f)) + slideInVertically { -it / 4 }) togetherWith
-                    (fadeOut(animationSpec = spring(stiffness = 700f)) + slideOutVertically { -it / 4 })
-            },
-            label = "favorite_header_mode",
-        ) { currentMode ->
-            when (currentMode) {
-                FavoritePageMode.Normal -> {
-                    FavoriteHeaderMenuRow(
-                        title = "我的收藏",
-                        onSearch = onEnterSearch,
-                        onCreateCategory = onCreateCategory,
-                        onManageCategory = onManageCategory,
-                        onSyncFavorites = onSyncFavorites,
-                    )
-                }
-
-                FavoritePageMode.Search -> {
-                    FavoriteSearchTopBar(
-                        query = searchQuery,
-                        onQueryChange = onSearchQueryChange,
-                        onSearch = onSearchSubmit,
-                        onBack = onExitSearch,
-                    )
-                }
-
-                FavoritePageMode.Select -> {
-                    HeaderRow("已選 $selectedCount 項", buildList {
-                        add("全選" to onSelectAll)
-                        if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
-                            add("移動" to onOpenMoveDialog)
-                            add("合成集合" to onOpenMergeDialog)
-                            add("刪除" to onDeleteSelectedItems)
-                        }
-                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add("編輯" to onEditSelectedCollection)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(
-                            "解散" to onDissolveSelectedCollections
-                        )
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add("清空" to onClearSelection)
-                        add("返回" to onCancelSelection)
-                    })
-                }
-            }
-        }
-
-        ScrollableTabRow(
-            selectedTabIndex = ready.categories.indexOfFirst { it.id == ready.selectedCategoryId }.coerceAtLeast(0),
-            edgePadding = 8.dp,
-            containerColor = colors.creamBackground,
-            divider = { HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.12f)) },
-            indicator = {},
-        ) {
-            ready.categories.forEach { category ->
-                Tab(
-                    selected = category.id == ready.selectedCategoryId,
-                    onClick = { onSelectCategory(category.id) },
-                    text = {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                category.name,
-                                fontSize = 15.sp,
-                                fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium,
-                            )
-                            if (mode == FavoritePageMode.Search && searchQuery.isNotBlank()) {
-                                Text(
-                                    text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
-                                    fontSize = 11.sp,
-                                    color = colors.textDark.copy(alpha = 0.65f),
-                                )
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Box(
-                                Modifier
-                                    .width(48.dp)
-                                    .height(3.dp)
-                                    .background(
-                                        if (category.id == ready.selectedCategoryId) colors.brownDeep else Color.Transparent,
-                                        RoundedCornerShape(999.dp),
-                                    )
-                            )
-                        }
-                    },
-                    selectedContentColor = colors.brownDeep,
-                    unselectedContentColor = colors.textDark.copy(alpha = 0.66f),
-                )
-            }
-        }
-
-        val runningSyncRunId = (syncState as? FavoriteSyncState.Running)?.snapshot?.runId
-        if (runningSyncRunId != null && runningSyncRunId !in hiddenFavoritePageRuns) {
-            FavoriteSyncStatusCard(
-                state = syncState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 4.dp),
-                onOpenProgress = onOpenSyncProgress,
-                onDismiss = onHideSyncCard,
-                onResume = onResumeSync,
-                onInterrupt = onInterruptSync,
-            )
-        }
-
-        if (openedCollection != null) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionChip(YamiboIcons.Back, onBackToTab)
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(openedCollection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    Text("${openedCollection.items.size} 項", color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip("排列: ${favoriteGridMode.label}", onShowGridMode)
-                    ActionChip("排序: ${sortMode.label}${if (sortDescending) " ↓" else " ↑"}", onShowSort)
-                }
-            }
-        } else {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(ready.categories.firstOrNull { it.id == ready.selectedCategoryId }?.name.orEmpty(), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp, modifier = Modifier.weight(1f))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ActionChip("排列: ${favoriteGridMode.label}", onShowGridMode)
-                    ActionChip("排序: ${sortMode.label}${if (sortDescending) " ↓" else " ↑"}", onShowSort)
-                }
-            }
-        }
-
-        if (openedCollection != null) {
-            Box(Modifier.fillMaxSize()) {
-                if (gridEntries.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("這個集合還沒有內容", color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
-                    }
-                } else {
-                    FavoriteGridLayout(
-                        entries = gridEntries,
-                        favoriteGridMode = favoriteGridMode,
-                        selecting = mode == FavoritePageMode.Select,
-                        selectedItemIds = selectedItemIds,
-                        selectedCollectionIds = selectedCollectionIds,
-                        lastReadMap = lastReadMap,
-                        onOpenCollection = onOpenCollection,
-                        onToggleCollection = onToggleCollection,
-                        onEnterSelectCollection = onEnterSelectCollection,
-                        onOpenItem = onOpenItem,
-                        onToggleItem = onToggleItem,
-                        onEnterSelectItem = onEnterSelectItem,
-                    )
-                }
-            }
-        } else {
-            val selectedTabIndex = ready.categories.indexOfFirst { it.id == ready.selectedCategoryId }.coerceAtLeast(0)
-            val previousTabIndex = remember { mutableIntStateOf(selectedTabIndex) }
-            val density = LocalDensity.current
-            val direction = when {
-                selectedTabIndex > previousTabIndex.intValue -> 1f
-                selectedTabIndex < previousTabIndex.intValue -> -1f
-                else -> 0f
-            }
-            val initialOffsetPx = with(density) { (16.dp * direction).toPx() }
-            val initialAlpha = if (direction == 0f) 1f else 0.28f
-            val contentOffsetX = remember(selectedTabIndex) { Animatable(initialOffsetPx) }
-            val contentAlpha = remember(selectedTabIndex) { Animatable(initialAlpha) }
-            LaunchedEffect(selectedTabIndex) {
-                if (direction == 0f) {
-                    contentOffsetX.snapTo(0f)
-                    contentAlpha.snapTo(1f)
-                } else {
-                    launch {
-                        contentOffsetX.animateTo(
-                            targetValue = 0f,
-                            animationSpec = tween(durationMillis = 150),
-                        )
-                    }
-                    contentAlpha.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(durationMillis = 150),
-                    )
-                }
-                previousTabIndex.intValue = selectedTabIndex
-            }
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = contentOffsetX.value
-                        alpha = contentAlpha.value
-                    }
-            ) {
-                Box(Modifier.fillMaxSize()) {
-                    if (gridEntries.isEmpty()) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("目前還沒有收藏", color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
-                        }
-                    } else {
-                        FavoriteGridLayout(
-                            entries = gridEntries,
-                            favoriteGridMode = favoriteGridMode,
-                            selecting = mode == FavoritePageMode.Select,
-                            selectedItemIds = selectedItemIds,
-                            selectedCollectionIds = selectedCollectionIds,
-                            lastReadMap = lastReadMap,
-                            onOpenCollection = onOpenCollection,
-                            onToggleCollection = onToggleCollection,
-                            onEnterSelectCollection = onEnterSelectCollection,
-                            onOpenItem = onOpenItem,
-                            onToggleItem = onToggleItem,
-                            onEnterSelectItem = onEnterSelectItem,
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun FavoriteGridLayout(
-    entries: List<FavoriteGridEntry>,
-    favoriteGridMode: FavoriteGridMode,
-    selecting: Boolean,
-    selectedItemIds: Set<Long>,
-    selectedCollectionIds: Set<Long>,
-    lastReadMap: Map<Long, Long>,
-    onOpenCollection: (Long) -> Unit,
-    onToggleCollection: (Long) -> Unit,
-    onEnterSelectCollection: (Long) -> Unit,
-    onOpenItem: (FavoriteItem) -> Unit,
-    onToggleItem: (Long) -> Unit,
-    onEnterSelectItem: (Long) -> Unit,
-) {
-    val contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 88.dp)
-    val listState = rememberLazyListState()
-    val gridState = rememberLazyGridState()
-    val staggeredGridState = rememberLazyStaggeredGridState()
-    when (favoriteGridMode) {
-        FavoriteGridMode.FIXED_GRID -> {
-            Box(Modifier.fillMaxSize()) {
-                LazyVerticalGrid(
-                    state = gridState,
-                    columns = GridCells.Fixed(3),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    gridItems(entries, key = { it.key }, span = { GridItemSpan(1) }) { entry ->
-                        FavoriteGridEntryCard(
-                            entry = entry,
-                            favoriteGridMode = favoriteGridMode,
-                            selecting = selecting,
-                            selectedItemIds = selectedItemIds,
-                            selectedCollectionIds = selectedCollectionIds,
-                            lastReadMap = lastReadMap,
-                            onOpenCollection = onOpenCollection,
-                            onToggleCollection = onToggleCollection,
-                            onEnterSelectCollection = onEnterSelectCollection,
-                            onOpenItem = onOpenItem,
-                            onToggleItem = onToggleItem,
-                            onEnterSelectItem = onEnterSelectItem,
-                        )
-                    }
-                }
-                FavoriteGridScrollbar(
-                    state = gridState,
-                    totalItems = entries.size,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-        }
-
-        FavoriteGridMode.STAGGERED -> {
-            Box(Modifier.fillMaxSize()) {
-                LazyVerticalStaggeredGrid(
-                    state = staggeredGridState,
-                    columns = StaggeredGridCells.Fixed(3),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalItemSpacing = 10.dp,
-                ) {
-                    staggeredItems(entries, key = { it.key }, span = { StaggeredGridItemSpan.SingleLane }) { entry ->
-                        FavoriteGridEntryCard(
-                            entry = entry,
-                            favoriteGridMode = favoriteGridMode,
-                            selecting = selecting,
-                            selectedItemIds = selectedItemIds,
-                            selectedCollectionIds = selectedCollectionIds,
-                            lastReadMap = lastReadMap,
-                            onOpenCollection = onOpenCollection,
-                            onToggleCollection = onToggleCollection,
-                            onEnterSelectCollection = onEnterSelectCollection,
-                            onOpenItem = onOpenItem,
-                            onToggleItem = onToggleItem,
-                            onEnterSelectItem = onEnterSelectItem,
-                        )
-                    }
-                }
-                FavoriteStaggeredScrollbar(
-                    state = staggeredGridState,
-                    totalItems = entries.size,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-        }
-
-        FavoriteGridMode.ROW_CARD,
-        FavoriteGridMode.ROW_CARD_TEXT -> {
-            Box(Modifier.fillMaxSize()) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = contentPadding,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    items(entries, key = { it.key }) { entry ->
-                        FavoriteGridEntryCard(
-                            entry = entry,
-                            favoriteGridMode = favoriteGridMode,
-                            selecting = selecting,
-                            selectedItemIds = selectedItemIds,
-                            selectedCollectionIds = selectedCollectionIds,
-                            lastReadMap = lastReadMap,
-                            onOpenCollection = onOpenCollection,
-                            onToggleCollection = onToggleCollection,
-                            onEnterSelectCollection = onEnterSelectCollection,
-                            onOpenItem = onOpenItem,
-                            onToggleItem = onToggleItem,
-                            onEnterSelectItem = onEnterSelectItem,
-                        )
-                    }
-                }
-                FavoriteListScrollbar(
-                    state = listState,
-                    totalItems = entries.size,
-                    modifier = Modifier.align(Alignment.CenterEnd),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun FavoriteGridEntryCard(
-    entry: FavoriteGridEntry,
-    favoriteGridMode: FavoriteGridMode,
-    selecting: Boolean,
-    selectedItemIds: Set<Long>,
-    selectedCollectionIds: Set<Long>,
-    lastReadMap: Map<Long, Long>,
-    onOpenCollection: (Long) -> Unit,
-    onToggleCollection: (Long) -> Unit,
-    onEnterSelectCollection: (Long) -> Unit,
-    onOpenItem: (FavoriteItem) -> Unit,
-    onToggleItem: (Long) -> Unit,
-    onEnterSelectItem: (Long) -> Unit,
-) {
-    Box {
-        when (entry) {
-            is FavoriteGridEntry.Collection -> {
-                if (favoriteGridMode == FavoriteGridMode.ROW_CARD || favoriteGridMode == FavoriteGridMode.ROW_CARD_TEXT) {
-                    CollectionRowCardUi(
-                        collection = entry.value,
-                        showPreview = favoriteGridMode == FavoriteGridMode.ROW_CARD,
-                        selected = entry.value.collection.id in selectedCollectionIds,
-                        selecting = selecting,
-                        onOpen = { onOpenCollection(entry.value.collection.id) },
-                        onToggle = { onToggleCollection(entry.value.collection.id) },
-                        onEnterSelect = { onEnterSelectCollection(entry.value.collection.id) },
-                    )
-                } else {
-                    CollectionCardUi(
-                        collection = entry.value,
-                        selected = entry.value.collection.id in selectedCollectionIds,
-                        selecting = selecting,
-                        onOpen = { onOpenCollection(entry.value.collection.id) },
-                        onToggle = { onToggleCollection(entry.value.collection.id) },
-                        onEnterSelect = { onEnterSelectCollection(entry.value.collection.id) },
-                    )
-                }
-            }
-
-            is FavoriteGridEntry.Item -> {
-                if (favoriteGridMode == FavoriteGridMode.ROW_CARD || favoriteGridMode == FavoriteGridMode.ROW_CARD_TEXT) {
-                    ItemRowCardUi(
-                        item = entry.value,
-                        showCover = favoriteGridMode == FavoriteGridMode.ROW_CARD,
-                        selected = entry.value.id in selectedItemIds,
-                        selecting = selecting,
-                        lastReadAt = lastReadMap[entry.value.id],
-                        onOpen = { onOpenItem(entry.value) },
-                        onToggle = { onToggleItem(entry.value.id) },
-                        onEnterSelect = { onEnterSelectItem(entry.value.id) },
-                    )
-                } else {
-                    ItemCardUi(
-                        item = entry.value,
-                        selected = entry.value.id in selectedItemIds,
-                        selecting = selecting,
-                        lastReadAt = lastReadMap[entry.value.id],
-                        onOpen = { onOpenItem(entry.value) },
-                        onToggle = { onToggleItem(entry.value.id) },
-                        onEnterSelect = { onEnterSelectItem(entry.value.id) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CollectionCardUi(collection: FavoriteCollectionWithItems, selected: Boolean, selecting: Boolean, onOpen: () -> Unit, onToggle: () -> Unit, onEnterSelect: () -> Unit) {
-    val colors = YamiboTheme.colors
-    val borderColor = if (selected) colors.brownDeep else collectionColor(collection.collection.colorKey).copy(alpha = 0.45f)
-    Surface(
-        modifier = Modifier.fillMaxWidth().pointerInput(selecting, selected, collection.collection.id) {
-            detectTapGestures(onTap = { if (selecting) onToggle() else onOpen() }, onLongPress = { if (selecting) onToggle() else onEnterSelect() })
-        },
-        shape = RoundedCornerShape(16.dp),
-        color = colors.creamSurface,
-        border = BorderStroke(1.5.dp, borderColor),
-    ) {
-        Column(Modifier.padding(6.dp)) {
-            PreviewGrid(collection.items, collection.collection.colorKey)
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(collection.collection.name, color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = selected,
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut(),
-                ) {
-                    SelectedDot()
-                }
-            }
-            Spacer(Modifier.height(4.dp))
-            Text("${collection.items.size} 項", color = colors.textDark.copy(alpha = 0.55f), fontSize = 11.sp)
-        }
-    }
-}
-
-@Composable
-private fun PreviewGrid(items: List<FavoriteItem>, colorKey: String) {
-    val previewItems = items.take(4)
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        repeat(2) { rowIndex ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(2) { columnIndex ->
-                    val item = previewItems.getOrNull(rowIndex * 2 + columnIndex)
-                    Box(Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(collectionColor(colorKey).copy(alpha = 0.18f))) {
-                        val coverUrl = item?.coverUrl
-                        if (coverUrl != null) {
-                            AsyncImage(model = rememberImageRequest(coverUrl), contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                        } else if (item != null) {
-                            CoverTextFallback(title = item.title, color = collectionColor(colorKey))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ItemCardUi(item: FavoriteItem, selected: Boolean, selecting: Boolean, lastReadAt: Long?, onOpen: () -> Unit, onToggle: () -> Unit, onEnterSelect: () -> Unit) {
-    val colors = YamiboTheme.colors
-    val effectiveLastReadAt = lastReadAt?.takeIf { it > 0L }
-    Surface(
-        modifier = Modifier.fillMaxWidth().pointerInput(selecting, selected, item.id) {
-            detectTapGestures(onTap = { if (selecting) onToggle() else onOpen() }, onLongPress = { if (selecting) onToggle() else onEnterSelect() })
-        },
-        shape = RoundedCornerShape(16.dp),
-        color = colors.creamSurface,
-        border = BorderStroke(1.5.dp, if (selected) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.28f)),
-    ) {
-        Column(Modifier.padding(6.dp)) {
-            Box(Modifier.fillMaxWidth().aspectRatio(0.72f).clip(RoundedCornerShape(12.dp)).background(colors.brownPrimary.copy(alpha = 0.12f))) {
-                val coverUrl = item.coverUrl
-                if (coverUrl != null) {
-                    AsyncImage(model = rememberImageRequest(coverUrl), contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                } else {
-                    CoverTextFallback(title = item.title, color = colors.brownDeep.copy(alpha = 0.75f))
-                }
-                /**
-                 * IMPORTANT: Use fully-qualified androidx.compose.animation.AnimatedVisibility.
-                 *
-                 * If import is auto-optimized or replaced with implicit receiver version, Kotlin may
-                 * resolve to a LayoutScope extension overload and fail with: "cannot be called in this
-                 * context with an implicit receiver".
-                 *
-                 * @suppress Do NOT clean up this path.
-                 */
-                @Suppress("RemoveRedundantQualifierName")
-                androidx.compose.animation.AnimatedVisibility(
-                    visible = selected,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(6.dp),
-                    enter = fadeIn() + scaleIn(),
-                    exit = fadeOut() + scaleOut(),
-                ) {
-                    SelectedDot()
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-            item.forumName?.takeIf { it.isNotBlank() }?.let {
-                Text("#$it", color = colors.textDark.copy(alpha = 0.58f), fontSize = 11.sp)
-                Spacer(Modifier.height(4.dp))
-            }
-            Text(item.title, color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            if (effectiveLastReadAt != null) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}",
-                    color = colors.textDark.copy(alpha = 0.45f),
-                    fontSize = 10.sp,
-                    minLines = 1,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CollectionRowCardUi(
-    collection: FavoriteCollectionWithItems,
-    showPreview: Boolean,
-    selected: Boolean,
-    selecting: Boolean,
-    onOpen: () -> Unit,
-    onToggle: () -> Unit,
-    onEnterSelect: () -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    val borderColor = if (selected) colors.brownDeep else collectionColor(collection.collection.colorKey).copy(alpha = 0.45f)
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selecting, selected, collection.collection.id) {
-                detectTapGestures(
-                    onTap = { if (selecting) onToggle() else onOpen() },
-                    onLongPress = { if (selecting) onToggle() else onEnterSelect() },
-                )
-            },
-        shape = RoundedCornerShape(18.dp),
-        color = colors.creamSurface,
-        border = BorderStroke(1.5.dp, borderColor),
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (showPreview) {
-                Box(
-                    modifier = Modifier
-                        .width(108.dp)
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(collectionColor(collection.collection.colorKey).copy(alpha = 0.16f)),
-                ) {
-                    PreviewGrid(collection.items, collection.collection.colorKey)
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = collection.collection.name,
-                    color = colors.brownDeep,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = "${collection.items.size} 項收藏",
-                    color = colors.textDark.copy(alpha = 0.62f),
-                    fontSize = 13.sp,
-                )
-                collection.items.firstOrNull()?.forumName?.takeIf { it.isNotBlank() }?.let {
-                    Text(
-                        text = "#$it",
-                        color = colors.textDark.copy(alpha = 0.52f),
-                        fontSize = 12.sp,
-                    )
-                }
-            }
-            androidx.compose.animation.AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut(),
-            ) {
-                SelectedDot()
-            }
-        }
-    }
-}
-
-@Composable
-private fun ItemRowCardUi(
-    item: FavoriteItem,
-    showCover: Boolean,
-    selected: Boolean,
-    selecting: Boolean,
-    lastReadAt: Long?,
-    onOpen: () -> Unit,
-    onToggle: () -> Unit,
-    onEnterSelect: () -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    val effectiveLastReadAt = lastReadAt?.takeIf { it > 0L }
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .pointerInput(selecting, selected, item.id) {
-                detectTapGestures(
-                    onTap = { if (selecting) onToggle() else onOpen() },
-                    onLongPress = { if (selecting) onToggle() else onEnterSelect() },
-                )
-            },
-        shape = RoundedCornerShape(18.dp),
-        color = colors.creamSurface,
-        border = BorderStroke(1.5.dp, if (selected) colors.brownDeep else colors.brownPrimary.copy(alpha = 0.28f)),
-    ) {
-        Row(
-            modifier = Modifier.padding(10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (showCover) {
-                Box(
-                    modifier = Modifier
-                        .width(92.dp)
-                        .aspectRatio(0.72f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.brownPrimary.copy(alpha = 0.12f)),
-                ) {
-                    val coverUrl = item.coverUrl
-                    if (coverUrl != null) {
-                        AsyncImage(
-                            model = rememberImageRequest(coverUrl),
-                            contentDescription = item.title,
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                        )
-                    } else {
-                        CoverTextFallback(title = item.title, color = colors.brownDeep.copy(alpha = 0.75f))
-                    }
-                }
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = item.title,
-                    color = colors.textDark,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (!item.forumName.isNullOrBlank() || effectiveLastReadAt != null) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        item.forumName?.takeIf { it.isNotBlank() }?.let {
-                            Text(
-                                text = "#$it",
-                                color = colors.textDark.copy(alpha = 0.56f),
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                        if (effectiveLastReadAt != null) {
-                            Text(
-                                text = "最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}",
-                                color = colors.textDark.copy(alpha = 0.48f),
-                                fontSize = 12.sp,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
-            }
-            androidx.compose.animation.AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn() + scaleIn(),
-                exit = fadeOut() + scaleOut(),
-            ) {
-                SelectedDot()
-            }
-        }
-    }
-}
-
-@Composable
-private fun SelectedDot() {
-    val colors = YamiboTheme.colors
-    Box(Modifier.size(20.dp).background(colors.brownDeep, CircleShape), contentAlignment = Alignment.Center) {
-        Text("✓", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun CoverTextFallback(title: String, color: Color) {
-    val fontSize = when {
-        title.length <= 6 -> 32.sp
-        title.length <= 12 -> 24.sp
-        title.length <= 24 -> 19.sp
-        title.length <= 40 -> 15.sp
-        else -> 12.sp
-    }
-    Text(
-        text = title,
-        color = color,
-        fontSize = fontSize,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.fillMaxSize().padding(8.dp),
-        lineHeight = fontSize * 1.15f,
-        textAlign = TextAlign.Center,
-        softWrap = true,
-    )
-}
-
-@Composable
-private fun FavoriteSortDialog(
-    selected: FavoriteSortMode,
-    descending: Boolean,
-    onDismiss: () -> Unit,
-    onSelect: (FavoriteSortMode) -> Unit,
-    onConfirm: () -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("排序", color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FavoriteSortMode.entries.forEach { mode ->
-                    val isSelected = selected == mode
-                    Surface(
-                        onClick = { onSelect(mode) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent,
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(mode.label, color = colors.textDark, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            if (isSelected) {
-                                Text(if (descending) "↓" else "↑", color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { ActionChip("確定", onConfirm) },
-        dismissButton = { ActionChip("返回", onDismiss) },
-        containerColor = colors.creamSurface,
-    )
-}
-
-@Composable
-private fun FavoriteGridModeDialog(
-    selected: FavoriteGridMode,
-    onDismiss: () -> Unit,
-    onSelect: (FavoriteGridMode) -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("排列方式", color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FavoriteGridMode.entries.forEach { mode ->
-                    val isSelected = selected == mode
-                    Surface(
-                        onClick = { onSelect(mode) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = if (isSelected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent,
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(mode.label, color = colors.textDark, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            if (isSelected) {
-                                Text("已選擇", color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { ActionChip("返回", onDismiss) },
-        dismissButton = {},
-        containerColor = colors.creamSurface,
-    )
-}
-
-@Composable
-private fun CollectionEditorDialog(draft: FavoriteCollectionDraft, onDismiss: () -> Unit, onConfirm: (String, String, Boolean) -> Unit) {
-    val colors = YamiboTheme.colors
-    var name by remember(draft.collectionId, draft.initialName) { mutableStateOf(draft.initialName) }
-    var colorKey by remember(draft.collectionId, draft.initialColorKey) { mutableStateOf(draft.initialColorKey) }
-    var removeOriginal by remember(draft.collectionId, draft.removeOriginalItems) { mutableStateOf(draft.removeOriginalItems) }
-    val palette = listOf("brown", "rose", "blue", "green", "gold")
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(draft.title, color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("名稱") })
-                Text("顏色", color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    palette.forEach { paletteKey ->
-                        Box(Modifier.size(26.dp).clip(CircleShape).background(collectionColor(paletteKey)).pointerInput(paletteKey) { detectTapGestures(onTap = { colorKey = paletteKey }) }.border(if (paletteKey == colorKey) 2.dp else 0.dp, colors.brownDeep, CircleShape))
-                    }
-                }
-                if (draft.showRemoveOriginalOption) {
-                    Row(Modifier.fillMaxWidth().pointerInput(removeOriginal) { detectTapGestures(onTap = { removeOriginal = !removeOriginal }) }, verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = removeOriginal, onCheckedChange = { removeOriginal = it })
-                        Spacer(Modifier.width(6.dp))
-                        Text("移除原始條目", color = colors.textDark, fontSize = 13.sp)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            ActionChip("確定") {
-                if (name.isNotBlank()) onConfirm(
-                    name.trim(),
-                    colorKey,
-                    removeOriginal
-                )
-            }
-        },
-        dismissButton = { ActionChip("返回", onDismiss) },
-        containerColor = colors.creamSurface,
-    )
-}
-
 private suspend fun favoriteItemLastReadAt(item: FavoriteItem, repo: ReadHistoryRepository): Long {
     return when (item.targetType) {
         FavoriteTargetType.ThreadNormal -> repo.getPosition(ThreadId(item.targetId.toInt()), ReadHistoryRepository.ThreadEntryType.Normal)?.lastVisitTime ?: 0L
@@ -1690,10 +810,24 @@ private fun sortCollections(
     mode: FavoriteSortMode,
     descending: Boolean,
     lastReadMap: Map<Long, Long>,
+    remoteFavoriteOrderMap: Map<Long, Long>,
 ): List<FavoriteCollectionWithItems> {
     val sorted = when (mode) {
         FavoriteSortMode.DEFAULT -> items.sortedWith(compareBy<FavoriteCollectionWithItems> { it.collection.sortOrder }.thenByDescending { it.collection.createdAt })
         FavoriteSortMode.UPDATED_AT -> items.sortedByDescending { maxOf(it.collection.updatedAt, it.items.maxOfOrNull(FavoriteItem::updatedAt) ?: 0L) }
+        FavoriteSortMode.FAVORITED_ORDER -> {
+            val itemComparator = compareFavoriteItemsByOrder(descending, remoteFavoriteOrderMap)
+            items.sortedWith { left, right ->
+                val leftLead = left.items.sortedWith(itemComparator).firstOrNull()
+                val rightLead = right.items.sortedWith(itemComparator).firstOrNull()
+                when {
+                    leftLead == null && rightLead == null -> left.collection.name.lowercase().compareTo(right.collection.name.lowercase())
+                    leftLead == null -> 1
+                    rightLead == null -> -1
+                    else -> itemComparator.compare(leftLead, rightLead)
+                }
+            }
+        }
         FavoriteSortMode.NAME -> items.sortedBy { it.collection.name.lowercase() }
         FavoriteSortMode.FORUM_NAME -> items.sortedWith(
             compareBy<FavoriteCollectionWithItems> {
@@ -1707,7 +841,7 @@ private fun sortCollections(
         )
         FavoriteSortMode.LAST_READ -> items.sortedByDescending { it.items.maxOfOrNull { item -> lastReadMap[item.id] ?: 0L } ?: 0L }
     }
-    return if (descending) sorted else sorted.reversed()
+    return if (mode == FavoriteSortMode.FAVORITED_ORDER || descending) sorted else sorted.reversed()
 }
 
 private fun sortItems(
@@ -1715,15 +849,47 @@ private fun sortItems(
     mode: FavoriteSortMode,
     descending: Boolean,
     lastReadMap: Map<Long, Long>,
+    remoteFavoriteOrderMap: Map<Long, Long>,
 ): List<FavoriteItem> {
     val sorted = when (mode) {
         FavoriteSortMode.DEFAULT -> items.sortedByDescending(FavoriteItem::createdAt)
         FavoriteSortMode.UPDATED_AT -> items.sortedByDescending(FavoriteItem::updatedAt)
+        FavoriteSortMode.FAVORITED_ORDER -> items.sortedWith(compareFavoriteItemsByOrder(descending, remoteFavoriteOrderMap))
         FavoriteSortMode.NAME -> items.sortedBy { it.title.lowercase() }
         FavoriteSortMode.FORUM_NAME -> items.sortedWith(compareBy<FavoriteItem> { it.forumName?.lowercase().orEmpty() }.thenBy { it.title.lowercase() })
         FavoriteSortMode.LAST_READ -> items.sortedByDescending { lastReadMap[it.id] ?: 0L }
     }
-    return if (descending) sorted else sorted.reversed()
+    return if (mode == FavoriteSortMode.FAVORITED_ORDER || descending) sorted else sorted.reversed()
+}
+
+private fun compareFavoriteItemsByOrder(
+    descending: Boolean,
+    remoteFavoriteOrderMap: Map<Long, Long>,
+): Comparator<FavoriteItem> {
+    return Comparator { left, right ->
+        val leftRemoteOrder = remoteFavoriteOrderMap[left.id]
+        val rightRemoteOrder = remoteFavoriteOrderMap[right.id]
+        when {
+            leftRemoteOrder != null && rightRemoteOrder != null -> {
+                if (descending) {
+                    rightRemoteOrder.compareTo(leftRemoteOrder)
+                } else {
+                    leftRemoteOrder.compareTo(rightRemoteOrder)
+                }
+            }
+
+            leftRemoteOrder == null && rightRemoteOrder == null -> {
+                if (descending) {
+                    right.createdAt.compareTo(left.createdAt)
+                } else {
+                    left.createdAt.compareTo(right.createdAt)
+                }
+            }
+
+            descending -> if (leftRemoteOrder != null) -1 else 1
+            else -> if (leftRemoteOrder == null) -1 else 1
+        }.takeIf { it != 0 } ?: left.title.lowercase().compareTo(right.title.lowercase())
+    }
 }
 
 private suspend fun readySearchCounts(
@@ -1784,24 +950,6 @@ private fun currentSyncRunId(state: FavoriteSyncState): String? {
     }
 }
 
-private fun formatFavoriteTime(timestamp: Long): String {
-    if (timestamp <= 0L) return "-"
-    val elapsed = (currentTimeMillis() - timestamp).coerceAtLeast(0L)
-    val minutes = elapsed / 1000L / 60L
-    val hours = minutes / 60L
-    val days = hours / 24L
-    return when {
-        days > 0L -> "${days}天前"
-        hours > 0L -> "${hours}小時前"
-        minutes > 0L -> "${minutes}分鐘前"
-        else -> "剛剛"
-    }
-}
 
-fun collectionColor(colorKey: String): Color = when (colorKey) {
-    "rose" -> Color(0xFFD28B9C)
-    "blue" -> Color(0xFF89A8C9)
-    "green" -> Color(0xFF8FAE8A)
-    "gold" -> Color(0xFFD6B46F)
-    else -> Color(0xFFB4977A)
-}
+
+

@@ -286,9 +286,9 @@ object HtmlParser {
             "1" -> 12f
             "2" -> 14f
             "3" -> 16f // Standard base
-            "4" -> 22f
-            "5" -> 28f
-            "6" -> 36f
+            "4" -> 18f
+            "5" -> 24f
+            "6" -> 32f
             "7" -> 48f // Huge
             else -> 16f
         }

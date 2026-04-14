@@ -30,16 +30,21 @@ import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteAddSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemoveSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.addFavoriteAndMaybeSync
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
 import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -53,6 +58,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoading
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadTopBar
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
+import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 
 /** Thread detail state */
 internal sealed interface ThreadState {
@@ -94,8 +100,11 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var favoriteRefreshToken by remember { mutableStateOf(0) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf("已移除收藏") }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
+    var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
+    var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
 
     /** Load reading history for this thread */
     LaunchedEffect(tid) {
@@ -108,12 +117,14 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         val currentTitle = (state as? ThreadState.Success)?.page?.thread?.title ?: title
         val currentForumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid
         val currentForumName = (state as? ThreadState.Success)?.page?.thread?.forum?.name
+        val firstPost = (state as? ThreadState.Success)?.page?.posts?.firstOrNull { it.floor == 1 }
         return FavoriteTargetPayload.Thread(
             tid = tid,
             title = currentTitle,
             threadType = ReadHistoryRepository.ThreadEntryType.Novel,
             authorId = authorId,
             coverUrl = readHistory?.threadCover,
+            lastUpdatedTime = firstPost?.lastEditedTime?.epochMillisOrNull() ?: firstPost?.timeCreate?.epochMillisOrNull(),
             forumId = currentForumId,
             forumName = currentForumName
         )
@@ -127,19 +138,62 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         favoritePaths = selection.paths
     }
 
+    suspend fun completeFavoriteAdd(syncToRemote: Boolean) {
+        val syncResult = withContext(Dispatchers.Default) {
+            addFavoriteAndMaybeSync(favoriteRepository, favoriteSyncRepository, favoriteTarget(), syncToRemote)
+        }
+        favoriteRefreshToken += 1
+        val message = when {
+            syncResult == null -> "已加入收藏"
+            syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
+            else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
+        }
+        snackbarHostState.showSnackbar(message)
+    }
+
+    suspend fun completeFavoriteRemoval(removeRemote: Boolean) {
+        val result = withContext(Dispatchers.Default) {
+            removeFavoriteWithSync(
+                favoriteRepository = favoriteRepository,
+                favoriteSyncRepository = favoriteSyncRepository,
+                target = favoriteTarget(),
+                removeRemote = removeRemote,
+            )
+        }
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar(
+            if (result.success) pendingFavoriteRemovalSuccessMessage else result.message ?: "移除收藏失敗",
+        )
+        pendingFavoriteRemovalSelection = null
+    }
+
+    suspend fun maybePromptRemoteRemoval() {
+        val target = favoriteTarget()
+        val shouldPromptRemote = target.supportsRemoteWebsiteSync() &&
+            hasRemoteFavoriteForTarget(favoriteRepository, favoriteSyncRepository, target)
+        when {
+            shouldPromptRemote && appSettingsRepo.favoriteRemoveSyncPromptEnabled.getValue() -> {
+                showFavoriteRemoveSyncConfirm = true
+            }
+            else -> {
+                completeFavoriteRemoval(
+                    removeRemote = shouldPromptRemote && appSettingsRepo.favoriteRemoveSyncDefault.getValue(),
+                )
+            }
+        }
+    }
+
     suspend fun toggleFavorite() {
         val target = favoriteTarget()
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalSelection = selection
+            pendingFavoriteRemovalSuccessMessage = "已移除收藏"
             if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已移除收藏")
-                    pendingFavoriteRemovalSelection = null
+                    maybePromptRemoteRemoval()
                 }
             } else {
                 showFavoriteRemovalConfirm = true
@@ -147,9 +201,13 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             return
         }
 
-        favoriteRepository.saveFavorite(target)
-        favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已加入收藏")
+        if (target.supportsRemoteWebsiteSync() && appSettingsRepo.favoriteAddSyncPromptEnabled.getValue()) {
+            showFavoriteAddSyncConfirm = true
+        } else {
+            completeFavoriteAdd(
+                syncToRemote = target.supportsRemoteWebsiteSync() && appSettingsRepo.favoriteAddSyncDefault.getValue(),
+            )
+        }
     }
 
     LaunchedEffect(tid, authorId, favoriteRefreshToken, (state as? ThreadState.Success)?.page?.thread?.title) {
@@ -366,42 +424,45 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     }
 
 if (showFavoriteDialog) {
-        val target = FavoriteTargetPayload.Thread(
-            tid = tid,
-            title = (state as? ThreadState.Success)?.page?.thread?.title ?: title,
-            threadType = ReadHistoryRepository.ThreadEntryType.Novel,
-            authorId = authorId,
-            coverUrl = readHistory?.threadCover,
-            forumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid,
-            forumName = (state as? ThreadState.Success)?.page?.thread?.forum?.name
-        )
-        FavoriteCollectionPickerDialog(
-            categories = favoriteDialogCategories,
-            options = favoriteDialogOptions,
-            initialCategorySelection = favoriteDialogCategorySelection,
-            initialCollectionSelection = favoriteDialogSelection,
-            onDismiss = { showFavoriteDialog = false },
-            onEdit = {
-                showFavoriteDialog = false
-                navigator.navigate(IFavoriteCategoryManageScreen())
-            },
-            onConfirm = { selectedCategories, selectedCollections ->
-                scope.launch {
-                    val existing = favoriteRepository.findFavoriteItem(target)
-                    if (existing == null) {
-                        favoriteRepository.saveFavorite(
-                            target,
-                            categoryIds = selectedCategories.toList(),
-                            collectionIds = selectedCollections.toList()
-                        )
-                    } else {
-                        favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
-                    }
-                    showFavoriteDialog = false
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("收藏位置已更新")
+    val target = FavoriteTargetPayload.Thread(
+        tid = tid,
+        title = (state as? ThreadState.Success)?.page?.thread?.title ?: title,
+        threadType = ReadHistoryRepository.ThreadEntryType.Novel,
+        authorId = authorId,
+        coverUrl = readHistory?.threadCover,
+        lastUpdatedTime = (state as? ThreadState.Success)?.page?.posts?.firstOrNull { it.floor == 1 }?.let {
+            it.lastEditedTime?.epochMillisOrNull() ?: it.timeCreate.epochMillisOrNull()
+        },
+        forumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid,
+        forumName = (state as? ThreadState.Success)?.page?.thread?.forum?.name
+    )
+    FavoriteCollectionPickerDialog(
+        categories = favoriteDialogCategories,
+        options = favoriteDialogOptions,
+        initialCategorySelection = favoriteDialogCategorySelection,
+        initialCollectionSelection = favoriteDialogSelection,
+        onDismiss = { showFavoriteDialog = false },
+        onEdit = {
+            showFavoriteDialog = false
+            navigator.navigate(IFavoriteCategoryManageScreen())
+        },
+        onConfirm = { selectedCategories, selectedCollections ->
+            scope.launch {
+                val existing = favoriteRepository.findFavoriteItem(target)
+                if (existing == null) {
+                    favoriteRepository.saveFavorite(
+                        target,
+                        categoryIds = selectedCategories.toList(),
+                        collectionIds = selectedCollections.toList()
+                    )
+                } else {
+                    favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                 }
+                showFavoriteDialog = false
+                favoriteRefreshToken += 1
+                snackbarHostState.showSnackbar("收藏位置已更新")
             }
+        }
     )
 }
 
@@ -419,12 +480,41 @@ if (showFavoriteRemovalConfirm) {
                 if ((selection?.paths?.size ?: 0) > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                        favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已移除收藏")
-                    pendingFavoriteRemovalSelection = null
+                    pendingFavoriteRemovalSuccessMessage = "已移除收藏"
+                    maybePromptRemoteRemoval()
                 }
             }
+        },
+    )
+}
+
+if (showFavoriteAddSyncConfirm) {
+    FavoriteAddSyncConfirmDialog(
+        onDismiss = { showFavoriteAddSyncConfirm = false },
+        onConfirm = { rememberChoice, syncRemote ->
+            showFavoriteAddSyncConfirm = false
+            if (rememberChoice) {
+                appSettingsRepo.favoriteAddSyncPromptEnabled.setValue(false)
+                appSettingsRepo.favoriteAddSyncDefault.setValue(syncRemote)
+            }
+            scope.launch { completeFavoriteAdd(syncRemote) }
+        },
+    )
+}
+
+if (showFavoriteRemoveSyncConfirm) {
+    FavoriteRemoveSyncConfirmDialog(
+        onDismiss = {
+            showFavoriteRemoveSyncConfirm = false
+            pendingFavoriteRemovalSelection = null
+        },
+        onConfirm = { rememberChoice, syncRemote ->
+            showFavoriteRemoveSyncConfirm = false
+            if (rememberChoice) {
+                appSettingsRepo.favoriteRemoveSyncPromptEnabled.setValue(false)
+                appSettingsRepo.favoriteRemoveSyncDefault.setValue(syncRemote)
+            }
+            scope.launch { completeFavoriteRemoval(syncRemote) }
         },
     )
 }
@@ -432,18 +522,16 @@ if (showFavoriteRemovalConfirm) {
 if (showFavoriteMultiPathDialog) {
     FavoriteMultiPathRemoveDialog(
         paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = "tip：長按可詳細編輯收藏路徑",
+        tip = "tip：長按可詳細編輯收藏路徑",
         onDismiss = {
             showFavoriteMultiPathDialog = false
             pendingFavoriteRemovalSelection = null
         },
         onRemoveAll = {
             showFavoriteMultiPathDialog = false
+            pendingFavoriteRemovalSuccessMessage = "已從所有位置移除收藏"
             scope.launch {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已從所有位置移除收藏")
-                pendingFavoriteRemovalSelection = null
+                maybePromptRemoteRemoval()
             }
         },
     )
@@ -533,4 +621,3 @@ private fun ThreadContent(
         }
     }
 }
-

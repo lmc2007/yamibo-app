@@ -180,6 +180,15 @@ fun ReadHistoryCard(
                     fontSize = 12.sp,
                     color = colors.textDark.copy(alpha = 0.5f),
                 )
+
+                history.lastUpdatedTime?.takeIf { it > 0L }?.let { lastUpdatedTime ->
+                    Spacer(Modifier.size(2.dp))
+                    Text(
+                        text = "最後更新 ${formatHistoryRelativeTime(lastUpdatedTime)}",
+                        fontSize = 12.sp,
+                        color = colors.textDark.copy(alpha = 0.45f),
+                    )
+                }
             }
 
             Spacer(Modifier.size(4.dp))
@@ -212,5 +221,18 @@ fun ReadHistoryCard(
                 }
             }
         }
+    }
+}
+
+private fun formatHistoryRelativeTime(timestamp: Long): String {
+    val elapsed = (me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis() - timestamp).coerceAtLeast(0L)
+    val minutes = elapsed / 1000L / 60L
+    val hours = minutes / 60L
+    val days = hours / 24L
+    return when {
+        days > 0L -> "${days}天前"
+        hours > 0L -> "${hours}小時前"
+        minutes > 0L -> "${minutes}分鐘前"
+        else -> "剛剛"
     }
 }

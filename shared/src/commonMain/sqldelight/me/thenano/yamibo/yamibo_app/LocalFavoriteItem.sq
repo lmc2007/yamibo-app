@@ -1,7 +1,7 @@
 insertFavoriteItem:
 INSERT INTO LocalFavoriteItem(
-    targetType, targetId, title, coverUrl, forumId, forumName, authorId, createdAt, updatedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    targetType, targetId, title, coverUrl, lastUpdatedTime, forumId, forumName, authorId, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 findByTarget:
 SELECT * FROM LocalFavoriteItem
@@ -20,7 +20,7 @@ LIMIT 1;
 
 updateFavoriteItem:
 UPDATE LocalFavoriteItem
-SET title = ?, coverUrl = ?, forumId = ?, forumName = ?, authorId = ?, updatedAt = ?
+SET title = ?, coverUrl = ?, lastUpdatedTime = ?, forumId = ?, forumName = ?, authorId = ?, updatedAt = ?
 WHERE id = ?;
 
 touchFavoriteItem:

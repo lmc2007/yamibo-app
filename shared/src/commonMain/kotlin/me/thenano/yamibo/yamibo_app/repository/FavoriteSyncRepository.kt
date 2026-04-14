@@ -29,6 +29,8 @@ interface FavoriteSyncRepository {
         val targetCategoryId: Long,
         val startedAt: Long,
         val updatedAt: Long,
+        val lastCompletedAt: Long?,
+        val elapsedDurationMs: Long,
         val currentPage: Int,
         val totalPages: Int?,
         val scannedCount: Int,
@@ -55,6 +57,11 @@ interface FavoriteSyncRepository {
         val message: String? = null,
     )
 
+    data class FavoriteSyncActionResult(
+        val success: Boolean,
+        val message: String? = null,
+    )
+
     data class FavoriteSyncBulkDeleteResult(
         val deletedCount: Int,
         val failedCount: Int,
@@ -69,6 +76,12 @@ interface FavoriteSyncRepository {
     suspend fun interruptRun(runId: String)
     suspend fun getLatestSnapshot(): FavoriteSyncSnapshot?
     suspend fun runImport(runId: String)
-    suspend fun removeLocalFavoriteItem(itemId: Long): FavoriteSyncDeleteResult
-    suspend fun removeLocalFavoriteItems(itemIds: Set<Long>): FavoriteSyncBulkDeleteResult
+    suspend fun syncLocalFavoriteItem(itemId: Long): FavoriteSyncActionResult
+    suspend fun hasRemoteFavorite(itemId: Long): Boolean
+    suspend fun getRemoteFavoriteOrderMap(itemIds: Set<Long>): Map<Long, Long>
+    suspend fun removeLocalFavoriteItem(itemId: Long, removeRemote: Boolean = true): FavoriteSyncDeleteResult
+    suspend fun removeLocalFavoriteItems(
+        itemIds: Set<Long>,
+        removeRemote: Boolean = true,
+    ): FavoriteSyncBulkDeleteResult
 }

@@ -35,6 +35,7 @@ interface ReadHistoryRepository {
         val threadName: String,
         val threadId: ThreadId,
         val threadCover: String?,
+        val lastUpdatedTime: Long?,
         val forumName: String?,
         val forumId: ForumId?,
         val authorId: UserId?,

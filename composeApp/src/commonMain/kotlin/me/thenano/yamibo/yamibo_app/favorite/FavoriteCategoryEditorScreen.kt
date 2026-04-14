@@ -60,6 +60,7 @@ import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.favorite.components.ReorderActionChip
 import me.thenano.yamibo.yamibo_app.favorite.components.calculateReorderTargetIndex
+import me.thenano.yamibo.yamibo_app.favorite.components.collectionColor
 import me.thenano.yamibo.yamibo_app.favorite.components.fastReorderDrag
 import me.thenano.yamibo.yamibo_app.favorite.components.rememberReorderGapOffset
 import me.thenano.yamibo.yamibo_app.favorite.components.reorderedList

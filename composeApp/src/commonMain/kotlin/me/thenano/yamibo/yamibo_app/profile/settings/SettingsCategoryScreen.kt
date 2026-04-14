@@ -182,6 +182,10 @@ private fun FavoriteSettingsContent() {
     val appSettingsRepository = LocalAppSettingsRepository.current
     val favoriteSyncRunner = LocalFavoriteSyncRunner.current
     val skipConfirm = appSettingsRepository.skipFavoriteRemovalConfirm.state()
+    val addSyncPromptEnabled = appSettingsRepository.favoriteAddSyncPromptEnabled.state()
+    val addSyncDefault = appSettingsRepository.favoriteAddSyncDefault.state()
+    val removeSyncPromptEnabled = appSettingsRepository.favoriteRemoveSyncPromptEnabled.state()
+    val removeSyncDefault = appSettingsRepository.favoriteRemoveSyncDefault.state()
     val gridMode = appSettingsRepository.favoriteGridMode.state()
     val sortMode = appSettingsRepository.favoriteSortMode.state()
     val sortDescending = appSettingsRepository.favoriteSortDescending.state()
@@ -278,6 +282,54 @@ private fun FavoriteSettingsContent() {
 
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel("收藏同步偏好")
+    SettingsToggleRow(
+        title = "新增收藏時詢問同步",
+        subtitle = "開啟後，新建收藏時會詢問是否同步到百合會。",
+        checked = addSyncPromptEnabled,
+        onCheckedChange = { appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(it) },
+    )
+    Spacer(Modifier.height(10.dp))
+    Text(
+        text = "新增收藏預設動作",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = listOf(true to "同步到百合會", false to "只存本地"),
+        selectedValue = addSyncDefault,
+        onSelect = { appSettingsRepository.favoriteAddSyncDefault.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+
+    Spacer(Modifier.height(18.dp))
+    SettingsToggleRow(
+        title = "完全移除收藏時詢問同步刪除",
+        subtitle = "開啟後，收藏將完全消失時會詢問是否同步從百合會移除。",
+        checked = removeSyncPromptEnabled,
+        onCheckedChange = { appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(it) },
+    )
+    Spacer(Modifier.height(10.dp))
+    Text(
+        text = "完全移除收藏預設動作",
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = listOf(true to "同步移除", false to "只刪本地"),
+        selectedValue = removeSyncDefault,
+        onSelect = { appSettingsRepository.favoriteRemoveSyncDefault.setValue(it) },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel("收藏同步")
     if (syncState != FavoriteSyncState.Idle) {
         FavoriteSyncStatusCard(
@@ -307,6 +359,48 @@ private fun FavoriteSettingsContent() {
             fontSize = 13.sp,
             color = colors.textDark.copy(alpha = 0.68f),
             modifier = Modifier.padding(horizontal = 4.dp),
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 16.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.textDark,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.6f),
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colors.brownDeep,
+                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.5f),
+                uncheckedThumbColor = colors.textDark.copy(alpha = 0.5f),
+                uncheckedTrackColor = colors.brownLight.copy(alpha = 0.3f),
+            ),
         )
     }
 }

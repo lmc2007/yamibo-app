@@ -28,7 +28,7 @@ class FavoriteSyncRunner(
         }
 
         val runId = repository.startRemoteImport(targetCategoryId)
-        dismissedFavoritePageRuns.value = dismissedFavoritePageRuns.value - runId
+        dismissedFavoritePageRuns.value -= runId
         runningJobs.remove(runId)?.cancel()
         runningJobs[runId] = scope.launch {
             repository.runImport(runId)
@@ -40,7 +40,7 @@ class FavoriteSyncRunner(
         val previousRunningRunId = (state.value as? FavoriteSyncState.Running)?.snapshot?.runId
         val runId = repository.resumeInterruptedRun() ?: return null
         if (previousRunningRunId != runId) {
-            dismissedFavoritePageRuns.value = dismissedFavoritePageRuns.value - runId
+            dismissedFavoritePageRuns.value -= runId
             runningJobs.remove(runId)?.cancel()
             runningJobs[runId] = scope.launch {
                 repository.runImport(runId)
@@ -54,13 +54,7 @@ class FavoriteSyncRunner(
         runningJobs.remove(runId)?.cancel()
     }
 
-    fun dismissProgressScreen(runId: String) {
-        scope.launch {
-            repository.cancelUiAttachment(runId)
-        }
-    }
-
     fun dismissFavoritePageCard(runId: String) {
-        dismissedFavoritePageRuns.value = dismissedFavoritePageRuns.value + runId
+        dismissedFavoritePageRuns.value += runId
     }
 }

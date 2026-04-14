@@ -1,10 +1,11 @@
 package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
-import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,7 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
@@ -88,16 +91,28 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            Crossfade(
-                targetState = currentTab,
-                label = "MainScreenTabCrossfade"
-            ) { tab ->
-                when (tab) {
-                    MainTab.Home -> HomeScreenContent()
-                    MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                    MainTab.Message -> PlaceholderScreen("Message")
-                    MainTab.Favorite -> FavoritePage()
-                    MainTab.Profile -> ProfilePage()
+            MainTab.entries.forEach { tab ->
+                val selected = tab == currentTab
+                val alpha by animateFloatAsState(
+                    targetValue = if (selected) 1f else 0f,
+                    animationSpec = tween(durationMillis = 220),
+                    label = "MainScreenTabAlpha_${tab.name}",
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .zIndex(if (selected) 1f else 0f)
+                        .graphicsLayer {
+                            this.alpha = alpha
+                        }
+                ) {
+                    when (tab) {
+                        MainTab.Home -> HomeScreenContent()
+                        MainTab.History -> ReadHistoryPage(reTapHistoryToken)
+                        MainTab.Message -> PlaceholderScreen("Message")
+                        MainTab.Favorite -> FavoritePage()
+                        MainTab.Profile -> ProfilePage()
+                    }
                 }
             }
         }

@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,15 +46,20 @@ import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteAddSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemoveSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.addFavoriteAndMaybeSync
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
 import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -68,6 +73,7 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
+import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
@@ -140,8 +146,11 @@ internal fun ThreadReaderScreen(
     var isFavorited by remember { mutableStateOf(false) }
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf("已取消收藏") }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
+    var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
+    var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
     
     LaunchedEffect(loadedPostsByPage[1], threadInfo) {
         if (coverUrl != null) return@LaunchedEffect // Lock once found for stability
@@ -171,12 +180,14 @@ internal fun ThreadReaderScreen(
 
     fun favoriteTarget(): FavoriteTargetPayload.Thread {
         val currentTitle = threadInfo?.title ?: title
+        val firstPost = loadedPostsByPage[1]?.firstOrNull { it.floor == 1 } ?: posts.firstOrNull { it.floor == 1 }
         return FavoriteTargetPayload.Thread(
             tid = tid,
             title = currentTitle,
             threadType = threadType,
             authorId = authorId,
             coverUrl = coverUrl,
+            lastUpdatedTime = firstPost?.lastEditedTime?.epochMillisOrNull() ?: firstPost?.timeCreate?.epochMillisOrNull(),
             forumId = threadInfo?.forum?.fid,
             forumName = threadInfo?.forum?.name,
         )
@@ -189,19 +200,62 @@ internal fun ThreadReaderScreen(
         isFavorited = selection.item != null
     }
 
+    suspend fun completeFavoriteAdd(syncToRemote: Boolean) {
+        val syncResult = withContext(Dispatchers.Default) {
+            addFavoriteAndMaybeSync(favoriteRepository, favoriteSyncRepository, favoriteTarget(), syncToRemote)
+        }
+        favoriteRefreshToken += 1
+        val message = when {
+            syncResult == null -> "已加入收藏"
+            syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
+            else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
+        }
+        snackbarHostState.showSnackbar(message)
+    }
+
+    suspend fun completeFavoriteRemoval(removeRemote: Boolean) {
+        val result = withContext(Dispatchers.Default) {
+            removeFavoriteWithSync(
+                favoriteRepository = favoriteRepository,
+                favoriteSyncRepository = favoriteSyncRepository,
+                target = favoriteTarget(),
+                removeRemote = removeRemote,
+            )
+        }
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar(
+            if (result.success) pendingFavoriteRemovalSuccessMessage else result.message ?: "取消收藏失敗",
+        )
+        pendingFavoriteRemovalSelection = null
+    }
+
+    suspend fun maybePromptRemoteRemoval() {
+        val target = favoriteTarget()
+        val shouldPromptRemote = target.supportsRemoteWebsiteSync() &&
+            hasRemoteFavoriteForTarget(favoriteRepository, favoriteSyncRepository, target)
+        when {
+            shouldPromptRemote && appSettingsRepository.favoriteRemoveSyncPromptEnabled.getValue() -> {
+                showFavoriteRemoveSyncConfirm = true
+            }
+            else -> {
+                completeFavoriteRemoval(
+                    removeRemote = shouldPromptRemote && appSettingsRepository.favoriteRemoveSyncDefault.getValue(),
+                )
+            }
+        }
+    }
+
     suspend fun toggleFavoriteQuickWithFeedback() {
         val target = favoriteTarget()
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalSelection = selection
+            pendingFavoriteRemovalSuccessMessage = "已取消收藏"
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消收藏")
-                    pendingFavoriteRemovalSelection = null
+                    maybePromptRemoteRemoval()
                 }
             } else {
                 showFavoriteRemovalConfirm = true
@@ -209,9 +263,13 @@ internal fun ThreadReaderScreen(
             return
         }
 
-        favoriteRepository.saveFavorite(target)
-        favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已加入收藏")
+        if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+            showFavoriteAddSyncConfirm = true
+        } else {
+            completeFavoriteAdd(
+                syncToRemote = target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncDefault.getValue(),
+            )
+        }
     }
 
     LaunchedEffect(tid, threadType, authorId, coverUrl, threadInfo?.forum?.fid, threadInfo?.forum?.name, title, favoriteRefreshToken) {
@@ -320,9 +378,12 @@ internal fun ThreadReaderScreen(
         Logger.i("ThreadReaderScreen", "$title : $coverUrl")
         return ThreadReadingHistory(
             threadType = threadType,
-            threadName = title,
+            threadName = threadInfo?.title ?: title,
             threadId = tid,
             threadCover = coverUrl,
+            lastUpdatedTime = loadedPostsByPage[1]
+                ?.firstOrNull { it.floor == 1 }
+                ?.let { it.lastEditedTime?.epochMillisOrNull() ?: it.timeCreate.epochMillisOrNull() },
             forumName = forumInfo?.name,
             forumId = forumInfo?.fid,
             authorId = authorId,
@@ -935,12 +996,41 @@ internal fun ThreadReaderScreen(
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                        favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已取消收藏")
-                        pendingFavoriteRemovalSelection = null
+                        pendingFavoriteRemovalSuccessMessage = "已取消收藏"
+                        maybePromptRemoteRemoval()
                     }
                 }
+            },
+        )
+    }
+
+    if (showFavoriteAddSyncConfirm) {
+        FavoriteAddSyncConfirmDialog(
+            onDismiss = { showFavoriteAddSyncConfirm = false },
+            onConfirm = { rememberChoice, syncRemote ->
+                showFavoriteAddSyncConfirm = false
+                if (rememberChoice) {
+                    appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(false)
+                    appSettingsRepository.favoriteAddSyncDefault.setValue(syncRemote)
+                }
+                scope.launch { completeFavoriteAdd(syncRemote) }
+            },
+        )
+    }
+
+    if (showFavoriteRemoveSyncConfirm) {
+        FavoriteRemoveSyncConfirmDialog(
+            onDismiss = {
+                showFavoriteRemoveSyncConfirm = false
+                pendingFavoriteRemovalSelection = null
+            },
+            onConfirm = { rememberChoice, syncRemote ->
+                showFavoriteRemoveSyncConfirm = false
+                if (rememberChoice) {
+                    appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(false)
+                    appSettingsRepository.favoriteRemoveSyncDefault.setValue(syncRemote)
+                }
+                scope.launch { completeFavoriteRemoval(syncRemote) }
             },
         )
     }
@@ -955,11 +1045,9 @@ internal fun ThreadReaderScreen(
             },
             onRemoveAll = {
                 showFavoriteMultiPathDialog = false
+                pendingFavoriteRemovalSuccessMessage = "已取消所有收藏"
                 scope.launch {
-                        withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已取消所有收藏")
-                    pendingFavoriteRemovalSelection = null
+                    maybePromptRemoteRemoval()
                 }
             },
         )

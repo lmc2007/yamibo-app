@@ -40,7 +40,8 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
             viewportHeight = history.viewportHeight?.toLong(),
             firstVisibleItemIndex = history.firstVisibleItemIndex?.toLong(),
             firstVisibleItemOffset = history.firstVisibleItemOffset?.toLong(),
-            lastVisitTime = history.lastVisitTime
+            lastVisitTime = history.lastVisitTime,
+            lastUpdatedTime = history.lastUpdatedTime
         )
         queries.trimToLatest(MAX_HISTORY_ITEMS)
     }
@@ -121,6 +122,7 @@ class AndroidReadHistoryRepository(dbFactory: DatabaseFactory) : ReadHistoryRepo
             threadName = threadName,
             threadId = ThreadId(threadId.toInt()),
             threadCover = threadCover,
+            lastUpdatedTime = lastUpdatedTime,
             forumName = forumName,
             forumId = forumId?.toInt()?.let { ForumId(it) },
             authorId = authorId.takeIf { it != 0L }?.toInt()?.let { UserId(it) },

@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.store.auth
 
 import io.github.littlesurvival.dto.page.ProfilePage
+import io.github.littlesurvival.dto.model.TimeInfo
 import io.github.littlesurvival.dto.value.FormHash
 import io.github.littlesurvival.dto.value.UserId
 
@@ -26,8 +27,8 @@ interface UserStore {
                 gender = "保密",
                 birthday = "-",
                 onlineHours = 172,
-                registerTime = "2024-8-14 20:23",
-                lastVisit = "2026-2-24 00:49",
+                registerTime = TimeInfo.parse("2024-8-14 20:23"),
+                lastVisit = TimeInfo.parse("2026-2-24 00:49"),
                 formHash = FormHash("dummy")
             )
     }

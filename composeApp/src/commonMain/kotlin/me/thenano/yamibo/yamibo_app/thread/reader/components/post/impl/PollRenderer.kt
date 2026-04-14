@@ -62,9 +62,9 @@ fun PollRenderer(
                 )
             }
 
-            if (poll.endTime.isNotEmpty()) {
+            if (poll.endTime.text.isNotEmpty()) {
                 Text(
-                    text = poll.endTime,
+                    text = poll.endTime.specialText ?: poll.endTime.text,
                     color = colors.textDark.copy(alpha = 0.7f),
                     fontSize = 13.sp,
                     modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)

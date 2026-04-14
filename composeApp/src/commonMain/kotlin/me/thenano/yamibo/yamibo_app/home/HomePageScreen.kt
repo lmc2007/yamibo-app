@@ -164,6 +164,25 @@ fun HomePageScreen() {
                         )
                     }
                     showSearch = false
+                },
+                onDirectThreadClick = { target ->
+                    if (target.isNovel) {
+                        navigator.navigate(
+                            INovelThreadDetailScreen(
+                                target.tid,
+                                target.title,
+                                target.authorId
+                            )
+                        )
+                    } else {
+                        navigator.navigate(
+                            IThreadReaderScreen(
+                                tid = target.tid,
+                                title = target.title
+                            )
+                        )
+                    }
+                    showSearch = false
                 }
             )
         }

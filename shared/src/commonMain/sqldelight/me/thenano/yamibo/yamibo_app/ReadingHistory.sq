@@ -6,8 +6,8 @@ INSERT OR REPLACE INTO ReadingHistory(
     anchorBlockId, anchorBlockType, anchorBlockRatio,
     globalScrollY, viewportHeight,
     firstVisibleItemIndex, firstVisibleItemOffset,
-    lastVisitTime
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    lastVisitTime, lastUpdatedTime
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getByThreadKey:
 SELECT * FROM ReadingHistory

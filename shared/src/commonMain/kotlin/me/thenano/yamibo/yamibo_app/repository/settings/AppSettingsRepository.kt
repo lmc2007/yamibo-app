@@ -58,6 +58,7 @@ enum class FavoriteGridMode(val label: String) {
 enum class FavoriteSortMode(val label: String) {
     DEFAULT("默認"),
     UPDATED_AT("更新時間"),
+    FAVORITED_ORDER("收藏順序"),
     NAME("名稱"),
     FORUM_NAME("版區"),
     LAST_READ("最後一次閱讀"),
@@ -87,6 +88,26 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
 
     val skipFavoriteRemovalConfirm by boolSetting(
         name = "取消收藏時略過確認",
+        default = false,
+    )
+
+    val favoriteAddSyncPromptEnabled by boolSetting(
+        name = "新增收藏時詢問是否同步到百合會",
+        default = true,
+    )
+
+    val favoriteAddSyncDefault by boolSetting(
+        name = "新增收藏預設同步到百合會",
+        default = true,
+    )
+
+    val favoriteRemoveSyncPromptEnabled by boolSetting(
+        name = "完全移除收藏時詢問是否同步刪除網站收藏",
+        default = true,
+    )
+
+    val favoriteRemoveSyncDefault by boolSetting(
+        name = "完全移除收藏預設同步刪除網站收藏",
         default = false,
     )
 

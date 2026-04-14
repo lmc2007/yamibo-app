@@ -25,7 +25,9 @@ import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import me.thenano.yamibo.yamibo_app.favorite.components.collectionColor
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncActionResult
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncDeleteResult
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -38,6 +40,7 @@ sealed interface FavoriteTargetPayload {
         val threadType: ReadHistoryRepository.ThreadEntryType,
         val authorId: UserId?,
         val coverUrl: String?,
+        val lastUpdatedTime: Long?,
         val forumId: ForumId?,
         val forumName: String?,
     ) : FavoriteTargetPayload
@@ -62,6 +65,31 @@ data class FavoriteLocationSelection(
     val paths: List<String>,
 )
 
+
+internal fun FavoriteTargetPayload.supportsRemoteWebsiteSync(): Boolean = this is FavoriteTargetPayload.Thread
+
+internal suspend fun addFavoriteAndMaybeSync(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+    syncToRemote: Boolean,
+): FavoriteSyncActionResult? {
+    favoriteRepository.saveFavorite(target)
+    if (!syncToRemote || !target.supportsRemoteWebsiteSync()) return null
+    val item = favoriteRepository.findFavoriteItem(target)
+        ?: return FavoriteSyncActionResult(false, "已加入本地收藏，但找不到同步目標。")
+    return favoriteSyncRepository.syncLocalFavoriteItem(item.id)
+}
+
+internal suspend fun hasRemoteFavoriteForTarget(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+): Boolean {
+    val item = favoriteRepository.findFavoriteItem(target) ?: return false
+    return favoriteSyncRepository.hasRemoteFavorite(item.id)
+}
+
 suspend fun LocalFavoriteRepository.saveFavorite(
     target: FavoriteTargetPayload,
     categoryIds: List<Long> = emptyList(),
@@ -75,6 +103,7 @@ suspend fun LocalFavoriteRepository.saveFavorite(
                     title = target.title,
                     authorId = target.authorId,
                     coverUrl = target.coverUrl,
+                    lastUpdatedTime = target.lastUpdatedTime,
                     forumId = target.forumId,
                     forumName = target.forumName,
                     categoryIds = categoryIds,
@@ -85,6 +114,7 @@ suspend fun LocalFavoriteRepository.saveFavorite(
                     tid = target.tid,
                     title = target.title,
                     coverUrl = target.coverUrl,
+                    lastUpdatedTime = target.lastUpdatedTime,
                     forumId = target.forumId,
                     forumName = target.forumName,
                     categoryIds = categoryIds,
@@ -605,10 +635,11 @@ internal suspend fun removeFavoriteWithSync(
     favoriteRepository: LocalFavoriteRepository,
     favoriteSyncRepository: FavoriteSyncRepository,
     target: FavoriteTargetPayload,
+    removeRemote: Boolean = true,
 ): FavoriteSyncDeleteResult {
     val item = favoriteRepository.findFavoriteItem(target)
         ?: return FavoriteSyncDeleteResult(success = true)
-    return favoriteSyncRepository.removeLocalFavoriteItem(item.id)
+    return favoriteSyncRepository.removeLocalFavoriteItem(item.id, removeRemote = removeRemote)
 }
 
 @Composable
@@ -663,6 +694,102 @@ fun FavoriteRemovalConfirmDialog(
                 background = colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = colors.brownDeep,
                 onClick = onDismiss,
+            )
+        },
+        containerColor = colors.creamSurface,
+    )
+}
+
+
+@Composable
+fun FavoriteAddSyncConfirmDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
+) {
+    FavoriteRemoteSyncChoiceDialog(
+        title = "同步到百合會收藏嗎",
+        message = "要將此收藏同步到百合會嗎？",
+        rememberLabel = "記住這次選擇",
+        primaryText = "同步到百合會",
+        secondaryText = "只存本地",
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
+    )
+}
+
+@Composable
+fun FavoriteRemoveSyncConfirmDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
+) {
+    FavoriteRemoteSyncChoiceDialog(
+        title = "同步移除百合會收藏嗎",
+        message = "要將此收藏從百合會網站移除嗎？",
+        rememberLabel = "記住這次選擇",
+        primaryText = "同步移除",
+        secondaryText = "只刪本地",
+        onDismiss = onDismiss,
+        onConfirm = onConfirm,
+    )
+}
+
+@Composable
+private fun FavoriteRemoteSyncChoiceDialog(
+    title: String,
+    message: String,
+    rememberLabel: String,
+    primaryText: String,
+    secondaryText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    var rememberChoice by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = message,
+                    color = colors.textDark,
+                    fontSize = 14.sp,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = rememberChoice,
+                        onCheckedChange = { rememberChoice = it },
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = colors.brownDeep,
+                            uncheckedColor = colors.textDark.copy(alpha = 0.4f),
+                            checkmarkColor = Color.White,
+                        ),
+                    )
+                    Text(
+                        text = rememberLabel,
+                        color = colors.textDark,
+                        fontSize = 13.sp,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            FavoriteDialogButton(
+                text = primaryText,
+                background = colors.brownDeep,
+                contentColor = Color.White,
+                onClick = { onConfirm(rememberChoice, true) },
+            )
+        },
+        dismissButton = {
+            FavoriteDialogButton(
+                text = secondaryText,
+                background = colors.brownPrimary.copy(alpha = 0.1f),
+                contentColor = colors.brownDeep,
+                onClick = { onConfirm(rememberChoice, false) },
             )
         },
         containerColor = colors.creamSurface,

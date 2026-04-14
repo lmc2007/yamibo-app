@@ -67,16 +67,21 @@ import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteAddSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemoveSyncConfirmDialog
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
 import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
+import me.thenano.yamibo.yamibo_app.favorite.addFavoriteAndMaybeSync
 import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
 import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
+import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
 import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
+import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
 import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
@@ -137,8 +142,11 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalTarget by remember { mutableStateOf<FavoriteTargetPayload?>(null) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf("已移除收藏") }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
+    var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
+    var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
 
     /** Re-tap History tab → open the topmost item's reader */
     LaunchedEffect(reTapToken) {
@@ -220,6 +228,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             threadType = history.threadType,
             authorId = history.authorId,
             coverUrl = history.threadCover,
+            lastUpdatedTime = history.lastUpdatedTime,
             forumId = history.forumId,
             forumName = history.forumName
         )
@@ -234,25 +243,63 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         favoriteDialogTarget = target
     }
 
+    suspend fun completeFavoriteAdd(target: FavoriteTargetPayload, syncToRemote: Boolean) {
+        val syncResult = withContext(Dispatchers.Default) {
+            addFavoriteAndMaybeSync(favoriteRepository, favoriteSyncRepository, target, syncToRemote)
+        }
+        favoriteRefreshToken += 1
+        val message = when {
+            syncResult == null -> "已加入收藏，預設存入未分類"
+            syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
+            else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
+        }
+        snackbarHostState.showSnackbar(message)
+    }
+
+    suspend fun completeFavoriteRemoval(target: FavoriteTargetPayload, removeRemote: Boolean) {
+        val removeResult = withContext(Dispatchers.Default) {
+            removeFavoriteWithSync(
+                favoriteRepository = favoriteRepository,
+                favoriteSyncRepository = favoriteSyncRepository,
+                target = target,
+                removeRemote = removeRemote,
+            )
+        }
+        favoriteRefreshToken += 1
+        snackbarHostState.showSnackbar(
+            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message ?: "移除收藏失敗",
+        )
+        pendingFavoriteRemovalTarget = null
+        pendingFavoriteRemovalSelection = null
+    }
+
+    suspend fun maybePromptRemoteRemoval(target: FavoriteTargetPayload) {
+        val shouldPromptRemote = target.supportsRemoteWebsiteSync() &&
+            hasRemoteFavoriteForTarget(favoriteRepository, favoriteSyncRepository, target)
+        when {
+            shouldPromptRemote && appSettingsRepository.favoriteRemoveSyncPromptEnabled.getValue() -> {
+                showFavoriteRemoveSyncConfirm = true
+            }
+            else -> {
+                completeFavoriteRemoval(
+                    target = target,
+                    removeRemote = shouldPromptRemote && appSettingsRepository.favoriteRemoveSyncDefault.getValue(),
+                )
+            }
+        }
+    }
+
     suspend fun toggleFavoriteQuickWithFeedback(target: FavoriteTargetPayload) {
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalTarget = target
             pendingFavoriteRemovalSelection = selection
+            pendingFavoriteRemovalSuccessMessage = "已移除收藏"
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    val removeResult = withContext(Dispatchers.Default) {
-                        removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
-                    }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(
-                        if (removeResult.success) "已移除收藏"
-                        else removeResult.message ?: "移除收藏失敗",
-                    )
-                    pendingFavoriteRemovalTarget = null
-                    pendingFavoriteRemovalSelection = null
+                    maybePromptRemoteRemoval(target)
                 }
             } else {
                 showFavoriteRemovalConfirm = true
@@ -260,9 +307,15 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             return
         }
 
-        favoriteRepository.saveFavorite(target)
-        favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar("已加入收藏，預設存入未分類")
+        if (target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncPromptEnabled.getValue()) {
+            pendingFavoriteRemovalTarget = target
+            showFavoriteAddSyncConfirm = true
+        } else {
+            completeFavoriteAdd(
+                target = target,
+                syncToRemote = target.supportsRemoteWebsiteSync() && appSettingsRepository.favoriteAddSyncDefault.getValue(),
+            )
+        }
     }
 
     LaunchedEffect(navigator.stack.size) {
@@ -544,15 +597,48 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        withContext(Dispatchers.Default) {
-                            removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
-                        }
-                        favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar("已移除收藏")
-                        pendingFavoriteRemovalTarget = null
-                        pendingFavoriteRemovalSelection = null
+                        pendingFavoriteRemovalSuccessMessage = "已移除收藏"
+                        maybePromptRemoteRemoval(target)
                     }
                 }
+            },
+        )
+    }
+
+    if (showFavoriteAddSyncConfirm) {
+        FavoriteAddSyncConfirmDialog(
+            onDismiss = {
+                showFavoriteAddSyncConfirm = false
+                pendingFavoriteRemovalTarget = null
+            },
+            onConfirm = { rememberChoice, syncRemote ->
+                val target = pendingFavoriteRemovalTarget ?: return@FavoriteAddSyncConfirmDialog
+                showFavoriteAddSyncConfirm = false
+                if (rememberChoice) {
+                    appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(false)
+                    appSettingsRepository.favoriteAddSyncDefault.setValue(syncRemote)
+                }
+                pendingFavoriteRemovalTarget = null
+                scope.launch { completeFavoriteAdd(target, syncRemote) }
+            },
+        )
+    }
+
+    if (showFavoriteRemoveSyncConfirm) {
+        FavoriteRemoveSyncConfirmDialog(
+            onDismiss = {
+                showFavoriteRemoveSyncConfirm = false
+                pendingFavoriteRemovalTarget = null
+                pendingFavoriteRemovalSelection = null
+            },
+            onConfirm = { rememberChoice, syncRemote ->
+                val target = pendingFavoriteRemovalTarget ?: return@FavoriteRemoveSyncConfirmDialog
+                showFavoriteRemoveSyncConfirm = false
+                if (rememberChoice) {
+                    appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(false)
+                    appSettingsRepository.favoriteRemoveSyncDefault.setValue(syncRemote)
+                }
+                scope.launch { completeFavoriteRemoval(target, syncRemote) }
             },
         )
     }
@@ -569,14 +655,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             onRemoveAll = {
                 val target = pendingFavoriteRemovalTarget ?: return@FavoriteMultiPathRemoveDialog
                 showFavoriteMultiPathDialog = false
+                pendingFavoriteRemovalSuccessMessage = "已從所有位置移除收藏"
                 scope.launch {
-                    withContext(Dispatchers.Default) {
-                        removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target)
-                    }
-                    favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar("已從所有位置移除收藏")
-                    pendingFavoriteRemovalTarget = null
-                    pendingFavoriteRemovalSelection = null
+                    maybePromptRemoteRemoval(target)
                 }
             },
         )
@@ -663,6 +744,7 @@ private fun ThreadHistoryItem(
             threadType = history.threadType,
             authorId = history.authorId,
             coverUrl = history.threadCover,
+            lastUpdatedTime = history.lastUpdatedTime,
             forumId = history.forumId,
             forumName = history.forumName
         )
@@ -975,4 +1057,3 @@ private fun formatTime(timestamp: Long): String {
 private fun isLeapYear(year: Int): Boolean {
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
 }
-

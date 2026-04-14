@@ -5,6 +5,8 @@ INSERT OR REPLACE INTO FavoriteSyncTask(
     targetCategoryId,
     startedAt,
     updatedAt,
+    lastCompletedAt,
+    elapsedDurationMs,
     phase,
     currentPage,
     totalPages,
@@ -17,7 +19,7 @@ INSERT OR REPLACE INTO FavoriteSyncTask(
     logMessage,
     warningMessage,
     errorMessage
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 getByRunId:
 SELECT * FROM FavoriteSyncTask
@@ -37,5 +39,8 @@ LIMIT 1;
 
 markRunningTasksInterrupted:
 UPDATE FavoriteSyncTask
-SET status = 'INTERRUPTED', updatedAt = ?, errorMessage = COALESCE(errorMessage, :message)
+SET status = 'INTERRUPTED',
+    updatedAt = :updatedAt,
+    elapsedDurationMs = :elapsedDurationMs,
+    errorMessage = COALESCE(errorMessage, :message)
 WHERE status = 'RUNNING';
