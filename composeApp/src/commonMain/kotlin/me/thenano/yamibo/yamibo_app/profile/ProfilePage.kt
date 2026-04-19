@@ -3,34 +3,12 @@ package me.thenano.yamibo.yamibo_app.profile
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -65,9 +43,14 @@ fun ProfilePage() {
     var isLoading by remember { mutableStateOf(false) }
     var signButtonTitle by remember { mutableStateOf("每日簽到") }
     var signRefreshKey by remember { mutableIntStateOf(0) }
+    var isSigning by remember { mutableStateOf(false) }
 
     fun refreshSignStatus() {
         coroutineScope.launch {
+            if (isSigning) {
+                signButtonTitle = "正在簽到..."
+                return@launch
+            }
             signButtonTitle = when {
                 userInfo == null -> "每日簽到"
                 signRepository.getCachedPageInfo()?.hasSignedToday == true -> "今日已簽到"
@@ -78,17 +61,13 @@ fun ProfilePage() {
                         is YamiboResult.Success -> {
                             if (result.value.hasSignedToday) "今日已簽到" else "每日簽到"
                         }
-
                         is YamiboResult.Failure -> {
                             when {
                                 signRepository.getCachedPageInfo()?.hasSignedToday == true -> "今日已簽到"
                                 else -> "每日簽到"
                             }
                         }
-
-                        is YamiboResult.NotLoggedIn -> "每日簽到"
-                        is YamiboResult.NoPermission -> "每日簽到"
-                        is YamiboResult.Maintenance -> "每日簽到"
+                        else -> "每日簽到"
                     }
                 }
             }
@@ -156,6 +135,8 @@ fun ProfilePage() {
                                     semiAutomatic = false,
                                     onResultObserved = {
                                         coroutineScope.launch {
+                                            isSigning = true
+                                            signButtonTitle = "正在簽到..."
                                             authRepository.syncCookieFromWebView()
                                             when (signRepository.fetchPageInfo()) {
                                                 is YamiboResult.Success -> {
@@ -165,6 +146,8 @@ fun ProfilePage() {
 
                                                 else -> Unit
                                             }
+                                            isSigning = false
+                                            refreshSignStatus()
                                         }
                                     }
                                 )
@@ -172,24 +155,49 @@ fun ProfilePage() {
                         }
 
                         SignInMode.SEMI_AUTOMATIC -> {
+                            isSigning = true
+                            signButtonTitle = "正在簽到..."
                             navigator.navigate(
                                 ISignWebView(
                                     semiAutomatic = true,
-                                    onSemiAutoReady = {
+                                    allowRepair = appSettingsRepository.signInAllowRepair.getValue(),
+                                    onSemiAutoCompleted = { result ->
                                         coroutineScope.launch {
-                                            authRepository.syncCookieFromWebView()
-                                            when (val result = signRepository.runAutoSign(appSettingsRepository.signInAllowRepair.getValue())) {
+                                            var snackbarMessage: String? = null
+                                            when (result) {
                                                 is YamiboResult.Success -> {
                                                     signRefreshKey += 1
+                                                    snackbarMessage = result.value.message
                                                 }
 
-                                                else -> Unit
+                                                is YamiboResult.Failure -> {
+                                                    snackbarMessage = result.message()
+                                                }
+
+                                                is YamiboResult.NotLoggedIn -> {
+                                                    snackbarMessage = "登入狀態已失效，請重新登入"
+                                                }
+
+                                                is YamiboResult.NoPermission -> {
+                                                    snackbarMessage = "目前無法自動簽到，請改用手動模式"
+                                                }
+
+                                                is YamiboResult.Maintenance -> Unit
                                             }
+                                            isSigning = false
                                             refreshSignStatus()
+                                            snackbarMessage?.let { message ->
+                                                coroutineScope.launch {
+                                                    snackbarHostState.currentSnackbarData?.dismiss()
+                                                    snackbarHostState.showSnackbar(message)
+                                                }
+                                            }
                                         }
                                     },
                                     onMaintenanceObserved = {
                                         coroutineScope.launch {
+                                            isSigning = false
+                                            refreshSignStatus()
                                             snackbarHostState.currentSnackbarData?.dismiss()
                                             snackbarHostState.showSnackbar("百合會維護中...現在不是簽到的好時機呢")
                                         }
@@ -255,7 +263,7 @@ private fun SignEntryCard(
         ) {
             Row(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(0.85f)
                     .clickable(onClick = onSignClick)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -277,17 +285,21 @@ private fun SignEntryCard(
                 }
             }
 
-            Row(
+            Box(
                 modifier = Modifier
+                    .weight(0.15f)
+                    .fillMaxHeight()
                     .clickable(onClick = onInfoClick)
-                    .padding(start = 0.dp, end = 8.dp, top = 18.dp, bottom = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = "|",
-                    fontSize = 18.sp,
-                    color = colors.brownLight.copy(alpha = 0.5f),
+                VerticalDivider(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .height(24.dp)
+                        .padding(start = 10.dp),
+                    color = colors.brownLight.copy(alpha = 0.35f),
+                    thickness = 1.dp,
                 )
                 Text(
                     text = "!",

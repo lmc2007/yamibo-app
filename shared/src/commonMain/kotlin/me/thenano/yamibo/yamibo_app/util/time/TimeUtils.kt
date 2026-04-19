@@ -3,8 +3,12 @@ package me.thenano.yamibo.yamibo_app.util.time
 expect fun currentTimeMillis(): Long
 
 fun currentLocalDateKey(): String {
+    return currentLocalDateKeyAt(currentTimeMillis())
+}
+
+fun currentLocalDateKeyAt(epochMillis: Long): String {
     val utcPlus8OffsetMillis = 8L * 60L * 60L * 1000L
-    val epochDay = (currentTimeMillis() + utcPlus8OffsetMillis).floorDiv(86_400_000L)
+    val epochDay = (epochMillis + utcPlus8OffsetMillis).floorDiv(86_400_000L)
     val (year, month, day) = civilFromDays(epochDay)
     return "${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}"
 }

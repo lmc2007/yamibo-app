@@ -27,14 +27,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
+import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.ProfilePage
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalAuthRepository
+import me.thenano.yamibo.yamibo_app.event.AppEventBus
+import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
-import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
+import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
 class ILoginScreen : Navigatable {
     override val id: String = buildId(Any().hashCode())
@@ -46,26 +50,32 @@ class ILoginScreen : Navigatable {
 }
 
 @Composable
-expect fun LoginWebView(onLoadingChanged: (Boolean) -> Unit = {})
-
-@Composable
 @androidx.compose.ui.tooling.preview.Preview
 fun LoginScreen() {
     val navigator = LocalNavigator.current
-    var loading by remember { mutableStateOf(false) }
-    Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-        WebViewTopBar(
-            title = "登入頁面",
-            url = YamiboRoute.Login.build(),
-            onCloseClick = { navigator.pop() },
-            useBackIcon = true
+    val authRepo = LocalAuthRepository.current
+
+    PlatformWebViewScreen(
+        initialUrl = YamiboRoute.Login.build(),
+        initialTitle = "登入頁面",
+        showNavigation = false,
+        useBackIcon = true,
+        onPageFinished = { authRepo.syncCookieFromWebView() },
+    )
+
+    LaunchedEffect(Unit) {
+        authRepo.startLoginDetect(
+            onSuccess = {
+                val status = authRepo.fetchStatus()
+                if (status is YamiboResult.Success) {
+                    AppEventBus.emit(LoginSuccessEvent)
+                }
+                navigator.pop()
+            },
+            onTimeOut = {
+                navigator.pop()
+            }
         )
-        Box(modifier = Modifier.weight(1f)) {
-            LoginWebView(onLoadingChanged = { loading = it })
-            LoadingOverlay(
-                visible = loading,
-            )
-        }
     }
 }
 

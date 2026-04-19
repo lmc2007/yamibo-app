@@ -12,29 +12,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
-import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.AndroidAuthRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidForumRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidLocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidThemeRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidThreadRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidNovelThreadCacheRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidSignRepository
-import me.thenano.yamibo.yamibo_app.repository.AndroidTagRepository
-import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.store.AndroidCookieStore
 import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
-import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L

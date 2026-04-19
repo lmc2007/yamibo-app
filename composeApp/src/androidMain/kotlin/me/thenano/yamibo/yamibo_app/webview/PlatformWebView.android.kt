@@ -4,37 +4,47 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.webkit.*
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import org.json.JSONArray
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 actual fun PlatformWebViewContent(
     url: String,
+    syncAuthCookies: Boolean,
+    captureHtml: Boolean,
     onTitleChanged: (String) -> Unit,
     onUrlChanged: (String) -> Unit,
     onLoadingChanged: (Boolean) -> Unit,
     onBack: (() -> Unit) -> Unit,
     onForward: (() -> Unit) -> Unit,
     onReload: (() -> Unit) -> Unit,
+    onPageFinished: (String) -> Unit,
+    onHtmlAvailable: (url: String, html: String) -> Unit,
+    shouldOverrideUrlLoading: (String) -> Boolean,
 ) {
     val navigator = LocalNavigator.current
     val authRepo = LocalAuthRepository.current
     val cookies = authRepo.cookieStore.load() ?: ""
-    
+
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
 
-    // Wire up terminal functions
     LaunchedEffect(webViewInstance) {
         onBack { if (webViewInstance?.canGoBack() == true) webViewInstance?.goBack() }
         onForward { if (webViewInstance?.canGoForward() == true) webViewInstance?.goForward() }
         onReload { webViewInstance?.reload() }
     }
 
-    // Prioritize webview back navigation
     DisposableEffect(webViewInstance) {
         val handler: () -> Boolean = {
             if (webViewInstance?.canGoBack() == true) {
@@ -63,7 +73,20 @@ actual fun PlatformWebViewContent(
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
                         onLoadingChanged(false)
-                        url?.let { onUrlChanged(it) }
+                        val currentUrl = url ?: return
+                        onUrlChanged(currentUrl)
+                        if (syncAuthCookies) {
+                            authRepo.syncCookieFromWebView()
+                        }
+                        onPageFinished(currentUrl)
+                        if (captureHtml) {
+                            evaluateJavascript("(function(){return document.documentElement.outerHTML;})()") { value ->
+                                val html = decodeEvaluatedHtml(value)
+                                if (html.isNotBlank()) {
+                                    onHtmlAvailable(currentUrl, html)
+                                }
+                            }
+                        }
                     }
 
                     override fun onReceivedError(
@@ -79,11 +102,7 @@ actual fun PlatformWebViewContent(
                         request: WebResourceRequest?
                     ): Boolean {
                         val targetUrl = request?.url?.toString() ?: return false
-                        if (targetUrl.contains("mod=viewthread") && targetUrl.contains("tid=")) {
-                            navigator.pop()
-                            return true
-                        }
-                        return false
+                        return shouldOverrideUrlLoading(targetUrl)
                     }
                 }
                 webChromeClient = object : WebChromeClient() {
@@ -114,7 +133,7 @@ actual fun PlatformWebViewContent(
                 cookieManager.setAcceptCookie(true)
                 cookieManager.setAcceptThirdPartyCookies(this, true)
 
-                if (cookies.isNotEmpty()) {
+                if (syncAuthCookies && cookies.isNotEmpty()) {
                     cookies.split(";").forEach {
                         cookieManager.setCookie(url, it.trim())
                     }
@@ -128,4 +147,9 @@ actual fun PlatformWebViewContent(
             webViewInstance = it
         }
     )
+}
+
+private fun decodeEvaluatedHtml(value: String?): String {
+    if (value.isNullOrBlank() || value == "null") return ""
+    return runCatching { JSONArray("[$value]").getString(0) }.getOrElse { value }
 }

@@ -1,26 +1,12 @@
 package me.thenano.yamibo.yamibo_app.webview.action
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import me.thenano.yamibo.yamibo_app.profile.LoadingOverlay
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.webview.WebViewTopBar
-
-@Composable
-expect fun ActionPlatformWebView(
-    url: String,
-    onTitleChanged: (String) -> Unit,
-    onUrlChanged: (String) -> Unit,
-    onLoadingChanged: (Boolean) -> Unit,
-    onSuccessDetected: () -> Unit,
-    successCondition: (url: String) -> Boolean,
-)
+import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
 @Composable
 internal fun ActionWebViewScreen(
@@ -30,35 +16,24 @@ internal fun ActionWebViewScreen(
     onSuccess: () -> Unit,
 ) {
     val navigator = LocalNavigator.current
+    var successHandled by remember(initialUrl) { mutableStateOf(false) }
 
-    var currentTitle by remember { mutableStateOf(title) }
-    var currentUrl by remember { mutableStateOf(initialUrl) }
-    var loading by remember { mutableStateOf(true) }
-    val colors = YamiboTheme.colors
-
-    Box(modifier = Modifier.fillMaxSize().background(colors.brownDeep)) {
-        Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
-            WebViewTopBar(
-                title = currentTitle,
-                url = currentUrl,
-                onCloseClick = { navigator.pop() },
-                showNavigation = false,
-                useBackIcon = true,
-            )
-            Box(modifier = Modifier.weight(1f)) {
-                ActionPlatformWebView(
-                    url = initialUrl,
-                    onTitleChanged = { currentTitle = it },
-                    onUrlChanged = { currentUrl = it },
-                    onLoadingChanged = { loading = it },
-                    onSuccessDetected = {
-                        onSuccess()
-                        navigator.pop()
-                    },
-                    successCondition = successCondition,
-                )
-                LoadingOverlay(visible = loading)
-            }
+    fun handleSuccess(url: String): Boolean {
+        if (!successHandled && successCondition(url)) {
+            successHandled = true
+            onSuccess()
+            navigator.pop()
+            return true
         }
+        return false
     }
+
+    PlatformWebViewScreen(
+        initialUrl = initialUrl,
+        initialTitle = title,
+        showNavigation = false,
+        useBackIcon = true,
+        shouldOverrideUrlLoading = { handleSuccess(it) },
+        onPageFinished = { handleSuccess(it) },
+    )
 }

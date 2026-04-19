@@ -19,6 +19,14 @@ import com.fleeksoft.ksoup.nodes.TextNode
 
 object HtmlParser {
 
+    private data class ParsedAttachment(
+        val url: String,
+        val iconUrl: String?,
+        val fileName: String,
+        val uploadInfo: String?,
+        val statInfo: String?,
+    )
+
     /** Generate a stable content-hash based ID */
     private fun hashId(type: String, content: String, index: Int): String {
         val raw = "${type}_${index}_${content.take(64)}"
@@ -173,7 +181,33 @@ object HtmlParser {
                                 }
                             }
                         }
-                        "p", "ul", "ol", "tbody", "tr", "td", "th" -> {
+                        "ul" -> {
+                            val clazz = node.attr("class")
+                            val attachment = parseAttachment(node)
+                            if (clazz.contains("post_attlist") && attachment != null) {
+                                commitText()
+                                val aid = hashId("att", attachment.fileName, blockCounter++)
+                                blocks.add(
+                                    HtmlBlock.Attachment(
+                                        url = attachment.url,
+                                        iconUrl = attachment.iconUrl,
+                                        fileName = attachment.fileName,
+                                        uploadInfo = attachment.uploadInfo,
+                                        statInfo = attachment.statInfo,
+                                        anchorId = aid,
+                                    )
+                                )
+                            } else {
+                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
+                                    globalBuilder.append("\n")
+                                }
+                                node.childNodes().forEach { parseNode(it, parentAlign) }
+                                if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
+                                    globalBuilder.append("\n")
+                                }
+                            }
+                        }
+                        "p", "ol", "tbody", "tr", "td", "th" -> {
                             if (globalBuilder.length > 0 && globalBuilder.toAnnotatedString().lastOrNull() != '\n') {
                                 globalBuilder.append("\n")
                             }
@@ -239,6 +273,28 @@ object HtmlParser {
         commitText()
 
         return blocks
+    }
+
+    private fun parseAttachment(node: Element): ParsedAttachment? {
+        val link = node.selectFirst("a[href]") ?: return null
+        val href = link.attr("href").trim()
+        if (href.isEmpty()) return null
+
+        val iconUrl = link.selectFirst("img")?.attr("src")?.trim()?.takeIf { it.isNotEmpty() }
+        val fileName = link.selectFirst(".link")?.text()?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: link.selectFirst(".tit")?.ownText()?.trim()?.takeIf { it.isNotEmpty() }
+            ?: link.text().lineSequence().map { it.trim() }.firstOrNull { it.isNotEmpty() }
+            ?: return null
+
+        val metadata = link.select("p").map { it.text().trim() }.filter { it.isNotEmpty() }
+        return ParsedAttachment(
+            url = href,
+            iconUrl = iconUrl,
+            fileName = fileName,
+            uploadInfo = metadata.getOrNull(0),
+            statInfo = metadata.getOrNull(1),
+        )
     }
 
     private fun parseColor(color: String?): Color? {

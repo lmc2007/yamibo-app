@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -33,12 +34,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
 
 @Composable
@@ -53,8 +56,10 @@ fun HtmlRenderer(html: String, tid: ThreadId? = null, modifier: Modifier = Modif
                     // Remove blank Text blocks that are sandwiched between or adjacent to Image blocks
                     val prev = rawBlocks.getOrNull(index - 1)
                     val next = rawBlocks.getOrNull(index + 1)
-                    val adjImage = prev is HtmlBlock.Image || next is HtmlBlock.Image
-                    return@filterIndexed !adjImage
+                    val adjacentVisualBlock =
+                        prev is HtmlBlock.Image || next is HtmlBlock.Image ||
+                            prev is HtmlBlock.Attachment || next is HtmlBlock.Attachment
+                    return@filterIndexed !adjacentVisualBlock
                 }
             }
             true
@@ -261,6 +266,168 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                 enableContextMenu = true,
                 isDarkTheme = false
             )
+        }
+
+        is HtmlBlock.Attachment -> {
+            val fullUrl = if (block.url.startsWith("http")) block.url else "https://bbs.yamibo.com/${block.url.removePrefix("/")}"
+            val iconUrl = block.iconUrl?.let {
+                if (it.startsWith("http")) it else "https://bbs.yamibo.com/${it.removePrefix("/")}"
+            }
+            var showAttachmentMenu by remember { mutableStateOf(false) }
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 6.dp)
+                    .clickable {
+                        showAttachmentMenu = true
+                    },
+                shape = RoundedCornerShape(10.dp),
+                color = colors.creamSurface,
+                border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.12f)),
+                tonalElevation = 1.dp,
+                shadowElevation = 0.dp,
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(colors.creamBackground),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (iconUrl != null) {
+                            AsyncImage(
+                                model = rememberImageRequest(iconUrl, enableCrossfade = false),
+                                contentDescription = block.fileName,
+                                modifier = Modifier.size(30.dp),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Text(
+                                text = "?"
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = block.fileName,
+                            color = colors.brownDeep,
+                            fontSize = 14.sp,
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+
+                        block.uploadInfo?.let {
+                            Text(
+                                text = it,
+                                color = colors.htmlTextDark.copy(alpha = 0.72f),
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                            )
+                        }
+
+                        block.statInfo?.let {
+                            Text(
+                                text = it,
+                                color = colors.htmlTextDark.copy(alpha = 0.72f),
+                                fontSize = 12.sp,
+                                lineHeight = 16.sp,
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (showAttachmentMenu) {
+                DisableSelection {
+                    AlertDialog(
+                        onDismissRequest = { showAttachmentMenu = false },
+                        title = { Text("附件選項", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        text = {
+                            Column(modifier = Modifier.fillMaxWidth()) {
+                                Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+                                    Text(
+                                        text = block.fileName,
+                                        color = colors.htmlTextDark,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = fullUrl,
+                                        color = colors.htmlTextDark.copy(alpha = 0.6f),
+                                        fontSize = 12.sp,
+                                        lineHeight = 16.sp
+                                    )
+                                    block.uploadInfo?.let {
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = it,
+                                            color = colors.htmlTextDark.copy(alpha = 0.72f),
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                    block.statInfo?.let {
+                                        Text(
+                                            text = it,
+                                            color = colors.htmlTextDark.copy(alpha = 0.72f),
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(bottom = 8.dp),
+                                    color = colors.brownPrimary.copy(alpha = 0.1f)
+                                )
+
+                                TextButton(onClick = {
+                                    navigator.navigate(IPlatformWebView(fullUrl))
+                                    showAttachmentMenu = false
+                                }) { Text("在應用內開啟連結", color = colors.brownPrimary, fontSize = 16.sp) }
+
+                                TextButton(onClick = {
+                                    clipboardManager.setText(AnnotatedString(fullUrl))
+                                    showAttachmentMenu = false
+                                }) { Text("複製連結地址", color = colors.brownPrimary, fontSize = 16.sp) }
+
+                                TextButton(onClick = {
+                                    clipboardManager.setText(AnnotatedString(block.fileName))
+                                    showAttachmentMenu = false
+                                }) { Text("複製連結文字", color = colors.brownPrimary, fontSize = 16.sp) }
+
+                                TextButton(onClick = {
+                                    try {
+                                        uriHandler.openUri(fullUrl)
+                                    } catch (_: Exception) {
+                                    }
+                                    showAttachmentMenu = false
+                                }) { Text("使用外部瀏覽器開啟", color = colors.brownPrimary, fontSize = 16.sp) }
+                            }
+                        },
+                        confirmButton = {},
+                        dismissButton = {
+                            TextButton(onClick = { showAttachmentMenu = false }) {
+                                Text("取消", color = colors.textDark.copy(alpha = 0.5f))
+                            }
+                        },
+                        containerColor = colors.creamSurface,
+                        titleContentColor = colors.textDark
+                    )
+                }
+            }
         }
 
         is HtmlBlock.Hr -> {

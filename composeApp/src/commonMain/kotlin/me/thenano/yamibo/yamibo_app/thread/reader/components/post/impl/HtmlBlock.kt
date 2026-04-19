@@ -13,6 +13,14 @@ sealed class HtmlBlock {
         override val anchorId: String = ""
     ) : HtmlBlock()
     data class Image(val url: String, val alt: String? = null, val linkAddress: String? = null, override val anchorId: String = "") : HtmlBlock()
+    data class Attachment(
+        val url: String,
+        val iconUrl: String?,
+        val fileName: String,
+        val uploadInfo: String?,
+        val statInfo: String?,
+        override val anchorId: String = ""
+    ) : HtmlBlock()
     data class Collapse(val title: String?, val contentBlocks: List<HtmlBlock>, override val anchorId: String = "") : HtmlBlock()
     data class Locked(val cost: Int, val contentBlocks: List<HtmlBlock>, override val anchorId: String = "") : HtmlBlock()
     data class Quote(val contentBlocks: List<HtmlBlock>, override val anchorId: String = "") : HtmlBlock()

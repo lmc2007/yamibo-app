@@ -8,12 +8,14 @@ import io.github.littlesurvival.core.FetchResult
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.fetch.FetchFactory
 import io.ktor.http.HttpMethod
+import io.ktor.http.HttpHeaders
 import io.ktor.client.statement.bodyAsText
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
 import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
+import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKeyAt
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.SignDailyRecord
 
@@ -24,6 +26,8 @@ class SignRepositoryImpl(
 ) : SignRepository {
     private companion object {
         const val FETCH_TIMEOUT_MILLIS = 60_000L
+        const val SIGN_WEBVIEW_USER_AGENT =
+            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
     }
 
     private val fetcher = FetchFactory(FetchFactory.Device.MOBILE, FETCH_TIMEOUT_MILLIS)
@@ -32,8 +36,9 @@ class SignRepositoryImpl(
     override suspend fun fetchPageInfo(): YamiboResult<SignRepository.SignPageInfo> {
         if (!authRepository.isLoggedIn()) return YamiboResult.NotLoggedIn
         applyCookies()
+        val cookie = authRepository.cookieStore.load().orEmpty()
 
-        return when (val result = fetcher.getResult(YamiboRoute.Sign.build())) {
+        return when (val result = performSignRequest(YamiboRoute.Sign.build(), cookie)) {
             is FetchResult.Success -> {
                 if (isCloudflarePage(result.value)) {
                     YamiboResult.Failure("尚未通過簽到頁的 Cloudflare 驗證，請先在 WebView 完成驗證。")
@@ -58,7 +63,7 @@ class SignRepositoryImpl(
     }
 
     override suspend fun runAutoSign(allowRepair: Boolean): YamiboResult<SignRepository.ActionResult> {
-        val initialInfo = when (val result = fetchPageInfo()) {
+        val initialInfo = getCachedPageInfo() ?: when (val result = fetchPageInfo()) {
             is YamiboResult.Success -> result.value
             is YamiboResult.NotLoggedIn -> return result
             is YamiboResult.NoPermission -> return result
@@ -156,6 +161,11 @@ class SignRepositoryImpl(
     }
 
     override fun getCachedPageInfo(): SignRepository.SignPageInfo? {
+        val cacheUpdatedAt = appSettingsRepository.signPageHtmlCacheUpdatedAt.getValue().toLongOrNull()
+            ?: return null
+        if (currentLocalDateKeyAt(cacheUpdatedAt) != currentLocalDateKey()) {
+            return null
+        }
         val html = appSettingsRepository.signPageHtmlCache.getValue().trim()
         if (html.isBlank() || isCloudflarePage(html) || !isSignPageLikeHtml(html)) return null
         return runCatching { parseSignPage(html) }.getOrNull()
@@ -177,18 +187,53 @@ class SignRepositoryImpl(
     private suspend fun executeAction(url: String): YamiboResult<ParsedActionResult> {
         applyCookies()
         val absoluteUrl = buildAbsoluteUrl(url)
+        val cookie = authRepository.cookieStore.load().orEmpty()
 
-        val response = runCatching {
-            fetcher.perform(HttpMethod.Get, absoluteUrl)
-        }.getOrElse {
-            return YamiboResult.Failure(it.message ?: "簽到操作失敗", it)
-        }
+        when (val result = performSignRequest(absoluteUrl, cookie)) {
+            is FetchResult.Success ->
+                return YamiboResult.Success(parseActionResult(result.value))
 
-        val html = response.bodyAsText()
-        if (!response.status.value.toString().startsWith("2")) {
-            return YamiboResult.Failure("簽到操作失敗（HTTP ${response.status.value}）")
+            is FetchResult.Failure.HttpError ->
+                return YamiboResult.Failure("簽到操作失敗（HTTP ${result.statusCode}）")
+
+            is FetchResult.Failure.NetworkError ->
+                return YamiboResult.Failure(result.exception.message ?: "簽到操作失敗", result.exception)
+
+            is FetchResult.Failure.Timeout ->
+                return YamiboResult.Failure("簽到操作逾時", result.exception)
+
+            is FetchResult.Failure.Unknown ->
+                return YamiboResult.Failure(result.exception.message ?: "簽到操作失敗", result.exception)
         }
-        return YamiboResult.Success(parseActionResult(html))
+    }
+
+    private suspend fun performSignRequest(url: String, cookie: String): FetchResult<String> {
+        return try {
+            val response = fetcher.perform(HttpMethod.Get, url) {
+                headers[HttpHeaders.UserAgent] = SIGN_WEBVIEW_USER_AGENT
+                headers["Referer"] = YamiboRoute.Sign.build()
+                headers[HttpHeaders.Accept] =
+                    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+                headers["Upgrade-Insecure-Requests"] = "1"
+                if (cookie.isNotBlank()) {
+                    headers[HttpHeaders.Cookie] = cookie
+                }
+            }
+            val text = response.bodyAsText()
+            if (response.status.value in 200..299) {
+                FetchResult.Success(value = text, statusCode = response.status.value, url = url)
+            } else {
+                FetchResult.Failure.HttpError(
+                    statusCode = response.status.value,
+                    url = url,
+                    bodyPreview = text
+                )
+            }
+        } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+            FetchResult.Failure.Timeout(url, e)
+        } catch (e: Exception) {
+            FetchResult.Failure.NetworkError(url, e)
+        }
     }
 
     private fun parseActionResult(html: String): ParsedActionResult {
