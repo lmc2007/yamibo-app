@@ -1,6 +1,6 @@
 insertFavoriteItem:
 INSERT INTO LocalFavoriteItem(
-    targetType, targetId, title, coverUrl, lastUpdatedTime, forumId, forumName, authorId, createdAt, updatedAt
+    targetType, targetId, title, coverUrl, lastUpdatedTime, forumId, forumName, authorId, createdAt, lastFavoriteStatusUpdateAt
 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 findByTarget:
@@ -15,17 +15,17 @@ LIMIT 1;
 findAnyThreadByTargetId:
 SELECT * FROM LocalFavoriteItem
 WHERE targetId = ? AND targetType IN ('ThreadNormal', 'ThreadNovel')
-ORDER BY updatedAt DESC, id DESC
+ORDER BY lastFavoriteStatusUpdateAt DESC, id DESC
 LIMIT 1;
 
 updateFavoriteItem:
 UPDATE LocalFavoriteItem
-SET title = ?, coverUrl = ?, lastUpdatedTime = ?, forumId = ?, forumName = ?, authorId = ?, updatedAt = ?
+SET title = ?, coverUrl = ?, lastUpdatedTime = ?, forumId = ?, forumName = ?, authorId = ?, lastFavoriteStatusUpdateAt = ?
 WHERE id = ?;
 
-touchFavoriteItem:
+markFavoriteStatusUpdated:
 UPDATE LocalFavoriteItem
-SET updatedAt = ?
+SET lastFavoriteStatusUpdateAt = ?
 WHERE id = ?;
 
 getByCollectionId:
@@ -34,7 +34,7 @@ FROM LocalFavoriteItem
 INNER JOIN LocalFavoriteItemCollectionCrossRef
     ON LocalFavoriteItem.id = LocalFavoriteItemCollectionCrossRef.itemId
 WHERE LocalFavoriteItemCollectionCrossRef.collectionId = ?
-ORDER BY LocalFavoriteItem.updatedAt DESC, LocalFavoriteItem.id DESC;
+ORDER BY LocalFavoriteItem.lastFavoriteStatusUpdateAt DESC, LocalFavoriteItem.id DESC;
 
 getByCategoryId:
 SELECT LocalFavoriteItem.*
@@ -42,7 +42,7 @@ FROM LocalFavoriteItem
 INNER JOIN LocalFavoriteItemCategoryCrossRef
     ON LocalFavoriteItem.id = LocalFavoriteItemCategoryCrossRef.itemId
 WHERE LocalFavoriteItemCategoryCrossRef.categoryId = ?
-ORDER BY LocalFavoriteItem.updatedAt DESC, LocalFavoriteItem.id DESC;
+ORDER BY LocalFavoriteItem.lastFavoriteStatusUpdateAt DESC, LocalFavoriteItem.id DESC;
 
 deleteById:
 DELETE FROM LocalFavoriteItem WHERE id = ?;

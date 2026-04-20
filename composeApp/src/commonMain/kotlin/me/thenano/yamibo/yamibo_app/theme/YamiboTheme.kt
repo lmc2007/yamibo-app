@@ -3,11 +3,7 @@ package me.thenano.yamibo.yamibo_app.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
-import me.thenano.yamibo.yamibo_app.LocalThemeRepository
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.scheme.YamiboColorScheme
 import me.thenano.yamibo.yamibo_app.util.state
 
 /** Compose-layer color wrapper. Converts repo Long hex → Compose Color. */

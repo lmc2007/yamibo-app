@@ -86,6 +86,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
         coroutineScope.launch {
             loading = true
             errorMessage = null
+            /** This when converts repository sign-info results into the SignInfoScreen loading/error/render state. */
             when (val result = signRepository.fetchPageInfo()) {
                 is YamiboResult.Success -> {
                     info = result.value
@@ -93,9 +94,9 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                     onInfoLoaded()
                 }
 
-                is YamiboResult.NotLoggedIn -> errorMessage = "目前未登入百合會。"
+                is YamiboResult.NotLoggedIn -> errorMessage = result.message()
                 is YamiboResult.NoPermission -> errorMessage = result.reason
-                is YamiboResult.Maintenance -> errorMessage = "百合會目前維護中。"
+                is YamiboResult.Maintenance -> errorMessage = result.message()
                 is YamiboResult.Failure -> errorMessage = result.reason
             }
             loading = false

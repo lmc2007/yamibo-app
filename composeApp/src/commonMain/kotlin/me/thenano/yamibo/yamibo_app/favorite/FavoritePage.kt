@@ -805,6 +805,10 @@ private suspend fun favoriteItemLastReadAt(item: FavoriteItem, repo: ReadHistory
     }
 }
 
+private fun favoriteItemEffectiveUpdatedAt(item: FavoriteItem): Long {
+    return item.lastUpdatedTime?.takeIf { it > 0L } ?: item.lastFavoriteStatusUpdateAt
+}
+
 private fun sortCollections(
     items: List<FavoriteCollectionWithItems>,
     mode: FavoriteSortMode,
@@ -814,7 +818,9 @@ private fun sortCollections(
 ): List<FavoriteCollectionWithItems> {
     val sorted = when (mode) {
         FavoriteSortMode.DEFAULT -> items.sortedWith(compareBy<FavoriteCollectionWithItems> { it.collection.sortOrder }.thenByDescending { it.collection.createdAt })
-        FavoriteSortMode.UPDATED_AT -> items.sortedByDescending { maxOf(it.collection.updatedAt, it.items.maxOfOrNull(FavoriteItem::updatedAt) ?: 0L) }
+        FavoriteSortMode.UPDATED_AT -> items.sortedByDescending {
+            maxOf(it.collection.updatedAt, it.items.maxOfOrNull(::favoriteItemEffectiveUpdatedAt) ?: 0L)
+        }
         FavoriteSortMode.FAVORITED_ORDER -> {
             val itemComparator = compareFavoriteItemsByOrder(descending, remoteFavoriteOrderMap)
             items.sortedWith { left, right ->
@@ -853,7 +859,7 @@ private fun sortItems(
 ): List<FavoriteItem> {
     val sorted = when (mode) {
         FavoriteSortMode.DEFAULT -> items.sortedByDescending(FavoriteItem::createdAt)
-        FavoriteSortMode.UPDATED_AT -> items.sortedByDescending(FavoriteItem::updatedAt)
+        FavoriteSortMode.UPDATED_AT -> items.sortedByDescending(::favoriteItemEffectiveUpdatedAt)
         FavoriteSortMode.FAVORITED_ORDER -> items.sortedWith(compareFavoriteItemsByOrder(descending, remoteFavoriteOrderMap))
         FavoriteSortMode.NAME -> items.sortedBy { it.title.lowercase() }
         FavoriteSortMode.FORUM_NAME -> items.sortedWith(compareBy<FavoriteItem> { it.forumName?.lowercase().orEmpty() }.thenBy { it.title.lowercase() })

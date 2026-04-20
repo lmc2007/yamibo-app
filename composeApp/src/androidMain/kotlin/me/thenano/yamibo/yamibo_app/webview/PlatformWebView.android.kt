@@ -114,6 +114,7 @@ actual fun PlatformWebViewContent(
                 settings.apply {
                     javaScriptEnabled = true
                     domStorageEnabled = true
+                    @Suppress("DEPRECATION")
                     databaseEnabled = true
                     loadsImagesAutomatically = true
                     useWideViewPort = true

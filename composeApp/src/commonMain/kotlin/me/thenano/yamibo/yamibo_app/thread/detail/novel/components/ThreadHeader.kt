@@ -61,7 +61,7 @@ internal fun ThreadHeader(
     readingProgressText: String? = null,
     onCopy: (String) -> Unit = {}
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
     val colors = YamiboTheme.colors
     val thread = threadPage.thread

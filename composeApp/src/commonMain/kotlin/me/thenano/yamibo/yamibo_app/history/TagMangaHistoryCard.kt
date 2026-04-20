@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
@@ -57,6 +60,7 @@ fun TagMangaHistoryCard(
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val timingSummary = "最近閱讀 $timeLabel"
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = tween(150)
@@ -91,12 +95,14 @@ fun TagMangaHistoryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
-                    .size(52.dp)
+                    .width(92.dp)
+                    .aspectRatio(0.72f)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -104,10 +110,9 @@ fun TagMangaHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                val coverUrl = history.coverUrl
-                if (coverUrl != null) {
+                if (!history.coverUrl.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
-                        model = rememberImageRequest(url = coverUrl),
+                        model = rememberImageRequest(url = history.coverUrl!!),
                         contentDescription = "Cover Image",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -124,27 +129,40 @@ fun TagMangaHistoryCard(
                 }
             }
 
-            Spacer(Modifier.size(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(
                     text = history.tagName,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textDark,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.size(4.dp))
                 Text(
                     text = history.threadTitle,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.textDark.copy(alpha = 0.75f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.size(2.dp))
+                val progress = "第 ${history.threadImagePageIndex + 1} / ${history.threadImageTotalPages} 頁"
                 Text(
-                    text = "第 ${history.threadImagePageIndex + 1} / ${history.threadImageTotalPages} 頁  ・  $timeLabel",
+                    text = progress,
                     fontSize = 12.sp,
-                    color = colors.textDark.copy(alpha = 0.5f),
+                    color = colors.textDark.copy(alpha = 0.56f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = timingSummary,
+                    fontSize = 12.sp,
+                    color = colors.textDark.copy(alpha = 0.48f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 

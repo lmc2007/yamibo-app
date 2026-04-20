@@ -25,6 +25,10 @@ import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.favorite.components.collectionColor
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncActionResult
@@ -102,6 +106,96 @@ internal suspend fun hasRemoteFavoriteForTarget(
 ): Boolean {
     val item = favoriteRepository.findFavoriteItem(target) ?: return false
     return favoriteSyncRepository.hasRemoteFavorite(item.id)
+}
+
+internal suspend fun completeFavoriteAddWithFeedback(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+    syncToRemote: Boolean,
+    snackbarHostState: SnackbarHostState,
+    onRefreshRequested: () -> Unit,
+) {
+    val syncResult = withContext(Dispatchers.Default) {
+        addFavoriteAndMaybeSync(favoriteRepository, favoriteSyncRepository, target, syncToRemote)
+    }
+    onRefreshRequested()
+    val message = when {
+        syncResult == null -> "已加入收藏"
+        syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
+        else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
+    }
+    snackbarHostState.showSnackbar(message)
+}
+
+internal suspend fun completeSavedFavoriteSyncWithFeedback(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+    syncToRemote: Boolean,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    onRefreshRequested: () -> Unit,
+) {
+    val syncingSnackbarJob = if (syncToRemote) {
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                message = "正在同步到百合會...",
+                duration = SnackbarDuration.Indefinite,
+            )
+        }
+    } else {
+        null
+    }
+    val syncResult = withContext(Dispatchers.Default) {
+        syncExistingFavoriteIfRequested(favoriteRepository, favoriteSyncRepository, target, syncToRemote)
+    }
+    syncingSnackbarJob?.cancel()
+    snackbarHostState.currentSnackbarData?.dismiss()
+    onRefreshRequested()
+    val message = when {
+        syncResult == null -> "已加入本地收藏"
+        syncResult.success -> "已加入本地收藏，${syncResult.message ?: "已同步到百合會。"}"
+        else -> "已加入本地收藏，但同步到百合會失敗：${syncResult.message ?: "請稍後再試"}"
+    }
+    snackbarHostState.showSnackbar(message)
+}
+
+internal suspend fun completeFavoriteRemovalWithFeedback(
+    favoriteRepository: LocalFavoriteRepository,
+    favoriteSyncRepository: FavoriteSyncRepository,
+    target: FavoriteTargetPayload,
+    removeRemote: Boolean,
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+    successMessage: String,
+    failureMessage: String,
+    onRefreshRequested: () -> Unit,
+) {
+    val syncingSnackbarJob = if (removeRemote) {
+        scope.launch {
+            snackbarHostState.showSnackbar(
+                message = "正在從百合會移除收藏...",
+                duration = SnackbarDuration.Indefinite,
+            )
+        }
+    } else {
+        null
+    }
+    val result = withContext(Dispatchers.Default) {
+        removeFavoriteWithSync(
+            favoriteRepository = favoriteRepository,
+            favoriteSyncRepository = favoriteSyncRepository,
+            target = target,
+            removeRemote = removeRemote,
+        )
+    }
+    syncingSnackbarJob?.cancel()
+    snackbarHostState.currentSnackbarData?.dismiss()
+    onRefreshRequested()
+    snackbarHostState.showSnackbar(
+        if (result.success) successMessage else result.message ?: failureMessage,
+    )
 }
 
 suspend fun LocalFavoriteRepository.saveFavorite(

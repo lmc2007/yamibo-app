@@ -163,7 +163,8 @@ fun ProfilePage() {
                                     allowRepair = appSettingsRepository.signInAllowRepair.getValue(),
                                     onSemiAutoCompleted = { result ->
                                         coroutineScope.launch {
-                                            var snackbarMessage: String? = null
+                                            var snackbarMessage: String?
+                                            /** This when maps semi-automatic sign results into the ProfilePage sign button snackbar/title update flow. */
                                             when (result) {
                                                 is YamiboResult.Success -> {
                                                     signRefreshKey += 1
@@ -175,18 +176,20 @@ fun ProfilePage() {
                                                 }
 
                                                 is YamiboResult.NotLoggedIn -> {
-                                                    snackbarMessage = "登入狀態已失效，請重新登入"
+                                                    snackbarMessage = result.message()
                                                 }
 
                                                 is YamiboResult.NoPermission -> {
                                                     snackbarMessage = "目前無法自動簽到，請改用手動模式"
                                                 }
 
-                                                is YamiboResult.Maintenance -> Unit
+                                                is YamiboResult.Maintenance -> {
+                                                    snackbarMessage = result.message()
+                                                }
                                             }
                                             isSigning = false
                                             refreshSignStatus()
-                                            snackbarMessage?.let { message ->
+                                            snackbarMessage.let { message ->
                                                 coroutineScope.launch {
                                                     snackbarHostState.currentSnackbarData?.dismiss()
                                                     snackbarHostState.showSnackbar(message)

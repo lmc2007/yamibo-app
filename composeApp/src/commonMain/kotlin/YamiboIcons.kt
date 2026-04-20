@@ -1274,5 +1274,6 @@ object YamiboIcons {
             }
         }.build()
 
-    val Back: String = "◀"
+    @Suppress("ConstPropertyName")
+    const val Back: String = "◀"
 }

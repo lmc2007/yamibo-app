@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -11,13 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
-import me.thenano.yamibo.yamibo_app.home.HomePageScreen
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.navigation.NavAction
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import me.thenano.yamibo.yamibo_app.home.HomePageScreen
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.navigation.NavAction
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 @Composable
 fun HomeScreenContent() {
@@ -25,7 +24,7 @@ fun HomeScreenContent() {
 }
 
 @Composable
-@Preview
+@androidx.compose.ui.tooling.preview.Preview
 fun App() {
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)

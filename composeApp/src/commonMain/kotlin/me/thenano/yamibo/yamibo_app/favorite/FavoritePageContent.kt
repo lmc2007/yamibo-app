@@ -162,6 +162,7 @@ internal fun FavoritePageContent(
             }
         }
 
+        @Suppress("DEPRECATION")
         ScrollableTabRow(
             selectedTabIndex = ready.categories.indexOfFirst { it.id == ready.selectedCategoryId }.coerceAtLeast(0),
             edgePadding = 8.dp,

@@ -7,6 +7,7 @@ import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.FetchResult
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.fetch.FetchFactory
+import io.ktor.client.plugins.HttpRequestTimeoutException
 import io.ktor.http.HttpMethod
 import io.ktor.http.HttpHeaders
 import io.ktor.client.statement.bodyAsText
@@ -20,7 +21,7 @@ import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.SignDailyRecord
 
 class SignRepositoryImpl(
-    private val db: Database,
+    db: Database,
     private val authRepository: AuthRepository,
     private val appSettingsRepository: AppSettingsRepository,
 ) : SignRepository {
@@ -38,6 +39,7 @@ class SignRepositoryImpl(
         applyCookies()
         val cookie = authRepository.cookieStore.load().orEmpty()
 
+        /** This when maps the raw sign-page HTTP fetch into repository-level page-info results. */
         return when (val result = performSignRequest(YamiboRoute.Sign.build(), cookie)) {
             is FetchResult.Success -> {
                 if (isCloudflarePage(result.value)) {
@@ -63,6 +65,7 @@ class SignRepositoryImpl(
     }
 
     override suspend fun runAutoSign(allowRepair: Boolean): YamiboResult<SignRepository.ActionResult> {
+        /** This when resolves the entry state for the semi-automatic sign flow before any action is fired. */
         val initialInfo = getCachedPageInfo() ?: when (val result = fetchPageInfo()) {
             is YamiboResult.Success -> result.value
             is YamiboResult.NotLoggedIn -> return result
@@ -73,7 +76,7 @@ class SignRepositoryImpl(
 
         var pageInfo = initialInfo
         var repairCount = 0
-        var lastMessage = ""
+        var lastMessage: String
         var finalStatus = if (pageInfo.hasSignedToday) {
             SignRepository.ActionStatus.ALREADY_SIGNED
         } else {
@@ -83,6 +86,7 @@ class SignRepositoryImpl(
         if (!pageInfo.hasSignedToday) {
             val signUrl = pageInfo.signActionUrl
                 ?: return YamiboResult.Failure("已通過驗證，但找不到簽到按鈕，請改用手動模式。")
+            /** This when maps the primary sign-button action into the semi-automatic sign flow result. */
             val signAction = when (val action = executeAction(signUrl)) {
                 is YamiboResult.Success -> action.value
                 is YamiboResult.NotLoggedIn -> return action
@@ -93,25 +97,24 @@ class SignRepositoryImpl(
             lastMessage = signAction.message
             finalStatus = signAction.status
 
+            /** This when refreshes the sign page after the main sign action so final state can be re-read. */
             pageInfo = when (val refreshed = fetchPageInfo()) {
                 is YamiboResult.Success -> refreshed.value
-                is YamiboResult.NotLoggedIn -> return refreshed
-                is YamiboResult.NoPermission -> return refreshed
-                is YamiboResult.Maintenance -> return refreshed
-                is YamiboResult.Failure -> return refreshed
+                else -> optimisticSignedPageInfo(pageInfo)
             }
         } else {
             lastMessage = "今天已經打卡過了。"
         }
 
         if (allowRepair) {
-            var seenRepairValues = emptySet<String>()
+            var seenRepairValues = mutableSetOf<String>()
             while (pageInfo.repairOptions.isNotEmpty()) {
                 val prefix = pageInfo.repairActionPrefix ?: break
                 val repairOption = pageInfo.repairOptions.firstOrNull { it.value !in seenRepairValues } ?: break
                 seenRepairValues += repairOption.value
 
                 val repairUrl = buildAbsoluteUrl("$prefix${repairOption.value}")
+                /** This when maps one repair request into the semi-automatic repair sub-flow result. */
                 val repairAction = when (val action = executeAction(repairUrl)) {
                     is YamiboResult.Success -> action.value
                     is YamiboResult.NotLoggedIn -> return action
@@ -123,14 +126,12 @@ class SignRepositoryImpl(
                 lastMessage = repairAction.message
                 finalStatus = repairAction.status
 
+                /** This when refreshes the sign page after each repair to decide whether more repairs remain. */
                 pageInfo = when (val refreshed = fetchPageInfo()) {
                     is YamiboResult.Success -> refreshed.value
-                    is YamiboResult.NotLoggedIn -> return refreshed
-                    is YamiboResult.NoPermission -> return refreshed
-                    is YamiboResult.Maintenance -> return refreshed
-                    is YamiboResult.Failure -> return refreshed
+                    else -> optimisticRepairedPageInfo(pageInfo, repairOption.value)
                 }
-                seenRepairValues = emptySet()
+                seenRepairValues = mutableSetOf()
             }
         }
 
@@ -189,6 +190,7 @@ class SignRepositoryImpl(
         val absoluteUrl = buildAbsoluteUrl(url)
         val cookie = authRepository.cookieStore.load().orEmpty()
 
+        /** This when maps a sign/repair action HTTP response into repository-level action results. */
         when (val result = performSignRequest(absoluteUrl, cookie)) {
             is FetchResult.Success ->
                 return YamiboResult.Success(parseActionResult(result.value))
@@ -229,7 +231,7 @@ class SignRepositoryImpl(
                     bodyPreview = text
                 )
             }
-        } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+        } catch (e: HttpRequestTimeoutException) {
             FetchResult.Failure.Timeout(url, e)
         } catch (e: Exception) {
             FetchResult.Failure.NetworkError(url, e)
@@ -246,7 +248,7 @@ class SignRepositoryImpl(
         }
         return ParsedActionResult(
             status = status,
-            message = if (message.isNotBlank()) message else "操作完成"
+            message = message.ifBlank { "操作完成" }
         )
     }
 
@@ -263,11 +265,11 @@ class SignRepositoryImpl(
         }
         val myActivity = extractSectionItems(document, "我的打卡动态")
         val statistics = extractSectionItems(document, "打卡统计")
-        val extraSections = listOf(
+        val extraSections = listOfNotNull(
             buildSection(document, "天天打卡固定奖励"),
             buildSection(document, "节日额外奖励"),
             buildSection(document, "打卡等级"),
-        ).filterNotNull()
+        )
         val signActionUrl = document.selectFirst(".signbtn a.btna")?.attr("href")?.trim()?.takeIf { it.isNotBlank() }
             ?.let(::buildAbsoluteUrl)
         val repairActionPrefix = parseRepairActionPrefix(document)
@@ -372,6 +374,22 @@ class SignRepositoryImpl(
         if (url.startsWith("http://") || url.startsWith("https://")) return url
         val base = YamiboRoute.Domain.build()
         return if (url.startsWith("/")) "$base${url.removePrefix("/")}" else "$base$url"
+    }
+
+    private fun optimisticSignedPageInfo(info: SignRepository.SignPageInfo): SignRepository.SignPageInfo {
+        return info.copy(
+            signActionUrl = null,
+            hasSignedToday = true,
+        )
+    }
+
+    private fun optimisticRepairedPageInfo(
+        info: SignRepository.SignPageInfo,
+        repairedValue: String,
+    ): SignRepository.SignPageInfo {
+        return optimisticSignedPageInfo(info).copy(
+            repairOptions = info.repairOptions.filterNot { it.value == repairedValue }
+        )
     }
 
     private fun updateTodayRecord(

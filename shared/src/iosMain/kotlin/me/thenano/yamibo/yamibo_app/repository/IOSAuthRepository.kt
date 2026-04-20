@@ -11,6 +11,7 @@ import me.thenano.yamibo.yamibo_app.util.auth.parseCookieStringToMap
 import platform.Foundation.NSHTTPCookie
 import platform.Foundation.NSHTTPCookieStorage
 import platform.Foundation.NSURL
+import kotlin.time.Duration.Companion.milliseconds
 
 class IOSAuthRepository(
     override val cookieStore: CookieStore,
@@ -58,7 +59,7 @@ class IOSAuthRepository(
                 onSuccess()
                 return
             }
-            delay(loginDetectInterval)
+            delay(loginDetectInterval.milliseconds)
             elapsed += loginDetectInterval
         }
 

@@ -10,7 +10,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import com.fleeksoft.ksoup.Ksoup
 import com.fleeksoft.ksoup.nodes.Document
 import com.fleeksoft.ksoup.nodes.Element
@@ -48,7 +47,7 @@ object HtmlParser {
 
         fun commitText() {
             if (globalBuilder.length > lastCommitIndex) {
-                var textStr = globalBuilder.toAnnotatedString().subSequence(lastCommitIndex, globalBuilder.length)
+                val textStr = globalBuilder.toAnnotatedString().subSequence(lastCommitIndex, globalBuilder.length)
                 
                 if (textStr.isNotEmpty()) {
                     val aid = hashId("t", textStr.text, blockCounter++)

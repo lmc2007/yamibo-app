@@ -56,10 +56,10 @@ internal fun TagListScreen(
                     state = TagListState.Success
                 }
                 else -> {
-                    if (!forceRefresh) {
-                        state = TagListState.Error(result.message())
+                    state = if (!forceRefresh) {
+                        TagListState.Error(result.message())
                     } else {
-                        state = TagListState.Success // keep old tags if refresh fails but don't show error box
+                        TagListState.Success // keep old tags if refresh fails but don't show error box
                     }
                 }
             }

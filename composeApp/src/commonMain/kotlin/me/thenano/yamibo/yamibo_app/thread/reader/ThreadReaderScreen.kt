@@ -7,8 +7,6 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -17,71 +15,42 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
-import coil3.compose.LocalPlatformContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
-import io.github.littlesurvival.dto.value.FormHash
-import io.github.littlesurvival.dto.value.PollOptionId
-import io.github.littlesurvival.dto.value.PostId
-import io.github.littlesurvival.dto.value.ThreadId
-import io.github.littlesurvival.dto.value.UserId
-import kotlinx.coroutines.Dispatchers
+import io.github.littlesurvival.dto.value.*
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRepository
-import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.LocalThreadRepository
-import me.thenano.yamibo.yamibo_app.Logger
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteCollectionPickerDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteAddSyncConfirmDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteMultiPathRemoveDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemovalConfirmDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteRemoveSyncConfirmDialog
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteTargetPayload
-import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
-import me.thenano.yamibo.yamibo_app.favorite.addFavoriteAndMaybeSync
-import me.thenano.yamibo.yamibo_app.favorite.findFavoriteItem
-import me.thenano.yamibo.yamibo_app.favorite.getFavoriteLocationSelection
-import me.thenano.yamibo.yamibo_app.favorite.hasRemoteFavoriteForTarget
-import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
-import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
-import me.thenano.yamibo.yamibo_app.favorite.supportsRemoteWebsiteSync
-import me.thenano.yamibo.yamibo_app.favorite.syncExistingFavoriteIfRequested
-import me.thenano.yamibo.yamibo_app.favorite.syncFavoriteMetadata
+import me.thenano.yamibo.yamibo_app.*
+import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
+import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
-import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
-import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
-import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
 import me.thenano.yamibo.yamibo_app.util.shareText
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 import kotlin.math.abs
-import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
-import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
-import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
 import kotlin.time.Duration.Companion.milliseconds
 
 internal sealed interface ReaderState {
@@ -154,16 +123,22 @@ internal fun ThreadReaderScreen(
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
     
     LaunchedEffect(loadedPostsByPage[1], threadInfo) {
-        if (coverUrl != null) return@LaunchedEffect // Lock once found for stability
-        
         val fid = threadInfo?.forum?.fid
         val isMangaThread = fid?.let { YamiboForum.isMangaForum(it) } == true
 
         // Find the posts on the first page
-        val firstPagePosts = loadedPostsByPage[1] ?: return@LaunchedEffect
+        val firstPagePosts = loadedPostsByPage[1]
+        if (firstPagePosts == null) {
+            coverUrl = null
+            return@LaunchedEffect
+        }
 
         // Use the author from the very first post of the thread
-        val threadAuthorId = firstPagePosts.firstOrNull()?.author?.uid ?: return@LaunchedEffect
+        val threadAuthorId = firstPagePosts.firstOrNull()?.author?.uid
+        if (threadAuthorId == null) {
+            coverUrl = null
+            return@LaunchedEffect
+        }
 
         // Get posts by the thread author on the first page
         val authorPosts = firstPagePosts.filter { it.author.uid == threadAuthorId }
@@ -173,9 +148,18 @@ internal fun ThreadReaderScreen(
             candidateImages.getOrNull(1)?.url ?: candidateImages.getOrNull(0)?.url
         } else {
             authorPosts.firstOrNull()?.images?.firstOrNull()?.url
-        } ?: return@LaunchedEffect
+        }
 
-        if (attachedImageUrl.contains("none.gif") || attachedImageUrl.contains("smiley/") || attachedImageUrl.contains("face")) return@LaunchedEffect
+        if (
+            attachedImageUrl == null ||
+            attachedImageUrl.contains("none.gif") ||
+            attachedImageUrl.contains("smiley/") ||
+            attachedImageUrl.contains("face")
+        ) {
+            coverUrl = null
+            return@LaunchedEffect
+        }
+
         coverUrl = if (attachedImageUrl.startsWith("http")) attachedImageUrl else "${YamiboRoute.Domain.build()}$attachedImageUrl"
     }
 
@@ -202,67 +186,39 @@ internal fun ThreadReaderScreen(
     }
 
     suspend fun completeFavoriteAdd(syncToRemote: Boolean) {
-        val syncResult = withContext(Dispatchers.Default) {
-            addFavoriteAndMaybeSync(favoriteRepository, favoriteSyncRepository, favoriteTarget(), syncToRemote)
-        }
-        favoriteRefreshToken += 1
-        val message = when {
-            syncResult == null -> "已加入收藏"
-            syncResult.success -> "已加入收藏，${syncResult.message ?: "已同步到百合會。"}"
-            else -> "已加入收藏，但同步失敗：${syncResult.message ?: "請稍後再試"}"
-        }
-        snackbarHostState.showSnackbar(message)
+        completeFavoriteAddWithFeedback(
+            favoriteRepository = favoriteRepository,
+            favoriteSyncRepository = favoriteSyncRepository,
+            target = favoriteTarget(),
+            syncToRemote = syncToRemote,
+            snackbarHostState = snackbarHostState,
+            onRefreshRequested = { favoriteRefreshToken += 1 },
+        )
     }
 
     suspend fun completeSavedFavoriteSync(syncToRemote: Boolean) {
-        val syncingSnackbarJob = if (syncToRemote) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = "正在同步到百合會...",
-                    duration = SnackbarDuration.Indefinite,
-                )
-            }
-        } else {
-            null
-        }
-        val syncResult = withContext(Dispatchers.Default) {
-            syncExistingFavoriteIfRequested(favoriteRepository, favoriteSyncRepository, favoriteTarget(), syncToRemote)
-        }
-        syncingSnackbarJob?.cancel()
-        snackbarHostState.currentSnackbarData?.dismiss()
-        favoriteRefreshToken += 1
-        val message = when {
-            syncResult == null -> "已加入本地收藏"
-            syncResult.success -> "已加入本地收藏，${syncResult.message ?: "已同步到百合會。"}"
-            else -> "已加入本地收藏，但同步到百合會失敗：${syncResult.message ?: "請稍後再試"}"
-        }
-        snackbarHostState.showSnackbar(message)
+        completeSavedFavoriteSyncWithFeedback(
+            favoriteRepository = favoriteRepository,
+            favoriteSyncRepository = favoriteSyncRepository,
+            target = favoriteTarget(),
+            syncToRemote = syncToRemote,
+            scope = scope,
+            snackbarHostState = snackbarHostState,
+            onRefreshRequested = { favoriteRefreshToken += 1 },
+        )
     }
 
     suspend fun completeFavoriteRemoval(removeRemote: Boolean) {
-        val syncingSnackbarJob = if (removeRemote) {
-            scope.launch {
-                snackbarHostState.showSnackbar(
-                    message = "正在從百合會移除收藏...",
-                    duration = SnackbarDuration.Indefinite,
-                )
-            }
-        } else {
-            null
-        }
-        val result = withContext(Dispatchers.Default) {
-            removeFavoriteWithSync(
-                favoriteRepository = favoriteRepository,
-                favoriteSyncRepository = favoriteSyncRepository,
-                target = favoriteTarget(),
-                removeRemote = removeRemote,
-            )
-        }
-        syncingSnackbarJob?.cancel()
-        snackbarHostState.currentSnackbarData?.dismiss()
-        favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar(
-            if (result.success) pendingFavoriteRemovalSuccessMessage else result.message ?: "取消收藏失敗",
+        completeFavoriteRemovalWithFeedback(
+            favoriteRepository = favoriteRepository,
+            favoriteSyncRepository = favoriteSyncRepository,
+            target = favoriteTarget(),
+            removeRemote = removeRemote,
+            scope = scope,
+            snackbarHostState = snackbarHostState,
+            successMessage = pendingFavoriteRemovalSuccessMessage,
+            failureMessage = "取消收藏失敗",
+            onRefreshRequested = { favoriteRefreshToken += 1 },
         )
         pendingFavoriteRemovalSelection = null
     }

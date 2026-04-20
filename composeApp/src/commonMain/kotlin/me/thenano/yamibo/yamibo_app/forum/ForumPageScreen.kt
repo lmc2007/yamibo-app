@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
+import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.ForumPage
@@ -37,6 +38,7 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
+import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 /** Forum page state */
 private sealed interface ForumState {
@@ -118,6 +120,20 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 title = forumName,
                 onBack = { navigator.pop() },
                 onSearch = { showSearch = true },
+                onPostThread = {
+                    navigator.navigate(
+                        IActionWebView(
+                            title = "發表帖子",
+                            initialUrl = YamiboRoute.PostThread(fid).build(),
+                            successCondition = { url -> url.contains("mod=forumdisplay") && url.contains("fid=") },
+                            onSuccess = {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar("發帖成功")
+                                }
+                            },
+                        )
+                    )
+                },
                 onStarClick = {
                     val formHash = authRepository.currentUser()?.formHash
                     if (formHash == null) {
@@ -306,6 +322,7 @@ private fun ForumTopBar(
     title: String,
     onBack: () -> Unit,
     onSearch: () -> Unit,
+    onPostThread: () -> Unit,
     onStarClick: () -> Unit,
     onHomeClick: () -> Unit,
     onFavoriteClick: () -> Unit
@@ -349,6 +366,20 @@ private fun ForumTopBar(
                     onDismissRequest = { showMenu = false },
                     modifier = Modifier.background(colors.creamSurface)
                 ) {
+                    DropdownMenuItem(
+                        text = { Text("發表帖子", color = colors.brownDeep) },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = YamiboIcons.EditOrSign,
+                                contentDescription = null,
+                                tint = colors.brownPrimary
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onPostThread()
+                        }
+                    )
                     DropdownMenuItem(
                         text = { Text("收藏本版", color = colors.brownDeep) },
                         leadingIcon = {

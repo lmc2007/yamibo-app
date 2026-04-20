@@ -70,7 +70,7 @@ interface LocalFavoriteRepository {
         val forumName: String?,
         val authorId: UserId?,
         val createdAt: Long,
-        val updatedAt: Long,
+        val lastFavoriteStatusUpdateAt: Long,
     )
 
     data class FavoriteCollectionWithItems(

@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,6 +34,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
@@ -56,6 +60,14 @@ fun ReadHistoryCard(
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val timingSummary = buildString {
+        append("最近閱讀 ")
+        append(timeLabel)
+        history.lastUpdatedTime?.takeIf { it > 0L }?.let {
+            append(" / 最後更新 ")
+            append(formatHistoryRelativeTime(it))
+        }
+    }
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = tween(150)
@@ -90,12 +102,14 @@ fun ReadHistoryCard(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Card(
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier
-                    .size(52.dp)
+                    .width(92.dp)
+                    .aspectRatio(0.72f)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -109,7 +123,7 @@ fun ReadHistoryCard(
                         contentDescription = "thread cover",
                         modifier = Modifier
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(12.dp)),
+                            .clip(RoundedCornerShape(14.dp)),
                         contentScale = ContentScale.Crop,
                         error = {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -132,28 +146,38 @@ fun ReadHistoryCard(
                         }
                     )
                 } else {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = YamiboIcons.History,
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = colors.brownPrimary.copy(alpha = 0.5f)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = history.threadName,
+                            color = colors.brownDeep.copy(alpha = 0.75f),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 14.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 5,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.size(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 Text(
                     text = history.threadName,
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = colors.textDark,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
                 )
-
-                Spacer(Modifier.size(6.dp))
 
                 val progress = if (history.postTitle.isNotEmpty()) {
                     "P.${history.page} ${history.postTitle}"
@@ -162,33 +186,28 @@ fun ReadHistoryCard(
                 }
                 Text(
                     text = progress,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.textDark.copy(alpha = 0.75f),
-                )
-
-                Spacer(Modifier.size(2.dp))
-
-                val metaInfo = buildString {
-                    if (history.forumName != null) {
-                        append("#${history.forumName}  ・  ")
-                    }
-                    append(timeLabel)
-                }
-                Text(
-                    text = metaInfo,
                     fontSize = 12.sp,
-                    color = colors.textDark.copy(alpha = 0.5f),
+                    fontWeight = FontWeight.Medium,
+                    color = colors.textDark.copy(alpha = 0.72f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
-
-                history.lastUpdatedTime?.takeIf { it > 0L }?.let { lastUpdatedTime ->
-                    Spacer(Modifier.size(2.dp))
+                history.forumName?.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        text = "最後更新 ${formatHistoryRelativeTime(lastUpdatedTime)}",
+                        text = "#$it",
+                        color = colors.textDark.copy(alpha = 0.56f),
                         fontSize = 12.sp,
-                        color = colors.textDark.copy(alpha = 0.45f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+                Text(
+                    text = timingSummary,
+                    color = colors.textDark.copy(alpha = 0.48f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
 
             Spacer(Modifier.size(4.dp))

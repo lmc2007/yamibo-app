@@ -124,9 +124,9 @@ sealed class YamiboColorScheme {
         override val navBarIconUnselected = 0xFF888888
     }
 
-    /** Catppuccin Mocha */
+    /** Cappuccino Mocha */
     data object Catppuccin : YamiboColorScheme() {
-        override val name = "Catppuccin"
+        override val name = "catppuccin"
         override val brownDeep = 0xFF1E1E2E
         override val brownPrimary = 0xFFCBA6F7
         override val brownLight = 0xFF585B70
@@ -232,7 +232,7 @@ sealed class YamiboColorScheme {
         override val navBarIconUnselected = 0xFF6D3B4D
     }
 
-    /** Tako */
+    /** tako */
     data object Tako : YamiboColorScheme() {
         override val name = "Tako"
         override val brownDeep = 0xFF21212E

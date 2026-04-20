@@ -29,7 +29,7 @@ class IntSetting(
         } else newValue
         
         saveToStore(steppedValue)
-        _flow.value = steppedValue
+        flow.value = steppedValue
         return true
     }
 }
@@ -61,7 +61,7 @@ class FloatSetting(
         } else newValue
         
         saveToStore(steppedValue)
-        _flow.value = steppedValue
+        flow.value = steppedValue
         return true
     }
 }
@@ -79,9 +79,10 @@ class BoolSetting(
     override fun saveToStore(newValue: Boolean) {
         store.putBoolean(key, newValue)
     }
-    
+
+    @Suppress("unused")
     fun toggle() {
-        setValue(!_flow.value)
+        setValue(!flow.value)
     }
 }
 

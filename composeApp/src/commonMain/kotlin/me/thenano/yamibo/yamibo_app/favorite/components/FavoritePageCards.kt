@@ -162,13 +162,25 @@ internal fun ItemCardUi(item: FavoriteItem, selected: Boolean, selecting: Boolea
                 Spacer(Modifier.height(4.dp))
             }
             Text(item.title, color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            if (effectiveLastUpdatedAt != null) {
+            val timingSummary = buildString {
+                if (effectiveLastReadAt != null) {
+                    append("最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}")
+                }
+                if (effectiveLastUpdatedAt != null) {
+                    if (isNotEmpty()) append(" / ")
+                    append("最後更新 ${formatFavoriteTime(effectiveLastUpdatedAt)}")
+                }
+            }.takeIf { it.isNotBlank() }
+            if (timingSummary != null) {
                 Spacer(Modifier.height(6.dp))
-                Text("最後更新 ${formatFavoriteTime(effectiveLastUpdatedAt)}", color = colors.textDark.copy(alpha = 0.45f), fontSize = 10.sp, minLines = 1)
-            }
-            if (effectiveLastReadAt != null) {
-                Spacer(Modifier.height(6.dp))
-                Text("最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}", color = colors.textDark.copy(alpha = 0.45f), fontSize = 10.sp, minLines = 1)
+                Text(
+                    timingSummary,
+                    color = colors.textDark.copy(alpha = 0.45f),
+                    fontSize = 10.sp,
+                    minLines = 1,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -239,9 +251,9 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(item.title, color = colors.textDark, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                if (!item.forumName.isNullOrBlank() || effectiveLastReadAt != null || effectiveLastUpdatedAt != null) {
+                if (!showCover && (!item.forumName.isNullOrBlank() || effectiveLastReadAt != null || effectiveLastUpdatedAt != null)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        val forumModifier = if (!showCover && timingSummary != null) Modifier.weight(1f) else Modifier
+                        val forumModifier = if (timingSummary != null) Modifier.weight(1f) else Modifier
                         item.forumName?.takeIf { it.isNotBlank() }?.let {
                             Text(
                                 "#$it",
@@ -252,7 +264,7 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
                                 modifier = forumModifier
                             )
                         }
-                        if (!showCover && timingSummary != null) {
+                        if (timingSummary != null) {
                             if (!item.forumName.isNullOrBlank()) {
                                 Spacer(Modifier.width(8.dp))
                             }
@@ -263,13 +275,28 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                        } else if (effectiveLastReadAt != null) {
-                            Text("最近閱讀 ${formatFavoriteTime(effectiveLastReadAt)}", color = colors.textDark.copy(alpha = 0.48f), fontSize = 12.sp, maxLines = 1)
                         }
                     }
                 }
-                if (showCover && effectiveLastUpdatedAt != null) {
-                    Text("最後更新 ${formatFavoriteTime(effectiveLastUpdatedAt)}", color = colors.textDark.copy(alpha = 0.48f), fontSize = 12.sp, maxLines = 1)
+                if (showCover) {
+                    item.forumName?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            "#$it",
+                            color = colors.textDark.copy(alpha = 0.56f),
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                if (showCover && timingSummary != null) {
+                    Text(
+                        timingSummary,
+                        color = colors.textDark.copy(alpha = 0.48f),
+                        fontSize = 12.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
             AnimatedVisibility(visible = selected, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) { SelectedDot() }

@@ -15,7 +15,7 @@ ktor = "3.4.2"
 ktorClientCore = "3.4.2"
 coil3 = "3.4.0"
 securityCrypto = "1.1.0"
-yamiboApi = "1.0.23"
+yamiboApi = "1.0.24"
 sqldelight = "2.2.1"
 okio = "3.17.0"
 

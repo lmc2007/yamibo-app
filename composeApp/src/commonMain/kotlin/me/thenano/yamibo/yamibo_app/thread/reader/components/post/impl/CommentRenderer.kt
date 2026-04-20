@@ -6,8 +6,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +26,6 @@ fun CommentRenderer(
 ) {
     val colors = YamiboTheme.colors
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
-    val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
     if (comments.isEmpty()) return

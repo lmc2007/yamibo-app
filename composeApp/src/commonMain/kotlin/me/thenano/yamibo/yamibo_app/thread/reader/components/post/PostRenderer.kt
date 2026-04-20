@@ -1,43 +1,37 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import io.github.littlesurvival.dto.page.Post
-import io.github.littlesurvival.dto.value.PollOptionId
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.util.state
 import YamiboIcons
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.AttachmentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.CommentRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.PollRenderer
-import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.RateRenderer
+import io.github.littlesurvival.dto.page.Post
+import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.*
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.util.state
 
 @Composable
-@Suppress("AssignedValueIsNeverRead")
 fun PostRenderer(
     post: Post,
     modifier: Modifier = Modifier,

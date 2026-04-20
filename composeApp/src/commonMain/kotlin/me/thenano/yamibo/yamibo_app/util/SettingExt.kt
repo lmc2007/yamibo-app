@@ -8,6 +8,6 @@ import me.thenano.yamibo.yamibo_app.repository.settings.core.SettingItem
 /** Compose-friendly accessor: just call `setting.state()` to get the current reactive value. */
 @Composable
 fun <T> SettingItem<T>.state(): T {
-    val current by flow.collectAsState()
+    val current by stateFlow.collectAsState()
     return current
 }

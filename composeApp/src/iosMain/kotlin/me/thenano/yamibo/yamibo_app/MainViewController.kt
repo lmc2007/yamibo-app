@@ -1,31 +1,23 @@
+@file:Suppress("FunctionName", "unused")
+
 package me.thenano.yamibo.yamibo_app
 
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.ui.window.ComposeUIViewController
 import io.github.littlesurvival.YamiboClient
-import me.thenano.yamibo.yamibo_app.Database
+import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.IOSAuthRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSForumRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSLocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSThemeRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSThreadRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSNovelThreadCacheRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSSignRepository
-import me.thenano.yamibo.yamibo_app.repository.IOSTagRepository
-import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.store.IOSCookieStore
 import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
-import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */

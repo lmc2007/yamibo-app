@@ -62,6 +62,7 @@ class ComposableNavigator(start: Navigatable = IMainScreen()) {
         while (stack.size > 1) stack.removeAt(stack.lastIndex)
     }
 
+    @Deprecated("There's no longer a need for this.")
     fun canGoBack(): Boolean = stack.size > 1
 }
 

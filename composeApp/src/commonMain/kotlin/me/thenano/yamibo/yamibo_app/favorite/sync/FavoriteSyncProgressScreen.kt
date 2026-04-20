@@ -338,10 +338,19 @@ private fun SyncMessageBlock(
             .toList()
     }
     val viewportPx = with(density) { maxHeight.roundToPx() }.toFloat().coerceAtLeast(1f)
-    val totalScrollablePx = scrollState.maxValue.toFloat()
-    val totalContentPx = viewportPx + totalScrollablePx
-    val thumbHeightFraction = if (totalContentPx <= 0f) 1f else (viewportPx / totalContentPx).coerceIn(0.18f, 1f)
-    val thumbOffsetFraction = if (totalScrollablePx <= 0f) 0f else (scrollState.value.toFloat() / totalScrollablePx).coerceIn(0f, 1f)
+    val thumbMetrics by remember(scrollState, viewportPx) {
+        derivedStateOf {
+            val totalScrollablePx = scrollState.maxValue.toFloat()
+            val totalContentPx = viewportPx + totalScrollablePx
+            val heightFraction =
+                if (totalContentPx <= 0f) 1f else (viewportPx / totalContentPx).coerceIn(0.18f, 1f)
+            val offsetFraction =
+                if (totalScrollablePx <= 0f) 0f else (scrollState.value.toFloat() / totalScrollablePx).coerceIn(0f, 1f)
+            heightFraction to offsetFraction
+        }
+    }
+    val thumbHeightFraction = thumbMetrics.first
+    val thumbOffsetFraction = thumbMetrics.second
 
     LaunchedEffect(message, lines.size, scrollState.maxValue) {
         scrollState.scrollTo(scrollState.maxValue)

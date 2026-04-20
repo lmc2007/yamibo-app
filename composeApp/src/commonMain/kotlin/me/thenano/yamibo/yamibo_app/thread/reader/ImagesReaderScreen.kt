@@ -310,8 +310,11 @@ fun ImagesReaderScreen(
             @OptIn(DelicateCoroutinesApi::class)
             GlobalScope.launch {
                 if (tagId != null && tagName != null) {
-                    val existing = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
-                    val finalCover = currentCoverSnap ?: existing?.coverUrl
+                    val finalCover = if (actualImageList.isEmpty()) {
+                        historyRepo.getTagMangaReaderModeHistoryPosition(tagId)?.coverUrl
+                    } else {
+                        currentCoverSnap
+                    }
 
                     historyRepo.saveTagMangaReaderModeHistory(
                         ReadHistoryRepository.TagMangaReadingHistory(
@@ -395,7 +398,6 @@ fun ImagesReaderScreen(
             isLoadingImages = true
             scrollOverscrollY = 0f
             scope.launch {
-                var loadedCrossPage = false
                 if (currentThreadIndex() >= 0 && currentThreadIndex() < currentThreads.lastIndex) {
                     activeTid = currentThreads[currentThreadIndex() + 1].tid
                     currentPage = 0
@@ -414,7 +416,6 @@ fun ImagesReaderScreen(
                         currentPage = 0
                         actualImageList = emptyList()
                         actualPostId = null
-                        loadedCrossPage = true
                     } else {
                         snackbarHostState.showSnackbar("無法載入下一頁")
                     }
@@ -430,7 +431,6 @@ fun ImagesReaderScreen(
             isLoadingImages = true
             scrollOverscrollY = 0f
             scope.launch {
-                var loadedCrossPage = false
                 if (currentThreadIndex() > 0) {
                     activeTid = currentThreads[currentThreadIndex() - 1].tid
                     currentPage = 0
@@ -451,7 +451,6 @@ fun ImagesReaderScreen(
                         actualImageList = emptyList()
                         actualPostId = null
                         startFromLastPage = true
-                        loadedCrossPage = true
                     } else {
                         snackbarHostState.showSnackbar("無法載入上一頁")
                     }
@@ -669,7 +668,7 @@ fun ImagesReaderScreen(
                                 }
                             } else {
                                 velocityTracker.resetTracking()
-                                isStaleFling = true // Never fling after a multi-touch/pinch release
+                                isStaleFling = true // Never fling after a multitouch/pinch release
                             }
 
                             if (event.changes.size >= 2) {

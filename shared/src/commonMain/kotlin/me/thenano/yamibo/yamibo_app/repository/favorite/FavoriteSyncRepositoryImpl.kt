@@ -279,7 +279,7 @@ class FavoriteSyncRepositoryImpl(
                         )
                     }
 
-                    appendLog(logs, "頁數 $page/${totalPages ?: page} 頁")
+                    appendLog(logs, "頁數 $page/${totalPages} 頁")
                     appendLog(logs, "已取得 ${remoteItems.size} 項收藏")
                     current = updateSnapshot(
                         current.copy(
@@ -292,7 +292,7 @@ class FavoriteSyncRepositoryImpl(
                         logs = logs,
                     )
 
-                    val reachedLastPage = totalPages != null && page >= totalPages
+                    val reachedLastPage = page >= totalPages
                     val hasMoreByNav = result.value.pageNav?.nextUrl != null
                     if (reachedLastPage || (!hasMoreByNav && result.value.items.isEmpty())) {
                         break
@@ -752,7 +752,7 @@ class FavoriteSyncRepositoryImpl(
                         )
                     }
 
-                    val reachedLastPage = totalPages != null && page >= totalPages
+                    val reachedLastPage = page >= totalPages
                     val hasMoreByNav = result.value.pageNav?.nextUrl != null
                     if (reachedLastPage || (!hasMoreByNav && result.value.items.isEmpty())) {
                         return RemoteFetchResult.Success(items, page, totalPages)

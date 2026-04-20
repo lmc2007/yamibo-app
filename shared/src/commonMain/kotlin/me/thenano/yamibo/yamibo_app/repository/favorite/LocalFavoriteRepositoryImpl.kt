@@ -368,7 +368,7 @@ class LocalFavoriteRepositoryImpl(
                 forumId = null,
                 forumName = null,
                 authorId = 0L,
-                updatedAt = now,
+                lastFavoriteStatusUpdateAt = now,
                 id = existing.id
             )
             existing.id
@@ -383,7 +383,7 @@ class LocalFavoriteRepositoryImpl(
                 forumName = null,
                 authorId = 0L,
                 createdAt = now,
-                updatedAt = now
+                lastFavoriteStatusUpdateAt = now
             )
             itemQueries.findByTarget(
                 targetType = FavoriteTargetType.TagManga.name,
@@ -469,7 +469,7 @@ class LocalFavoriteRepositoryImpl(
                 }
         }
 
-        itemQueries.touchFavoriteItem(currentTimeMillis(), itemId)
+        itemQueries.markFavoriteStatusUpdated(currentTimeMillis(), itemId)
         cleanupOrphanItems(listOf(itemId))
     }
 
@@ -512,7 +512,7 @@ class LocalFavoriteRepositoryImpl(
                         crossRefQueries.insertCrossRef(itemId, collectionId, now)
                     }
 
-                itemQueries.touchFavoriteItem(now, itemId)
+                itemQueries.markFavoriteStatusUpdated(now, itemId)
             }
         }
         cleanupOrphanItems(itemIds.toList())
@@ -545,7 +545,7 @@ class LocalFavoriteRepositoryImpl(
                     }
                 }
 
-                itemQueries.touchFavoriteItem(now, itemId)
+                itemQueries.markFavoriteStatusUpdated(now, itemId)
             }
         }
     }
@@ -564,7 +564,7 @@ class LocalFavoriteRepositoryImpl(
         db.transaction {
             itemIds.forEach { itemId ->
                 itemCategoryCrossRefQueries.deleteByItemIdAndCategoryId(itemId, categoryId)
-                itemQueries.touchFavoriteItem(now, itemId)
+                itemQueries.markFavoriteStatusUpdated(now, itemId)
             }
         }
         cleanupOrphanItems(itemIds.toList())
@@ -578,7 +578,7 @@ class LocalFavoriteRepositoryImpl(
                 collectionIds.forEach { collectionId ->
                     crossRefQueries.deleteByItemIdAndCollectionId(itemId, collectionId)
                 }
-                itemQueries.touchFavoriteItem(now, itemId)
+                itemQueries.markFavoriteStatusUpdated(now, itemId)
             }
         }
         cleanupOrphanItems(itemIds.toList())
@@ -628,7 +628,7 @@ class LocalFavoriteRepositoryImpl(
                 forumId = forumId?.value?.toLong(),
                 forumName = forumName,
                 authorId = storedAuthorId,
-                updatedAt = now,
+                lastFavoriteStatusUpdateAt = now,
                 id = existing.id
             )
             existing.id
@@ -643,7 +643,7 @@ class LocalFavoriteRepositoryImpl(
                 forumName = forumName,
                 authorId = storedAuthorId,
                 createdAt = now,
-                updatedAt = now
+                lastFavoriteStatusUpdateAt = now
             )
             itemQueries.findByTarget(
                 targetType = targetType.name,
@@ -779,7 +779,7 @@ class LocalFavoriteRepositoryImpl(
             forumName = forumName,
             authorId = authorId.takeIf { it != 0L }?.toInt()?.let(::UserId),
             createdAt = createdAt,
-            updatedAt = updatedAt
+            lastFavoriteStatusUpdateAt = lastFavoriteStatusUpdateAt
         )
     }
 }

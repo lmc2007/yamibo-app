@@ -49,7 +49,7 @@ private fun SignWebViewScreen(
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val scope = rememberCoroutineScope()
-    var handledSignPage by remember(semiAutomatic) { mutableStateOf(false) }
+    var handledResolvedSignPage by remember(semiAutomatic) { mutableStateOf(false) }
     var handledMaintenancePage by remember(semiAutomatic) { mutableStateOf(false) }
     var autoSignStarted by remember(semiAutomatic) { mutableStateOf(false) }
 
@@ -59,19 +59,20 @@ private fun SignWebViewScreen(
         useBackIcon = true,
         captureHtml = true,
         onHtmlAvailable = { _, html ->
-            signRepository.cacheObservedHtml(html)
+            val pageInfo = signRepository.cacheObservedHtml(html)
             if (semiAutomatic && !handledMaintenancePage && isMaintenancePageHtml(html)) {
                 handledMaintenancePage = true
                 onMaintenanceObserved()
                 navigator.pop()
                 return@PlatformWebViewScreen
             }
-            if (!handledSignPage && isSignPageHtml(html)) {
-                handledSignPage = true
+            if (!handledResolvedSignPage && pageInfo != null) {
+                handledResolvedSignPage = true
                 if (semiAutomatic && !autoSignStarted) {
                     autoSignStarted = true
                     scope.launch {
                         authRepository.syncCookieFromWebView()
+                        /** This when feeds the semi-automatic WebView flow back into the caller callbacks/navigation. */
                         when (val result = signRepository.runAutoSign(allowRepair)) {
                             is YamiboResult.Success -> {
                                 onSemiAutoCompleted(result)

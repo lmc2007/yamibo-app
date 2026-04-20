@@ -1,8 +1,6 @@
 package me.thenano.yamibo.yamibo_app.util
 
 import coil3.PlatformContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIApplication
 import platform.UIKit.UIViewController

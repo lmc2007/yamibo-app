@@ -103,12 +103,12 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
     var containerRootTop by remember { mutableFloatStateOf(0f) }
 
     suspend fun reloadCollections() {
-        if (workingCategoryId != 0L) {
-            collections = withContext(Dispatchers.Default) {
+        collections = if (workingCategoryId != 0L) {
+            withContext(Dispatchers.Default) {
                 favoriteRepository.getCollections(workingCategoryId)
             }
         } else {
-            collections = emptyList()
+            emptyList()
         }
     }
 

@@ -75,7 +75,6 @@ fun HtmlRenderer(html: String, tid: ThreadId? = null, modifier: Modifier = Modif
 }
 
 @Composable
-@Suppress("AssignedValueIsNeverRead")
 private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
     val colors = YamiboTheme.colors
     val uriHandler = LocalUriHandler.current
@@ -84,7 +83,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
-    val clipboardManager = LocalClipboardManager.current
+    @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val isDarkTheme = (colors.creamBackground.red + colors.creamBackground.green + colors.creamBackground.blue) < 1.5f
 
     val adjustAnnotatedString: @Composable (AnnotatedString) -> AnnotatedString = { input ->
@@ -147,7 +146,6 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
 
                                             // 2. Manual detection for this specific link tap/long press
                                             val longPressTimeout = viewConfiguration.longPressTimeoutMillis
-                                            var isLongPress = false
 
                                             // Manual wait for up or timeout
                                             val upOrNull = withTimeoutOrNull(longPressTimeout) {
@@ -155,8 +153,6 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                             }
 
                                             if (upOrNull == null) {
-                                                // Long press detected (timeout)
-                                                isLongPress = true
                                                 val link =
                                                     adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
                                                         .firstOrNull()
