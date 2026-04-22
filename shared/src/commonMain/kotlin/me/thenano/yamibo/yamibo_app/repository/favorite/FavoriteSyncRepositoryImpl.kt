@@ -47,12 +47,6 @@ class FavoriteSyncRepositoryImpl(
     override val state: StateFlow<FavoriteSyncState> = stateFlow.asStateFlow()
 
     init {
-        val now = currentTimeMillis()
-        taskQueries.markRunningTasksInterrupted(
-            updatedAt = now,
-            elapsedDurationMs = 0L,
-            message = "上次同步在 App 關閉時中斷，可重新同步。",
-        )
         stateFlow.value = taskQueries
             .getLatestRecoverable()
             .executeAsOneOrNull()
@@ -129,6 +123,13 @@ class FavoriteSyncRepositoryImpl(
         val snapshot = taskQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
         if (snapshot.status == FavoriteSyncStatus.RUNNING) {
             interruptRun(snapshot, "同步已取消。")
+        }
+    }
+
+    override suspend fun markRunInterrupted(runId: String, reason: String) {
+        val snapshot = taskQueries.getByRunId(runId).executeAsOneOrNull()?.toSnapshot() ?: return
+        if (snapshot.status == FavoriteSyncStatus.RUNNING) {
+            interruptRun(snapshot, reason)
         }
     }
 

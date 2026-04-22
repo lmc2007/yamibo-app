@@ -1,22 +1,31 @@
 package me.thenano.yamibo.yamibo_app
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidAppForegroundTracker
+import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -29,11 +38,24 @@ import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L
 
+    override fun onStart() {
+        super.onStart()
+        AndroidAppForegroundTracker.markForeground(true)
+    }
+
+    override fun onStop() {
+        AndroidAppForegroundTracker.markForeground(false)
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
             val context = LocalContext.current
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+            ) { }
 
             /** Navigator Logic */
             val navigator = remember { ComposableNavigator() }
@@ -88,7 +110,9 @@ class MainActivity : ComponentActivity() {
                     threadRepository = threadRepository,
                 )
             }
-            val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
+            val backgroundTaskRepository = remember { AndroidBackgroundTaskRepository(context) }
+            val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
+            val backgroundAccessRepository = remember { AndroidBackgroundAccessRepository(context) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
             val signRepository = remember { AndroidSignRepository(dbFactory, authRepository, appSettingsRepository) }
@@ -105,6 +129,7 @@ class MainActivity : ComponentActivity() {
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
+                LocalBackgroundAccessRepository provides backgroundAccessRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
                 LocalSignRepository provides signRepository,
@@ -128,9 +153,20 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 
-                androidx.compose.runtime.LaunchedEffect(Unit) {
+                LaunchedEffect(Unit) {
                     if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
                         diskCacheFactory.clearAllCache()
+                    }
+                }
+                LaunchedEffect(Unit) {
+                    if (
+                        android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                 }
 

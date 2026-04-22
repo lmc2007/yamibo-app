@@ -49,9 +49,47 @@ private fun SignWebViewScreen(
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val scope = rememberCoroutineScope()
-    var handledResolvedSignPage by remember(semiAutomatic) { mutableStateOf(false) }
     var handledMaintenancePage by remember(semiAutomatic) { mutableStateOf(false) }
     var autoSignStarted by remember(semiAutomatic) { mutableStateOf(false) }
+    var checkingPageReady by remember(semiAutomatic) { mutableStateOf(false) }
+
+    fun maybeStartSemiAutoSign() {
+        if (!semiAutomatic || autoSignStarted || checkingPageReady) return
+        authRepository.syncCookieFromWebView()
+        checkingPageReady = true
+        scope.launch {
+            /** This when confirms the current WebView page is really past Cloudflare before auto-sign starts. */
+            when (val pageInfoResult = signRepository.fetchPageInfo()) {
+                is YamiboResult.Success -> {
+                    autoSignStarted = true
+                    checkingPageReady = false
+                    /** This when feeds the semi-automatic WebView flow back into the caller callbacks/navigation. */
+                    when (val result = signRepository.runAutoSign(allowRepair)) {
+                        is YamiboResult.Success -> {
+                            onSemiAutoCompleted(result)
+                            navigator.pop()
+                        }
+                        is YamiboResult.Maintenance -> {
+                            onMaintenanceObserved()
+                            navigator.pop()
+                        }
+                        else -> {
+                            onSemiAutoCompleted(result)
+                            navigator.pop()
+                        }
+                    }
+                }
+                is YamiboResult.Maintenance -> {
+                    checkingPageReady = false
+                    onMaintenanceObserved()
+                    navigator.pop()
+                }
+                else -> {
+                    checkingPageReady = false
+                }
+            }
+        }
+    }
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Sign.build(),
@@ -59,38 +97,21 @@ private fun SignWebViewScreen(
         useBackIcon = true,
         captureHtml = true,
         onHtmlAvailable = { _, html ->
+            if (isCloudflareChallengeHtml(html)) {
+                return@PlatformWebViewScreen
+            }
             val pageInfo = signRepository.cacheObservedHtml(html)
+            val isResolvedResultPage = isSignResultPageHtml(html)
             if (semiAutomatic && !handledMaintenancePage && isMaintenancePageHtml(html)) {
                 handledMaintenancePage = true
                 onMaintenanceObserved()
                 navigator.pop()
                 return@PlatformWebViewScreen
             }
-            if (!handledResolvedSignPage && pageInfo != null) {
-                handledResolvedSignPage = true
-                if (semiAutomatic && !autoSignStarted) {
-                    autoSignStarted = true
-                    scope.launch {
-                        authRepository.syncCookieFromWebView()
-                        /** This when feeds the semi-automatic WebView flow back into the caller callbacks/navigation. */
-                        when (val result = signRepository.runAutoSign(allowRepair)) {
-                            is YamiboResult.Success -> {
-                                onSemiAutoCompleted(result)
-                                navigator.pop()
-                            }
-                            is YamiboResult.Maintenance -> {
-                                onMaintenanceObserved()
-                                navigator.pop()
-                            }
-                            else -> {
-                                onSemiAutoCompleted(result)
-                                navigator.pop()
-                            }
-                        }
-                    }
-                }
+            if (pageInfo != null || isResolvedResultPage) {
+                maybeStartSemiAutoSign()
             }
-            if (isSignResultPageHtml(html)) {
+            if (isResolvedResultPage) {
                 onResultObserved()
             }
         },

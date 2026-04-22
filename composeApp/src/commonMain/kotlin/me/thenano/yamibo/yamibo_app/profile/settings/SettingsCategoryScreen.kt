@@ -45,6 +45,7 @@ import me.thenano.yamibo.yamibo_app.favorite.IFavoriteCategoryManageScreen
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncStatusCard
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaReadingModeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.MangaTouchZoneSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelContentWidthSetting
@@ -116,7 +117,7 @@ internal fun SettingsCategoryScreen(category: String) {
                 "appearance" -> AppearanceContent()
                 "novel_reader" -> NovelReaderContent()
                 "manga_reader" -> MangaReaderContent()
-                "favorite" -> FavoriteSettingsContent()
+                "favorite" -> FavoriteSettingsContent(snackbarHostState)
                 "storage" -> StorageContent(snackbarHostState)
                 "sign" -> SignSettingsContent()
             }
@@ -179,7 +180,7 @@ private fun MangaReaderContent() {
 }
 
 @Composable
-private fun FavoriteSettingsContent() {
+private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -286,6 +287,14 @@ private fun FavoriteSettingsContent() {
     Spacer(Modifier.height(24.dp))
 
     SectionLabel("收藏同步偏好")
+    SettingsActionRow(
+        title = "通知與背景同步設定",
+        subtitle = "檢查通知權限、電池最佳化與背景同步所需的系統設定。",
+        onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
+    )
+
+    Spacer(Modifier.height(18.dp))
+
     SettingsToggleRow(
         title = "新增收藏時詢問同步",
         subtitle = "開啟後，新建收藏時會詢問是否同步到百合會。",
@@ -343,8 +352,15 @@ private fun FavoriteSettingsContent() {
             },
             onResume = {
                 coroutineScope.launch {
-                    val runId = favoriteSyncRunner.resumeInterruptedImport()
-                    if (runId != null) navigator.navigate(IFavoriteSyncProgressScreen(runId))
+                    when (val result = favoriteSyncRunner.resumeInterruptedImport()) {
+                        null -> Unit
+                        is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Started -> {
+                            navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
+                        }
+                        is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
+                            snackbarHostState.showSnackbar(result.reason)
+                        }
+                    }
                 }
             },
             onInterrupt = {

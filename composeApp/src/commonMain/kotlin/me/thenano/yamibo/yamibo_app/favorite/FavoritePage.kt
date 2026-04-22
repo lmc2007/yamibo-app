@@ -387,8 +387,15 @@ fun FavoritePage() {
                 },
                 onResumeSync = {
                     scope.launch {
-                        val runId = favoriteSyncRunner.resumeInterruptedImport()
-                        if (runId != null) navigator.navigate(IFavoriteSyncProgressScreen(runId))
+                        when (val result = favoriteSyncRunner.resumeInterruptedImport()) {
+                            null -> Unit
+                            is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Started -> {
+                                navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
+                            }
+                            is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
+                                showSnackbarMessage(result.reason)
+                            }
+                        }
                     }
                 },
                 onInterruptSync = {
@@ -580,8 +587,14 @@ fun FavoritePage() {
             onConfirm = { categoryId ->
                 showSyncCategoryDialog = false
                 scope.launch {
-                    val runId = favoriteSyncRunner.startImport(categoryId)
-                    navigator.navigate(IFavoriteSyncProgressScreen(runId))
+                    when (val result = favoriteSyncRunner.startImport(categoryId)) {
+                        is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Started -> {
+                            navigator.navigate(IFavoriteSyncProgressScreen(result.runId))
+                        }
+                        is me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner.LaunchResult.Rejected -> {
+                            showSnackbarMessage(result.reason)
+                        }
+                    }
                 }
             },
             onSelect = { syncTargetCategoryId = it },
@@ -955,7 +968,3 @@ private fun currentSyncRunId(state: FavoriteSyncState): String? {
         is FavoriteSyncState.Completed -> state.snapshot.runId
     }
 }
-
-
-
-

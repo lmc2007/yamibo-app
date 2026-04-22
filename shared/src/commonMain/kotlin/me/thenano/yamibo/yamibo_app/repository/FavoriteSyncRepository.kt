@@ -74,6 +74,7 @@ interface FavoriteSyncRepository {
     suspend fun resumeInterruptedRun(): String?
     suspend fun cancelUiAttachment(runId: String)
     suspend fun interruptRun(runId: String)
+    suspend fun markRunInterrupted(runId: String, reason: String)
     suspend fun getLatestSnapshot(): FavoriteSyncSnapshot?
     suspend fun runImport(runId: String)
     suspend fun syncLocalFavoriteItem(itemId: Long): FavoriteSyncActionResult

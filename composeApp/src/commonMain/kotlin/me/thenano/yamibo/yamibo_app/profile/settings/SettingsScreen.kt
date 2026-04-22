@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsItem
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
@@ -91,6 +92,14 @@ internal fun SettingsScreen() {
                 title = "收藏管理",
                 subtitle = "管理類別、整理排序與收藏互動設定",
                 onClick = { navigator.navigate(ISettingsCategoryScreen("favorite")) },
+            )
+            SettingsDivider()
+
+            SettingsItem(
+                icon = YamiboIcons.Sync,
+                title = "通知與背景同步",
+                subtitle = "檢查通知權限、電池最佳化與背景同步所需設定",
+                onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
             )
             SettingsDivider()
 

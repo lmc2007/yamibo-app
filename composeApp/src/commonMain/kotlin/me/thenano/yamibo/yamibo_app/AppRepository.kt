@@ -12,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
+import me.thenano.yamibo.yamibo_app.profile.settings.access.BackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
@@ -37,6 +38,9 @@ val LocalFavoriteSyncRepository =
 
 val LocalFavoriteSyncRunner =
     compositionLocalOf<FavoriteSyncRunner> { error("LocalFavoriteSyncRunner not provided") }
+
+val LocalBackgroundAccessRepository =
+    compositionLocalOf<BackgroundAccessRepository> { error("LocalBackgroundAccessRepository not provided") }
 
 val LocalThemeRepository =
     compositionLocalOf<ThemeRepository> { error("LocalThemeRepository not provided") }

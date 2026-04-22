@@ -8,8 +8,10 @@ import androidx.compose.ui.window.ComposeUIViewController
 import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
+import me.thenano.yamibo.yamibo_app.favorite.sync.IOSBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -60,7 +62,9 @@ fun MainViewController() = ComposeUIViewController {
             threadRepository = threadRepository,
         )
     }
-    val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository) }
+    val backgroundTaskRepository = remember { IOSBackgroundTaskRepository(favoriteSyncRepository) }
+    val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
+    val backgroundAccessRepository = remember { IOSBackgroundAccessRepository() }
     val novelCacheRepository = remember { IOSNovelThreadCacheRepository(diskCacheFactory) }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
     val signRepository = remember { IOSSignRepository(dbFactory, authRepository, appSettingsRepository) }
@@ -77,6 +81,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,
         LocalFavoriteSyncRunner provides favoriteSyncRunner,
+        LocalBackgroundAccessRepository provides backgroundAccessRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalSignRepository provides signRepository,
