@@ -37,10 +37,14 @@ class ComposableNavigator(start: Navigatable = IMainScreen()) {
         stack[stack.lastIndex] = navigatable
     }
 
-    fun pop(): Boolean {
+    fun dispatchBack(): Boolean {
         for (handler in backHandlers.reversed()) {
             if (handler()) return true
         }
+        return pop()
+    }
+
+    fun pop(): Boolean {
         if (stack.size <= 1) return false
         if (poppingIndex.intValue >= 0) return false // already popping
         lastAction = NavAction.Pop

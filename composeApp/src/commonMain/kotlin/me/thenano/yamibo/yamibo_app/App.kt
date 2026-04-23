@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.zIndex
 import coil3.ImageLoader
 import coil3.compose.setSingletonImageLoaderFactory
+import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -28,6 +29,11 @@ fun HomeScreenContent() {
 fun App() {
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)
+            .memoryCache {
+                MemoryCache.Builder()
+                    .maxSizePercent(context, 0.35)
+                    .build()
+            }
             .components {
                 add(KtorNetworkFetcherFactory())
             }

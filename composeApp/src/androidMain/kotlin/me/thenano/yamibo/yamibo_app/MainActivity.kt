@@ -61,7 +61,7 @@ class MainActivity : ComponentActivity() {
             val navigator = remember { ComposableNavigator() }
             onBackPressedDispatcher.addCallback(this) {
                 val exitInterval = 2000L // 2 seconds
-                if (navigator.pop()) return@addCallback
+                if (navigator.dispatchBack()) return@addCallback
 
                 val now = System.currentTimeMillis()
                 if (now - lastBackTime < exitInterval) {

@@ -51,18 +51,18 @@ private fun SignWebViewScreen(
     val scope = rememberCoroutineScope()
     var handledMaintenancePage by remember(semiAutomatic) { mutableStateOf(false) }
     var autoSignStarted by remember(semiAutomatic) { mutableStateOf(false) }
-    var checkingPageReady by remember(semiAutomatic) { mutableStateOf(false) }
+    var autoSignChecking by remember(semiAutomatic) { mutableStateOf(false) }
 
     fun maybeStartSemiAutoSign() {
-        if (!semiAutomatic || autoSignStarted || checkingPageReady) return
+        if (!semiAutomatic || autoSignStarted || autoSignChecking) return
         authRepository.syncCookieFromWebView()
-        checkingPageReady = true
+        autoSignChecking = true
         scope.launch {
             /** This when confirms the current WebView page is really past Cloudflare before auto-sign starts. */
             when (val pageInfoResult = signRepository.fetchPageInfo()) {
                 is YamiboResult.Success -> {
                     autoSignStarted = true
-                    checkingPageReady = false
+                    autoSignChecking = false
                     /** This when feeds the semi-automatic WebView flow back into the caller callbacks/navigation. */
                     when (val result = signRepository.runAutoSign(allowRepair)) {
                         is YamiboResult.Success -> {
@@ -80,12 +80,12 @@ private fun SignWebViewScreen(
                     }
                 }
                 is YamiboResult.Maintenance -> {
-                    checkingPageReady = false
+                    autoSignChecking = false
                     onMaintenanceObserved()
                     navigator.pop()
                 }
                 else -> {
-                    checkingPageReady = false
+                    autoSignChecking = false
                 }
             }
         }
@@ -96,6 +96,11 @@ private fun SignWebViewScreen(
         initialTitle = "每日簽到",
         useBackIcon = true,
         captureHtml = true,
+        onPageFinished = { currentUrl ->
+            if (currentUrl.contains("plugin.php?id=zqlj_sign")) {
+                maybeStartSemiAutoSign()
+            }
+        },
         onHtmlAvailable = { _, html ->
             if (isCloudflareChallengeHtml(html)) {
                 return@PlatformWebViewScreen

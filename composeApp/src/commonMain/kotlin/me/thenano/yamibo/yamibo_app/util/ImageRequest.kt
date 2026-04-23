@@ -8,6 +8,8 @@ import coil3.network.httpHeaders
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
 import coil3.request.crossfade
+import coil3.size.Precision
+import coil3.size.precision
 import io.github.littlesurvival.YamiboRoute
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 
@@ -25,6 +27,9 @@ fun rememberImageRequest(url: String, retryKey: Int = 0, enableCrossfade: Boolea
     return remember(fullUrl, cookie, retryKey, enableCrossfade) {
         val builder = ImageRequest.Builder(context)
             .data(fullUrl)
+            .memoryCacheKey(fullUrl)
+            .diskCacheKey(fullUrl)
+            .precision(Precision.INEXACT)
             .httpHeaders(
                 NetworkHeaders.Builder().apply {
                     if (isYamiboDomain) {

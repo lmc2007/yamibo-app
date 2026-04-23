@@ -17,7 +17,7 @@ class AndroidCookieStore(
 
     @SuppressLint("UseKtx")
     override fun save(value: String) {
-        prefs.edit().putString(key, value).apply()
+        prefs.edit().putString(key, value).commit()
     }
 
     override fun load(): String? {
@@ -26,6 +26,6 @@ class AndroidCookieStore(
 
     @SuppressLint("UseKtx")
     override fun clear() {
-        prefs.edit().clear().apply()
+        prefs.edit().clear().commit()
     }
 }
