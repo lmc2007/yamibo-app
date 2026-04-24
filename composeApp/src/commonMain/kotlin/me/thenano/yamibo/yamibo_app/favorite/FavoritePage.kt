@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -27,10 +28,17 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
+import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
+import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
@@ -80,14 +88,37 @@ sealed interface FavoriteGridEntry {
     data class Item(val value: FavoriteItem) : FavoriteGridEntry { override val key = "item_${value.id}" }
 }
 
-class IFavoriteCategoryManageScreen : Navigatable {
+@Serializable
+private data class FavoriteCategoryEditorRestorePayload(
+    val categoryId: Long? = null,
+)
+
+class IFavoriteCategoryManageScreen : RestorableNavigatable {
     override val id = buildId()
+    override val restoreDecoder = Decoder
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = emptyRestoreSnapshot(restoreDecoder)
     @Composable override fun Content() { FavoriteCategoryManageScreen() }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<IFavoriteCategoryManageScreen>(IFavoriteCategoryManageScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable = IFavoriteCategoryManageScreen()
+    }
 }
 
-class IFavoriteCategoryEditorScreen(private val categoryId: Long? = null) : Navigatable {
+class IFavoriteCategoryEditorScreen(val categoryId: Long? = null) : RestorableNavigatable {
     override val id = buildId(categoryId ?: "new")
+    override val restoreDecoder = Decoder
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
+        decoder = restoreDecoder,
+        payload = FavoriteCategoryEditorRestorePayload(categoryId = categoryId),
+    )
     @Composable override fun Content() { FavoriteCategoryEditorScreen(categoryId) }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<IFavoriteCategoryEditorScreen>(IFavoriteCategoryEditorScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable {
+            val data = decodeRestorePayload<FavoriteCategoryEditorRestorePayload>(payload)
+            return IFavoriteCategoryEditorScreen(categoryId = data.categoryId)
+        }
+    }
 }
 
 @Composable
@@ -488,9 +519,10 @@ fun FavoritePage() {
             )
         }
 
-        SnackbarHost(hostState = snackbarHostState, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)) { data ->
-            Snackbar(snackbarData = data, containerColor = colors.brownDeep, contentColor = Color.White, shape = RoundedCornerShape(12.dp))
-        }
+        YamiboSnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
+        )
     }
 
     if (showMoveDialog) {

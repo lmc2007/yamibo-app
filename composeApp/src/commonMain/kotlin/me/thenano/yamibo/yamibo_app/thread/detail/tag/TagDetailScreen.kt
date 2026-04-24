@@ -39,6 +39,7 @@ import me.thenano.yamibo.yamibo_app.favorite.removeFavoriteWithSync
 import me.thenano.yamibo.yamibo_app.favorite.saveFavorite
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
@@ -293,17 +294,7 @@ internal fun TagDetailScreen(
     Scaffold(
         containerColor = colors.creamBackground,
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = colors.brownDeep,
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            )
+            YamiboSnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
             TagDetailTopBar(

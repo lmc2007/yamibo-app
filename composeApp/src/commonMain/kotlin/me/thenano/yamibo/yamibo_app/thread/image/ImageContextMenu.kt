@@ -6,6 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,10 +32,15 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
  * Long-press context menu for images.
  * Shows Copy, Share, Save actions.
  */
+expect fun imageContextMenuDialogProperties(): DialogProperties
+
+private val MenuScrimColor = Color.Black.copy(alpha = 0.08f)
+
 @Composable
 fun ImageContextMenu(
     visible: Boolean,
     imageUrl: String,
+    onSetAsCover: ((String) -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     isBottomSheet: Boolean = false
@@ -47,7 +55,7 @@ fun ImageContextMenu(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
+                    .background(MenuScrimColor)
                     .clickable(
                         indication = null,
                         interactionSource = null
@@ -62,6 +70,7 @@ fun ImageContextMenu(
                 ) {
                     ContextMenuContainer(
                         imageUrl = imageUrl,
+                        onSetAsCover = onSetAsCover,
                         onDismiss = onDismiss,
                         isBottomSheet = true
                     )
@@ -72,25 +81,23 @@ fun ImageContextMenu(
         if (visible) {
             Dialog(
                 onDismissRequest = onDismiss,
-                properties = DialogProperties(
-                    usePlatformDefaultWidth = false,
-                    dismissOnBackPress = true,
-                    dismissOnClickOutside = true
-                )
+                properties = imageContextMenuDialogProperties()
             ) {
                 Box(
                     modifier = modifier
                         .fillMaxSize()
+                        .background(MenuScrimColor)
                         .clickable(
                             indication = null,
                             interactionSource = null
                         ) { onDismiss() },
-                    contentAlignment = Alignment.Center
+                    contentAlignment = Alignment.BottomCenter
                 ) {
                     ContextMenuContainer(
                         imageUrl = imageUrl,
+                        onSetAsCover = onSetAsCover,
                         onDismiss = onDismiss,
-                        isBottomSheet = false
+                        isBottomSheet = true
                     )
                 }
             }
@@ -101,6 +108,7 @@ fun ImageContextMenu(
 @Composable
 private fun ContextMenuContainer(
     imageUrl: String,
+    onSetAsCover: ((String) -> Unit)?,
     onDismiss: () -> Unit,
     isBottomSheet: Boolean
 ) {
@@ -115,47 +123,122 @@ private fun ContextMenuContainer(
     Surface(
         color = colors.brownDeep,
         shape = if (isBottomSheet) RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp) else RoundedCornerShape(16.dp),
-        modifier = if (isBottomSheet) Modifier.fillMaxWidth() else Modifier.wrapContentWidth().padding(32.dp)
+        modifier = if (isBottomSheet) {
+            Modifier
+                .fillMaxWidth()
+                .clickable(
+                    indication = null,
+                    interactionSource = null
+                ) {}
+        } else {
+            Modifier
+                .wrapContentWidth()
+                .padding(32.dp)
+                .clickable(
+                    indication = null,
+                    interactionSource = null
+                ) {}
+        }
     ) {
-        Row(
-            modifier = if (isBottomSheet) {
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 20.dp)
-            } else {
-                Modifier.padding(horizontal = 24.dp, vertical = 16.dp)
-            },
-            horizontalArrangement = if (isBottomSheet) Arrangement.SpaceEvenly else Arrangement.spacedBy(24.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ContextMenuItem(
-                icon = YamiboIcons.Copy,
-                label = "複製",
-                onClick = {
-                    scope.launch {
-                        copyImageToClipboard(context, imageUrl, cookie, referer)
-                        onDismiss()
+        if (isBottomSheet) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ContextMenuItem(
+                        icon = YamiboIcons.Copy,
+                        label = "複製",
+                        onClick = {
+                            scope.launch {
+                                copyImageToClipboard(context, imageUrl, cookie, referer)
+                                onDismiss()
+                            }
+                        }
+                    )
+                    ContextMenuItem(
+                        icon = YamiboIcons.Share,
+                        label = "分享",
+                        onClick = {
+                            scope.launch {
+                                shareImageToApp(context, imageUrl, cookie, referer)
+                                onDismiss()
+                            }
+                        }
+                    )
+                    ContextMenuItem(
+                        icon = YamiboIcons.Save,
+                        label = "儲存",
+                        onClick = {
+                            scope.launch {
+                                saveImageToGallery(context, imageUrl, cookie, referer)
+                                onDismiss()
+                            }
+                        }
+                    )
+                    if (onSetAsCover != null) {
+                        ContextMenuItem(
+                            icon = YamiboIcons.StarOutline,
+                            label = "設為封面",
+                            onClick = {
+                                onSetAsCover(imageUrl)
+                                onDismiss()
+                            }
+                        )
                     }
                 }
-            )
-            ContextMenuItem(
-                icon = YamiboIcons.Share,
-                label = "分享",
-                onClick = {
-                    scope.launch {
-                        shareImageToApp(context, imageUrl, cookie, referer)
-                        onDismiss()
+                Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)))
+            }
+        } else {
+            Row(
+                modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ContextMenuItem(
+                    icon = YamiboIcons.Copy,
+                    label = "複製",
+                    onClick = {
+                        scope.launch {
+                            copyImageToClipboard(context, imageUrl, cookie, referer)
+                            onDismiss()
+                        }
                     }
-                }
-            )
-            ContextMenuItem(
-                icon = YamiboIcons.Save,
-                label = "儲存",
-                onClick = {
-                    scope.launch {
-                        saveImageToGallery(context, imageUrl, cookie, referer)
-                        onDismiss()
+                )
+                ContextMenuItem(
+                    icon = YamiboIcons.Share,
+                    label = "分享",
+                    onClick = {
+                        scope.launch {
+                            shareImageToApp(context, imageUrl, cookie, referer)
+                            onDismiss()
+                        }
                     }
+                )
+                ContextMenuItem(
+                    icon = YamiboIcons.Save,
+                    label = "儲存",
+                    onClick = {
+                        scope.launch {
+                            saveImageToGallery(context, imageUrl, cookie, referer)
+                            onDismiss()
+                        }
+                    }
+                )
+                if (onSetAsCover != null) {
+                    ContextMenuItem(
+                        icon = YamiboIcons.StarOutline,
+                        label = "設為封面",
+                        onClick = {
+                            onSetAsCover(imageUrl)
+                            onDismiss()
+                        }
+                    )
                 }
-            )
+            }
         }
     }
 }

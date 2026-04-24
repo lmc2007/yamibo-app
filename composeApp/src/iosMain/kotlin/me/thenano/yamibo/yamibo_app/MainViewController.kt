@@ -9,8 +9,8 @@ import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.sync.IOSBackgroundTaskRepository
-import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
@@ -23,7 +23,7 @@ import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
 
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */
-    val navigator = remember { ComposableNavigator() }
+    val navigator = rememberRestorableNavigator()
 
     /** Store Logic */
     val cookieStore = remember { IOSCookieStore() }

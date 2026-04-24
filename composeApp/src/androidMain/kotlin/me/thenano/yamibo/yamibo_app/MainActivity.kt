@@ -9,6 +9,7 @@ import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.DisposableEffect
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,8 +24,8 @@ import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidAppForegroundTracker
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
-import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
@@ -58,22 +59,25 @@ class MainActivity : ComponentActivity() {
             ) { }
 
             /** Navigator Logic */
-            val navigator = remember { ComposableNavigator() }
-            onBackPressedDispatcher.addCallback(this) {
-                val exitInterval = 2000L // 2 seconds
-                if (navigator.dispatchBack()) return@addCallback
+            val navigator = rememberRestorableNavigator()
+            DisposableEffect(navigator) {
+                val callback = onBackPressedDispatcher.addCallback(this@MainActivity) {
+                    val exitInterval = 2000L // 2 seconds
+                    if (navigator.dispatchBack()) return@addCallback
 
-                val now = System.currentTimeMillis()
-                if (now - lastBackTime < exitInterval) {
-                    Logger.i(
-                        "AndroidBackHandler",
-                        "Double Tapped(Interval=${now - lastBackTime}) , Exit."
-                    )
-                    finish()
-                } else {
-                    lastBackTime = now
-                    Toast.makeText(this@MainActivity, "再按一次退出應用", Toast.LENGTH_SHORT).show()
+                    val now = System.currentTimeMillis()
+                    if (now - lastBackTime < exitInterval) {
+                        Logger.i(
+                            "AndroidBackHandler",
+                            "Double Tapped(Interval=${now - lastBackTime}) , Exit."
+                        )
+                        finish()
+                    } else {
+                        lastBackTime = now
+                        Toast.makeText(this@MainActivity, "再按一次退出應用", Toast.LENGTH_SHORT).show()
+                    }
                 }
+                onDispose { callback.remove() }
             }
             /** Store Logic */
             val cookieStore = remember { AndroidCookieStore(context) }

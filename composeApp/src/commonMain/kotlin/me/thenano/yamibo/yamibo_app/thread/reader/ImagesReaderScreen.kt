@@ -51,6 +51,7 @@ import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
@@ -1087,7 +1088,7 @@ fun ImagesReaderScreen(
         )
 
         // Snackbar
-        SnackbarHost(
+        YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)

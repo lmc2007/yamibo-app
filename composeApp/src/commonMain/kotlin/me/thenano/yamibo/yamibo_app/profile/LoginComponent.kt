@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.serialization.Serializable
 import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
@@ -35,17 +36,31 @@ import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
+import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
-class ILoginScreen : Navigatable {
-    override val id: String = buildId(Any().hashCode())
+@Serializable
+private data object LoginScreenRestorePayload
+
+class ILoginScreen : RestorableNavigatable {
+    override val id: String = buildId("login")
+    override val restoreDecoder = Decoder
+
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = emptyRestoreSnapshot(restoreDecoder)
 
     @Composable
     override fun Content() {
         LoginScreen()
+    }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<ILoginScreen>(ILoginScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable = ILoginScreen()
     }
 }
 

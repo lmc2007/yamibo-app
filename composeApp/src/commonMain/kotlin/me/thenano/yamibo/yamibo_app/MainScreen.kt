@@ -22,10 +22,16 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.Navigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
+import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
+import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
@@ -37,12 +43,30 @@ enum class MainTab(val title: String, val icon: ImageVector) {
     Profile("我的", YamiboIcons.Profile)
 }
 
-class IMainScreen(private val initialTab: MainTab = MainTab.Home) : Navigatable {
+@Serializable
+private data class MainScreenRestorePayload(
+    val initialTabName: String = MainTab.Home.name,
+)
+
+class IMainScreen(val initialTab: MainTab = MainTab.Home) : RestorableNavigatable {
     override val id = buildId(initialTab.name)
+    override val restoreDecoder = Decoder
+
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
+        decoder = restoreDecoder,
+        payload = MainScreenRestorePayload(initialTabName = initialTab.name),
+    )
 
     @Composable
     override fun Content() {
         MainScreen(initialTab)
+    }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<IMainScreen>(IMainScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable {
+            val data = decodeRestorePayload<MainScreenRestorePayload>(payload)
+            return IMainScreen(initialTab = MainTab.valueOf(data.initialTabName))
+        }
     }
 }
 

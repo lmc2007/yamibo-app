@@ -35,6 +35,7 @@ import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.forum.components.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -97,17 +98,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = colors.brownDeep,
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            )
+            YamiboSnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
             /** Sticky top bar: back + forum name (always visible) */

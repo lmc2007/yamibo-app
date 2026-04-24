@@ -17,6 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.serialization.Serializable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -24,20 +25,42 @@ import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.navigation.Navigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
+import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
+import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.*
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import kotlin.time.Duration.Companion.milliseconds
 
+@Serializable
+private data class FavoriteSyncProgressRestorePayload(
+    val runId: String,
+)
+
 class IFavoriteSyncProgressScreen(
-    private val runId: String,
-) : Navigatable {
+    val runId: String,
+) : RestorableNavigatable {
     override val id = buildId(runId)
+    override val restoreDecoder = Decoder
+
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
+        decoder = restoreDecoder,
+        payload = FavoriteSyncProgressRestorePayload(runId = runId),
+    )
 
     @Composable
     override fun Content() {
         FavoriteSyncProgressScreen(runId)
+    }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<IFavoriteSyncProgressScreen>(IFavoriteSyncProgressScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable {
+            val data = decodeRestorePayload<FavoriteSyncProgressRestorePayload>(payload)
+            return IFavoriteSyncProgressScreen(runId = data.runId)
+        }
     }
 }
 

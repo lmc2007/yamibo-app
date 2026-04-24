@@ -4,12 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderBottomBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderOverlayTopBar
@@ -39,6 +40,7 @@ internal fun ReaderOverlayMenu(
     onMangaReader: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    DebugRecomposeProbe("ReaderOverlayMenu", "visible=$visible")
     Box(modifier = modifier.fillMaxSize()) {
         // Animated top bar
         ReaderOverlayTopBar(
@@ -71,7 +73,7 @@ internal fun ReaderOverlayMenu(
             onShare = onShare,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
-        SnackbarHost(
+        YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)

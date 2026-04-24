@@ -41,41 +41,122 @@ import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
+import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
 
-@Composable
-fun HtmlRenderer(html: String, tid: ThreadId? = null, modifier: Modifier = Modifier) {
-    val rawBlocks = remember(html) { HtmlParser.parseHtml(html) }
-    // Filter out whitespace-only Text blocks that sit between images (produce extra blank lines)
-    val blocks = remember(rawBlocks) {
-        rawBlocks.filterIndexed { index, block ->
-            if (block is HtmlBlock.Text) {
-                val content = block.annotatedString.text.trim()
-                if (content.isEmpty()) {
-                    // Remove blank Text blocks that are sandwiched between or adjacent to Image blocks
-                    val prev = rawBlocks.getOrNull(index - 1)
-                    val next = rawBlocks.getOrNull(index + 1)
-                    val adjacentVisualBlock =
-                        prev is HtmlBlock.Image || next is HtmlBlock.Image ||
-                            prev is HtmlBlock.Attachment || next is HtmlBlock.Attachment
-                    return@filterIndexed !adjacentVisualBlock
-                }
-            }
-            true
-        }
-    }
-    SelectionContainer {
-        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-            blocks.forEach { block ->
-                HtmlBlockRenderer(block, tid)
+internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
+    return rawBlocks.filterIndexed { index, block ->
+        if (block is HtmlBlock.Text) {
+            val content = block.annotatedString.text.trim()
+            if (content.isEmpty()) {
+                val prev = rawBlocks.getOrNull(index - 1)
+                val next = rawBlocks.getOrNull(index + 1)
+                val adjacentVisualBlock =
+                    prev is HtmlBlock.Image || next is HtmlBlock.Image ||
+                        prev is HtmlBlock.Attachment || next is HtmlBlock.Attachment
+                return@filterIndexed !adjacentVisualBlock
             }
         }
+        true
     }
 }
 
 @Composable
-private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
+fun HtmlRenderer(
+    html: String,
+    tid: ThreadId? = null,
+    modifier: Modifier = Modifier,
+    onImageSuccess: ((String) -> Unit)? = null,
+    onImageError: ((String, String) -> Unit)? = null,
+    onImageReload: ((String) -> Unit)? = null,
+    imageErrorMessageFor: ((String) -> String?)? = null,
+    imageRetryKeyFor: ((String) -> Int)? = null,
+    imageCachedHeightFor: ((String) -> Int?)? = null,
+    imagePlaceholderAspectRatioFor: ((String) -> Float?)? = null,
+    onImageHeightChanged: ((String, Int) -> Unit)? = null,
+    onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
+) {
+    DebugRecomposeProbe("HtmlRenderer", html.hashCode().toString())
+    val rawBlocks = remember(html) { HtmlParser.parseHtml(html) }
+    val blocks = remember(rawBlocks) { normalizeHtmlBlocks(rawBlocks) }
+    HtmlBlocksRenderer(
+        blocks = blocks,
+        tid = tid,
+        modifier = modifier,
+        onImageSuccess = onImageSuccess,
+        onImageError = onImageError,
+        onImageReload = onImageReload,
+        imageErrorMessageFor = imageErrorMessageFor,
+        imageRetryKeyFor = imageRetryKeyFor,
+        imageCachedHeightFor = imageCachedHeightFor,
+        imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+        onImageHeightChanged = onImageHeightChanged,
+        onImageAspectRatioChanged = onImageAspectRatioChanged,
+    )
+}
+
+@Composable
+fun HtmlBlocksRenderer(
+    blocks: List<HtmlBlock>,
+    tid: ThreadId? = null,
+    modifier: Modifier = Modifier,
+    onImageSuccess: ((String) -> Unit)? = null,
+    onImageError: ((String, String) -> Unit)? = null,
+    onImageReload: ((String) -> Unit)? = null,
+    imageErrorMessageFor: ((String) -> String?)? = null,
+    imageRetryKeyFor: ((String) -> Int)? = null,
+    imageCachedHeightFor: ((String) -> Int?)? = null,
+    imagePlaceholderAspectRatioFor: ((String) -> Float?)? = null,
+    onImageHeightChanged: ((String, Int) -> Unit)? = null,
+    onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
+) {
+    val hasSelectableText = remember(blocks) {
+        blocks.any { it is HtmlBlock.Text }
+    }
+    val content: @Composable () -> Unit = {
+        Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            blocks.forEach { block ->
+                HtmlBlockRenderer(
+                    block = block,
+                    tid = tid,
+                    onImageSuccess = onImageSuccess,
+                    onImageError = onImageError,
+                    onImageReload = onImageReload,
+                    imageErrorMessageFor = imageErrorMessageFor,
+                    imageRetryKeyFor = imageRetryKeyFor,
+                    imageCachedHeightFor = imageCachedHeightFor,
+                    imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                    onImageHeightChanged = onImageHeightChanged,
+                    onImageAspectRatioChanged = onImageAspectRatioChanged,
+                )
+            }
+        }
+    }
+    if (hasSelectableText) {
+        SelectionContainer {
+            content()
+        }
+    } else {
+        content()
+    }
+}
+
+@Composable
+private fun HtmlBlockRenderer(
+    block: HtmlBlock,
+    tid: ThreadId? = null,
+    onImageSuccess: ((String) -> Unit)? = null,
+    onImageError: ((String, String) -> Unit)? = null,
+    onImageReload: ((String) -> Unit)? = null,
+    imageErrorMessageFor: ((String) -> String?)? = null,
+    imageRetryKeyFor: ((String) -> Int)? = null,
+    imageCachedHeightFor: ((String) -> Int?)? = null,
+    imagePlaceholderAspectRatioFor: ((String) -> Float?)? = null,
+    onImageHeightChanged: ((String, Int) -> Unit)? = null,
+    onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
+) {
+    DebugRecomposeProbe("HtmlBlockRenderer", "${block::class.simpleName}:${block.hashCode()}")
     val colors = YamiboTheme.colors
     val uriHandler = LocalUriHandler.current
     val navigator = LocalNavigator.current
@@ -115,6 +196,68 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
             var showLongPressMenu by remember { mutableStateOf<Pair<String, String>?>(null) }
             val layoutResult = remember { mutableStateOf<TextLayoutResult?>(null) }
             val adjustedAnnotatedString = adjustAnnotatedString(block.annotatedString)
+            val hasLinks = remember(adjustedAnnotatedString) {
+                adjustedAnnotatedString.getStringAnnotations("URL", 0, adjustedAnnotatedString.length).isNotEmpty()
+            }
+            val textModifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 0.dp)
+                .then(
+                    if (hasLinks) {
+                        Modifier.pointerInput(adjustedAnnotatedString) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    // 1. Initial Pass: Intercept 'down' on links to disable global selection
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    val down = event.changes.firstOrNull { it.changedToDown() }
+
+                                    if (down != null) {
+                                        val layout = layoutResult.value
+                                        if (layout != null) {
+                                            val offset = layout.getOffsetForPosition(down.position)
+                                            val hasLink = adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
+                                                .isNotEmpty()
+                                            if (hasLink) {
+                                                // Consume down in Initial pass -> Parents/Selection internal won't see it (prevents selection)
+                                                down.consume()
+
+                                                // 2. Manual detection for this specific link tap/long press
+                                                val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+
+                                                // Manual wait for up or timeout
+                                                val upOrNull = withTimeoutOrNull(longPressTimeout) {
+                                                    waitForUpOrCancellation()
+                                                }
+
+                                                if (upOrNull == null) {
+                                                    val link =
+                                                        adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
+                                                            .firstOrNull()
+                                                    if (link != null) {
+                                                        showLongPressMenu = link.item to adjustedAnnotatedString.substring(
+                                                            link.start,
+                                                            link.end
+                                                        )
+                                                        // Consume all movement until release
+                                                        while (true) {
+                                                            val moveEvent = awaitPointerEvent()
+                                                            moveEvent.changes.forEach { it.consume() }
+                                                            if (moveEvent.changes.none { it.pressed }) break
+                                                        }
+                                                    }
+                                                } else {
+                                                    // Fast tap (up before timeout) - Do nothing to avoid mis-clicks
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
 
             Text(
                 text = adjustedAnnotatedString,
@@ -124,59 +267,7 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     lineHeight = (fontSize * lineSpacing).sp,
                     textAlign = block.textAlign
                 ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 0.dp)
-                    .pointerInput(adjustedAnnotatedString) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                // 1. Initial Pass: Intercept 'down' on links to disable global selection
-                                val event = awaitPointerEvent(PointerEventPass.Initial)
-                                val down = event.changes.firstOrNull { it.changedToDown() }
-
-                                if (down != null) {
-                                    val layout = layoutResult.value
-                                    if (layout != null) {
-                                        val offset = layout.getOffsetForPosition(down.position)
-                                        val hasLink = adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
-                                            .isNotEmpty()
-                                        if (hasLink) {
-                                            // Consume down in Initial pass -> Parents/Selection internal won't see it (prevents selection)
-                                            down.consume()
-
-                                            // 2. Manual detection for this specific link tap/long press
-                                            val longPressTimeout = viewConfiguration.longPressTimeoutMillis
-
-                                            // Manual wait for up or timeout
-                                            val upOrNull = withTimeoutOrNull(longPressTimeout) {
-                                                waitForUpOrCancellation()
-                                            }
-
-                                            if (upOrNull == null) {
-                                                val link =
-                                                    adjustedAnnotatedString.getStringAnnotations("URL", offset, offset)
-                                                        .firstOrNull()
-                                                if (link != null) {
-                                                    showLongPressMenu = link.item to adjustedAnnotatedString.substring(
-                                                        link.start,
-                                                        link.end
-                                                    )
-                                                    // Consume all movement until release
-                                                    while (true) {
-                                                        val moveEvent = awaitPointerEvent()
-                                                        moveEvent.changes.forEach { it.consume() }
-                                                        if (moveEvent.changes.none { it.pressed }) break
-                                                    }
-                                                }
-                                            } else {
-                                                // Fast tap (up before timeout) - Do nothing to avoid mis-clicks
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    },
+                modifier = textModifier,
                 onTextLayout = { layoutResult.value = it }
             )
 
@@ -260,7 +351,17 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                     .padding(vertical = 1.dp),
                 contentScale = ContentScale.FillWidth,
                 enableContextMenu = true,
-                isDarkTheme = false
+                isDarkTheme = false,
+                enableCrossfade = false,
+                onSuccess = onImageSuccess,
+                onError = onImageError,
+                blockedErrorMessage = imageErrorMessageFor?.invoke(url),
+                externalRetryKey = imageRetryKeyFor?.invoke(url) ?: 0,
+                onReload = { onImageReload?.invoke(url) },
+                cachedHeightPx = imageCachedHeightFor?.invoke(url),
+                placeholderAspectRatio = imagePlaceholderAspectRatioFor?.invoke(url),
+                onRenderedHeightChanged = { heightPx -> onImageHeightChanged?.invoke(url, heightPx) },
+                onRenderedAspectRatioChanged = { ratio -> onImageAspectRatioChanged?.invoke(url, ratio) },
             )
         }
 
@@ -456,7 +557,21 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                 Modifier.padding(bottom = 12.dp),
                                 color = colors.brownPrimary.copy(alpha = 0.1f)
                             )
-                            block.contentBlocks.forEach { HtmlBlockRenderer(it, tid) }
+                            block.contentBlocks.forEach {
+                                HtmlBlockRenderer(
+                                    block = it,
+                                    tid = tid,
+                                    onImageSuccess = onImageSuccess,
+                                    onImageError = onImageError,
+                                    onImageReload = onImageReload,
+                                    imageErrorMessageFor = imageErrorMessageFor,
+                                    imageRetryKeyFor = imageRetryKeyFor,
+                                    imageCachedHeightFor = imageCachedHeightFor,
+                                    imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                                    onImageHeightChanged = onImageHeightChanged,
+                                    onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                )
+                            }
                         }
                     }
                 }
@@ -493,7 +608,21 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
-                    block.contentBlocks.forEach { HtmlBlockRenderer(it, tid) }
+                    block.contentBlocks.forEach {
+                        HtmlBlockRenderer(
+                            block = it,
+                            tid = tid,
+                            onImageSuccess = onImageSuccess,
+                            onImageError = onImageError,
+                            onImageReload = onImageReload,
+                            imageErrorMessageFor = imageErrorMessageFor,
+                            imageRetryKeyFor = imageRetryKeyFor,
+                            imageCachedHeightFor = imageCachedHeightFor,
+                            imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                            onImageHeightChanged = onImageHeightChanged,
+                            onImageAspectRatioChanged = onImageAspectRatioChanged,
+                        )
+                    }
                 }
             }
         }
@@ -513,7 +642,21 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                         .background(colors.brownPrimary)
                 )
                 Column(modifier = Modifier.padding(12.dp)) {
-                    block.contentBlocks.forEach { HtmlBlockRenderer(it) }
+                    block.contentBlocks.forEach {
+                        HtmlBlockRenderer(
+                            block = it,
+                            tid = tid,
+                            onImageSuccess = onImageSuccess,
+                            onImageError = onImageError,
+                            onImageReload = onImageReload,
+                            imageErrorMessageFor = imageErrorMessageFor,
+                            imageRetryKeyFor = imageRetryKeyFor,
+                            imageCachedHeightFor = imageCachedHeightFor,
+                            imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                            onImageHeightChanged = onImageHeightChanged,
+                            onImageAspectRatioChanged = onImageAspectRatioChanged,
+                        )
+                    }
                 }
             }
         }
@@ -588,7 +731,19 @@ private fun HtmlBlockRenderer(block: HtmlBlock, tid: ThreadId? = null) {
                                                                 )
                                                             )
                                                         }
-                                                        else -> HtmlBlockRenderer(innerBlock, tid)
+                                                        else -> HtmlBlockRenderer(
+                                                            block = innerBlock,
+                                                            tid = tid,
+                                                            onImageSuccess = onImageSuccess,
+                                                            onImageError = onImageError,
+                                                            onImageReload = onImageReload,
+                                                            imageErrorMessageFor = imageErrorMessageFor,
+                                                            imageRetryKeyFor = imageRetryKeyFor,
+                                                            imageCachedHeightFor = imageCachedHeightFor,
+                                                            imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                                                            onImageHeightChanged = onImageHeightChanged,
+                                                            onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                                        )
                                                     }
                                                 }
                                             }

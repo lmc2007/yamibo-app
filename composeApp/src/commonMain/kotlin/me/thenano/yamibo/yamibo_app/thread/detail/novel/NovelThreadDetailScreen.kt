@@ -28,6 +28,7 @@ import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.*
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -233,17 +234,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = colors.brownDeep,
-                        contentColor = Color.White,
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            )
+            YamiboSnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
             ThreadTopBar(

@@ -67,6 +67,7 @@ import me.thenano.yamibo.yamibo_app.favorite.components.reorderedList
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as FavoriteRepositoryContract
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCollection
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 private val EditorRowHeight = 78.dp
@@ -182,14 +183,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
     Scaffold(
         containerColor = colors.creamBackground,
         snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    containerColor = colors.brownDeep,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(12.dp),
-                )
-            }
+            YamiboSnackbarHost(snackbarHostState)
         },
         topBar = {
             TopAppBar(

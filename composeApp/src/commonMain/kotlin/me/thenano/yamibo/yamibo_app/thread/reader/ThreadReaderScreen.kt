@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
@@ -25,8 +26,10 @@ import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.page.ThreadInfo
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.*
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
@@ -39,13 +42,21 @@ import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorCo
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCoverListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalReaderOverlayVisible
+import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
+import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
 import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlParser
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.normalizeHtmlBlocks
 import me.thenano.yamibo.yamibo_app.thread.reader.components.tag.ITagListScreen
+import me.thenano.yamibo.yamibo_app.util.buildImageRequest
+import me.thenano.yamibo.yamibo_app.util.normalizeImageUrl
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.util.time.epochMillisOrNull
@@ -59,7 +70,76 @@ internal sealed interface ReaderState {
     data class Error(val message: String) : ReaderState
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private enum class ReaderEntryKind {
+    WholePost,
+    SegmentedHeader,
+    SegmentedBody,
+    SegmentedFooter,
+    RegularTagBanner,
+    NovelTagBanner,
+    NovelCommentBanner,
+    Separator,
+}
+
+private data class ReaderBodySegment(
+    val blocks: List<HtmlBlock>,
+    val anchorBlockId: String?,
+    val anchorBlockType: String?,
+)
+
+private data class ReaderListEntry(
+    val key: String,
+    val contentType: String,
+    val kind: ReaderEntryKind,
+    val post: Post,
+    val postIndex: Int,
+    val bodyBlocks: List<HtmlBlock> = emptyList(),
+    val anchorBlockId: String? = null,
+    val anchorBlockType: String? = null,
+) {
+    val isScrollAnchor: Boolean
+        get() = kind == ReaderEntryKind.WholePost || kind == ReaderEntryKind.SegmentedBody
+}
+
+private fun buildReaderBodySegments(post: Post): List<ReaderBodySegment>? {
+    if (post.images.size < 6) return null
+
+    val blocks = normalizeHtmlBlocks(HtmlParser.parseHtml(post.contentHtml))
+    if (blocks.none { it is HtmlBlock.Image }) return null
+
+    val segments = mutableListOf<ReaderBodySegment>()
+    val currentBlocks = mutableListOf<HtmlBlock>()
+
+    fun flushCurrentBlocks() {
+        if (currentBlocks.isEmpty()) return
+        val firstBlock = currentBlocks.first()
+        segments += ReaderBodySegment(
+            blocks = currentBlocks.toList(),
+            anchorBlockId = firstBlock.anchorId.takeIf { it.isNotBlank() },
+            anchorBlockType = if (currentBlocks.size == 1) firstBlock::class.simpleName else "Mixed",
+        )
+        currentBlocks.clear()
+    }
+
+    blocks.forEach { block ->
+        if (block is HtmlBlock.Image) {
+            flushCurrentBlocks()
+            segments += ReaderBodySegment(
+                blocks = listOf(block),
+                anchorBlockId = block.anchorId.takeIf { it.isNotBlank() },
+                anchorBlockType = "Image",
+            )
+        } else {
+            currentBlocks += block
+        }
+    }
+    flushCurrentBlocks()
+
+    val imageSegmentCount = segments.count { it.anchorBlockType == "Image" }
+    return if (imageSegmentCount >= 6 && segments.size > 2) segments else null
+}
+
+@OptIn(ExperimentalMaterial3Api::class, FlowPreview::class)
 @Composable
 internal fun ThreadReaderScreen(
     tid: ThreadId,
@@ -69,6 +149,7 @@ internal fun ThreadReaderScreen(
     initialPage: Int = 1,
     targetPid: PostId? = null
 ) {
+    DebugRecomposeProbe("ThreadReaderScreen", tid.value.toString())
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
@@ -83,6 +164,9 @@ internal fun ThreadReaderScreen(
 
     var state by remember { mutableStateOf<ReaderState>(ReaderState.Loading) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
+    var postIndexByPid by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var pageByPid by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var pageIndexBounds by remember { mutableStateOf<Map<Int, IntRange>>(emptyMap()) }
     var threadInfo by remember { mutableStateOf<ThreadInfo?>(null) }
     var loadedPages by remember { mutableStateOf(setOf<Int>()) }
     var currentPageFetching by remember { mutableStateOf(1) }
@@ -90,6 +174,15 @@ internal fun ThreadReaderScreen(
     var isLoadingNextPage by remember { mutableStateOf(false) }
 
     val loadedPostsByPage = remember { mutableStateMapOf<Int, List<Post>>() }
+    val postHeightCache = remember(tid) { mutableStateMapOf<Long, Int>() }
+    val imageHeightCache = remember(tid) { mutableStateMapOf<String, Int>() }
+    val imageAspectRatioCache = remember(tid) { mutableStateMapOf<String, Float>() }
+    val pendingPostHeights = remember(tid) { mutableStateMapOf<Long, Int>() }
+    val loadedImageUrlsByPost = remember(tid) { mutableStateMapOf<Long, Set<String>>() }
+    val prefetchedImageUrls = remember(tid) { hashSetOf<String>() }
+    val failedAutoLoadPages = remember(tid) { mutableStateMapOf<Int, String>() }
+    val failedImageMessages = remember(tid) { mutableStateMapOf<String, String>() }
+    val imageRetryKeys = remember(tid) { mutableStateMapOf<String, Int>() }
 
     var showMenu by remember { mutableStateOf(false) }
     var showSettingsPanel by remember { mutableStateOf(false) }
@@ -98,12 +191,11 @@ internal fun ThreadReaderScreen(
     val authRepo = LocalAuthRepository.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    /** Debounced save job reference */
-    var saveJob by remember { mutableStateOf<Job?>(null) }
     var hasRestoredPosition by remember { mutableStateOf(false) }
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
+    var manualCoverUrlOverride by remember(tid) { mutableStateOf<String?>(null) }
     var showFavoriteDialog by remember { mutableStateOf(false) }
     var favoriteDialogCategories by remember {
         mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
@@ -122,48 +214,34 @@ internal fun ThreadReaderScreen(
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
     
-    LaunchedEffect(loadedPostsByPage[1], threadInfo) {
-        val fid = threadInfo?.forum?.fid
-        val isMangaThread = fid?.let { YamiboForum.isMangaForum(it) } == true
+    fun resolveValidCoverUrl(rawUrl: String?): String? {
+        if (
+            rawUrl == null ||
+            rawUrl.contains("none.gif") ||
+            rawUrl.contains("smiley/") ||
+            rawUrl.contains("face")
+        ) {
+            return null
+        }
+        return if (rawUrl.startsWith("http")) rawUrl else "${YamiboRoute.Domain.build()}$rawUrl"
+    }
 
-        // Find the posts on the first page
+    LaunchedEffect(loadedPostsByPage[1], manualCoverUrlOverride) {
+        if (manualCoverUrlOverride != null) {
+            coverUrl = manualCoverUrlOverride
+            return@LaunchedEffect
+        }
+
         val firstPagePosts = loadedPostsByPage[1]
         if (firstPagePosts == null) {
             coverUrl = null
             return@LaunchedEffect
         }
 
-        // Use the author from the very first post of the thread
-        val threadAuthorId = firstPagePosts.firstOrNull()?.author?.uid
-        if (threadAuthorId == null) {
-            coverUrl = null
-            return@LaunchedEffect
-        }
-
-        // Get posts by the thread author on the first page
-        val authorPosts = firstPagePosts.filter { it.author.uid == threadAuthorId }
-
-        val attachedImageUrl = if (isMangaThread) {
-            val candidateImages = authorPosts.take(2).flatMap { it.images }
-            candidateImages.getOrNull(1)?.url ?: candidateImages.getOrNull(0)?.url
-        } else {
-            authorPosts.firstOrNull()?.images?.firstOrNull()?.url
-        }
-
-        if (
-            attachedImageUrl == null ||
-            attachedImageUrl.contains("none.gif") ||
-            attachedImageUrl.contains("smiley/") ||
-            attachedImageUrl.contains("face")
-        ) {
-            coverUrl = null
-            return@LaunchedEffect
-        }
-
-        coverUrl = if (attachedImageUrl.startsWith("http")) attachedImageUrl else "${YamiboRoute.Domain.build()}$attachedImageUrl"
+        coverUrl = resolveValidCoverUrl(firstPagePosts.firstOrNull()?.images?.firstOrNull()?.url)
     }
 
-    fun favoriteTarget(): FavoriteTargetPayload.Thread {
+    fun favoriteTarget(coverOverride: String? = coverUrl): FavoriteTargetPayload.Thread {
         val currentTitle = threadInfo?.title ?: title
         val firstPost = loadedPostsByPage[1]?.firstOrNull { it.floor == 1 } ?: posts.firstOrNull { it.floor == 1 }
         return FavoriteTargetPayload.Thread(
@@ -171,7 +249,7 @@ internal fun ThreadReaderScreen(
             title = currentTitle,
             threadType = threadType,
             authorId = authorId,
-            coverUrl = coverUrl,
+            coverUrl = coverOverride,
             lastUpdatedTime = firstPost?.lastEditedTime?.epochMillisOrNull() ?: firstPost?.timeCreate?.epochMillisOrNull(),
             forumId = threadInfo?.forum?.fid,
             forumName = threadInfo?.forum?.name,
@@ -332,16 +410,258 @@ internal fun ThreadReaderScreen(
     }
 
     fun rebuildPosts() {
-        val allPostsMutable = mutableListOf<Post>()
-        loadedPostsByPage.keys.sorted().forEach { p ->
-            allPostsMutable.addAll(loadedPostsByPage[p]!!)
+        val mergedPosts = mutableListOf<Post>()
+        val pageByPidMutable = mutableMapOf<Long, Int>()
+        val pageIndexBoundsMutable = mutableMapOf<Int, IntRange>()
+
+        loadedPostsByPage.keys.sorted().forEach { page ->
+            val startIndex = mergedPosts.size
+            loadedPostsByPage[page].orEmpty().forEach { post ->
+                val pid = post.pid.value.toLong()
+                if (pageByPidMutable.containsKey(pid)) return@forEach
+                pageByPidMutable[pid] = page
+                mergedPosts += post
+            }
+
+            val endIndex = mergedPosts.lastIndex
+            if (endIndex >= startIndex) {
+                pageIndexBoundsMutable[page] = startIndex..endIndex
+            }
         }
-        posts = allPostsMutable.distinctBy { it.pid }.sortedBy { it.floor }
+
+        posts = mergedPosts
+        postIndexByPid = mergedPosts.mapIndexed { index, post -> post.pid.value.toLong() to index }.toMap()
+        pageByPid = pageByPidMutable
+        pageIndexBounds = pageIndexBoundsMutable
+    }
+
+    val expectedImageUrlsByPost = remember(posts) {
+        posts.associate { post ->
+            post.pid.value.toLong() to post.images
+                .asSequence()
+                .map { normalizeImageUrl(it.url) }
+                .toSet()
+        }
+    }
+    val forumId = threadInfo?.forum?.fid
+    val isMangaForum = forumId?.let { YamiboForum.isMangaForum(it) } == true
+    val isNovelForum = forumId?.let { YamiboForum.isNovelForum(it) } == true
+    val showRegularFirstPostTagBanner = isMangaForum || (!isNovelForum && !isNovelThread)
+    val showNovelFirstPostTagBanner = isNovelThread && isNovelForum
+    val segmentedBodyByPostId = remember(posts) {
+        posts.associate { post ->
+            post.pid.value.toLong() to buildReaderBodySegments(post)
+        }
+    }
+    val readerEntries = remember(
+        posts,
+        segmentedBodyByPostId,
+        pageByPid,
+        isNovelThread,
+        showRegularFirstPostTagBanner,
+        showNovelFirstPostTagBanner,
+    ) {
+        buildList {
+            posts.forEachIndexed { index, post ->
+                val postId = post.pid.value.toLong()
+                val postPage = pageByPid[postId] ?: 1
+                val segmentedBody = segmentedBodyByPostId[postId]
+
+                if (segmentedBody.isNullOrEmpty()) {
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId",
+                            contentType = "thread_post",
+                            kind = ReaderEntryKind.WholePost,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                } else {
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId-header",
+                            contentType = "thread_post_header",
+                            kind = ReaderEntryKind.SegmentedHeader,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                    segmentedBody.forEachIndexed { segmentIndex, segment ->
+                        add(
+                            ReaderListEntry(
+                                key = "post-$postId-segment-$segmentIndex",
+                                contentType = if (segment.anchorBlockType == "Image") "thread_post_image_segment" else "thread_post_text_segment",
+                                kind = ReaderEntryKind.SegmentedBody,
+                                post = post,
+                                postIndex = index,
+                                bodyBlocks = segment.blocks,
+                                anchorBlockId = segment.anchorBlockId,
+                                anchorBlockType = segment.anchorBlockType,
+                            )
+                        )
+                    }
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId-footer",
+                            contentType = "thread_post_footer",
+                            kind = ReaderEntryKind.SegmentedFooter,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                }
+
+                if (post.floor == 1 && postPage == 1 && showRegularFirstPostTagBanner) {
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId-regular-tag-banner",
+                            contentType = "thread_banner",
+                            kind = ReaderEntryKind.RegularTagBanner,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                }
+
+                if (isNovelThread) {
+                    if (post.floor == 1 && postPage == 1 && showNovelFirstPostTagBanner) {
+                        add(
+                            ReaderListEntry(
+                                key = "post-$postId-novel-tag-banner",
+                                contentType = "thread_banner",
+                                kind = ReaderEntryKind.NovelTagBanner,
+                                post = post,
+                                postIndex = index,
+                            )
+                        )
+                    }
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId-novel-comment-banner",
+                            contentType = "thread_banner",
+                            kind = ReaderEntryKind.NovelCommentBanner,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                }
+
+                if (index < posts.lastIndex) {
+                    add(
+                        ReaderListEntry(
+                            key = "post-$postId-separator",
+                            contentType = "thread_separator",
+                            kind = ReaderEntryKind.Separator,
+                            post = post,
+                            postIndex = index,
+                        )
+                    )
+                }
+            }
+        }
+    }
+    val entryIndexByPid = remember(readerEntries) {
+        buildMap<Long, Int> {
+            readerEntries.forEachIndexed { index, entry ->
+                val postId = entry.post.pid.value.toLong()
+                if (!containsKey(postId)) {
+                    put(postId, index)
+                }
+            }
+        }
+    }
+    val entryIndexByAnchorBlockId = remember(readerEntries) {
+        buildMap<String, Int> {
+            readerEntries.forEachIndexed { index, entry ->
+                entry.anchorBlockId?.let { anchorBlockId ->
+                    if (!containsKey(anchorBlockId)) {
+                        put(anchorBlockId, index)
+                    }
+                }
+            }
+        }
+    }
+
+    fun isPostHeightStable(postId: Long): Boolean {
+        val expectedImageUrls = expectedImageUrlsByPost[postId].orEmpty()
+        if (expectedImageUrls.isEmpty()) return true
+        return loadedImageUrlsByPost[postId].orEmpty().containsAll(expectedImageUrls)
+    }
+
+    fun commitPostHeightIfStable(postId: Long) {
+        val measuredHeight = pendingPostHeights[postId] ?: return
+        if (isPostHeightStable(postId)) {
+            postHeightCache[postId] = measuredHeight
+        }
+    }
+
+    fun handlePostHeightChanged(post: Post, heightPx: Int) {
+        val postId = post.pid.value.toLong()
+        pendingPostHeights[postId] = heightPx
+        commitPostHeightIfStable(postId)
+    }
+
+    fun handlePostImageSuccess(post: Post, imageUrl: String) {
+        val postId = post.pid.value.toLong()
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        failedImageMessages.remove(normalizedUrl)
+        val loadedImageUrls = loadedImageUrlsByPost[postId].orEmpty()
+        if (normalizedUrl !in loadedImageUrls) {
+            loadedImageUrlsByPost[postId] = loadedImageUrls + normalizedUrl
+        }
+        commitPostHeightIfStable(postId)
+    }
+
+    fun handlePostImageError(imageUrl: String, message: String) {
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        failedImageMessages[normalizedUrl] = message
+    }
+
+    fun handlePostImageReload(imageUrl: String) {
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        failedImageMessages.remove(normalizedUrl)
+        imageRetryKeys[normalizedUrl] = (imageRetryKeys[normalizedUrl] ?: 0) + 1
+    }
+
+    fun handleImageHeightChanged(imageUrl: String, heightPx: Int) {
+        if (heightPx <= 0) return
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        if (imageHeightCache[normalizedUrl] != heightPx) {
+            imageHeightCache[normalizedUrl] = heightPx
+        }
+    }
+
+    fun handleImageAspectRatioChanged(imageUrl: String, aspectRatio: Float) {
+        if (aspectRatio <= 0f || !aspectRatio.isFinite()) return
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        if (imageAspectRatioCache[normalizedUrl] != aspectRatio) {
+            imageAspectRatioCache[normalizedUrl] = aspectRatio
+        }
+    }
+
+    fun imagePlaceholderAspectRatioFor(post: Post, imageUrl: String): Float {
+        val normalizedUrl = normalizeImageUrl(imageUrl)
+        imageAspectRatioCache[normalizedUrl]?.let { return it }
+
+        val postRatios = expectedImageUrlsByPost[post.pid.value.toLong()]
+            .orEmpty()
+            .mapNotNull(imageAspectRatioCache::get)
+        if (postRatios.isNotEmpty()) {
+            return postRatios.average().toFloat().coerceIn(0.6f, 3.2f)
+        }
+
+        val threadRatios = imageAspectRatioCache.values.toList()
+        if (threadRatios.isNotEmpty()) {
+            return threadRatios.average().toFloat().coerceIn(0.6f, 3.2f)
+        }
+
+        return 1.35f
     }
 
     /** Build a reading history snapshot from current scroll state (does NOT save) */
     fun buildHistory(): ThreadReadingHistory? {
-        if (posts.isEmpty()) return null
+        if (posts.isEmpty() || readerEntries.isEmpty()) return null
         val layoutInfo = listState.layoutInfo
         val visibleItems = layoutInfo.visibleItemsInfo
         if (visibleItems.isEmpty()) return null
@@ -354,19 +674,29 @@ internal fun ThreadReaderScreen(
         val centerItem = visibleItems.firstOrNull { item ->
             item.offset <= viewportCenter && item.offset + item.size >= viewportCenter
         } ?: visibleItems.first()
+        val centerEntry = visibleItems
+            .mapNotNull { item ->
+                readerEntries.getOrNull(item.index)?.takeIf { it.isScrollAnchor }?.let { entry -> item to entry }
+            }
+            .minByOrNull { (item, _) ->
+                when {
+                    viewportCenter < item.offset -> item.offset - viewportCenter
+                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                    else -> 0
+                }
+            }
+            ?: return null
 
-        val centerPostIndex = centerItem.index.coerceIn(0, posts.lastIndex)
-        val centerPost = posts[centerPostIndex]
+        val centerItemInfo = centerEntry.first
+        val centerReaderEntry = centerEntry.second
+        val centerPost = centerReaderEntry.post
 
-        /** Calculate ratio within this post */
-        val postTop = centerItem.offset
-        val postSize = centerItem.size.coerceAtLeast(1)
-        val anchorPostRatio = ((viewportCenter - postTop).toFloat() / postSize.toFloat()).coerceIn(0f, 1f)
+        val itemTop = centerItemInfo.offset
+        val itemSize = centerItemInfo.size.coerceAtLeast(1)
+        val entryRatio = ((viewportCenter - itemTop).toFloat() / itemSize.toFloat()).coerceIn(0f, 1f)
 
         /** Find which page this post is on */
-        val postPage = loadedPostsByPage.entries
-            .firstOrNull { (_, pagePosts) -> pagePosts.any { it.pid == centerPost.pid } }
-            ?.key ?: initialPage
+        val postPage = pageByPid[centerPost.pid.value.toLong()] ?: initialPage
 
         val forumInfo = threadInfo?.forum
         val firstVisible = listState.firstVisibleItemIndex
@@ -387,10 +717,10 @@ internal fun ThreadReaderScreen(
             postId = centerPost.pid,
             postTitle = centerPost.title,
             anchorPostId = centerPost.pid.value.toLong(),
-            anchorPostRatio = anchorPostRatio,
-            anchorBlockId = null,
-            anchorBlockType = null,
-            anchorBlockRatio = null,
+            anchorPostRatio = if (centerReaderEntry.kind == ReaderEntryKind.WholePost) entryRatio else null,
+            anchorBlockId = centerReaderEntry.anchorBlockId,
+            anchorBlockType = centerReaderEntry.anchorBlockType,
+            anchorBlockRatio = if (centerReaderEntry.kind == ReaderEntryKind.SegmentedBody) entryRatio else null,
             globalScrollY = null,
             viewportHeight = (viewportBottom - viewportTop),
             firstVisibleItemIndex = firstVisible,
@@ -399,22 +729,29 @@ internal fun ThreadReaderScreen(
         )
     }
 
-    /** Debounced save - wait 2 seconds after scroll stops */
-    fun scheduleSave() {
-        saveJob?.cancel()
-        saveJob = scope.launch {
-            delay(2000.milliseconds)
-            val history = buildHistory() ?: return@launch
+    fun applySelectedCover(imageUrl: String) {
+        val resolvedCoverUrl = resolveValidCoverUrl(imageUrl) ?: return
+        manualCoverUrlOverride = resolvedCoverUrl
+        coverUrl = resolvedCoverUrl
+        scope.launch {
+            buildHistory()?.copy(threadCover = resolvedCoverUrl)?.let { history ->
+                try {
+                    readHistoryRepo.savePosition(history)
+                } catch (_: Exception) {
+                }
+            }
             try {
-                readHistoryRepo.savePosition(history)
+                favoriteRepository.syncFavoriteMetadata(favoriteTarget(coverOverride = resolvedCoverUrl))
             } catch (_: Exception) {
             }
+            snackbarHostState.showSnackbar("已設為封面")
         }
     }
 
-    suspend fun loadPage(page: Int, forceRefresh: Boolean = false) {
-        if (!forceRefresh && page in loadedPages) return
+    suspend fun loadPage(page: Int, forceRefresh: Boolean = false, autoTriggered: Boolean = false): Boolean {
+        if (!forceRefresh && page in loadedPages) return true
         isLoadingNextPage = true
+        var loadSucceeded = false
 
         fun loadFromCache(): Boolean {
             val cached = threadRepository.getCachedThread(tid, authorId, page)
@@ -424,6 +761,7 @@ internal fun ThreadReaderScreen(
                 threadInfo = cached.thread
                 totalPages = cached.pageNav?.totalPages ?: 1
                 loadedPages = loadedPages + page
+                failedAutoLoadPages.remove(page)
                 if (page == initialPage || page == 1) state = ReaderState.Success
                 return true
             }
@@ -435,16 +773,22 @@ internal fun ThreadReaderScreen(
             rebuildPosts()
             totalPages = result.value.pageNav?.totalPages ?: 1
             loadedPages = loadedPages + page
+            failedAutoLoadPages.remove(page)
             threadInfo = result.value.thread
             if (page == initialPage || page == 1) state = ReaderState.Success
         }
 
         if (forceRefresh) {
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> updatePage(result)
+                is YamiboResult.Success -> {
+                    updatePage(result)
+                    loadSucceeded = true
+                }
                 else -> {
                     snackbarHostState.showSnackbar("刷新失敗: ${result.message()}，嘗試讀取緩存")
-                    if (!loadFromCache() && (page == initialPage || page == 1)) {
+                    if (loadFromCache()) {
+                        loadSucceeded = true
+                    } else if (page == initialPage || page == 1) {
                         state = ReaderState.Error(result.message())
                     }
                 }
@@ -452,18 +796,25 @@ internal fun ThreadReaderScreen(
         } else {
             if (loadFromCache()) {
                 isLoadingNextPage = false
-                return
+                return true
             }
 
             when (val result = threadRepository.fetchThread(tid, authorId, page)) {
-                is YamiboResult.Success -> updatePage(result)
+                is YamiboResult.Success -> {
+                    updatePage(result)
+                    loadSucceeded = true
+                }
                 else -> {
+                    if (autoTriggered && page != initialPage && page != 1) {
+                        failedAutoLoadPages[page] = result.message()
+                    }
                     if (page == initialPage || page == 1) state = ReaderState.Error(result.message())
                     else snackbarHostState.showSnackbar("載入失敗: ${result.message()}")
                 }
             }
         }
         isLoadingNextPage = false
+        return loadSucceeded
     }
 
     suspend fun fallbackNearestPost(targetPidLong: Long, fallbackPage: Int) {
@@ -483,9 +834,11 @@ internal fun ThreadReaderScreen(
         val nearestIndex =
             posts.indices.minByOrNull { abs(posts[it].pid.value.toLong() - targetPidLong) } ?: -1
         if (nearestIndex >= 0) {
-            listState.scrollToItem(nearestIndex)
+            val nearestPost = posts[nearestIndex]
+            val entryIndex = entryIndexByPid[nearestPost.pid.value.toLong()] ?: nearestIndex
+            listState.scrollToItem(entryIndex)
             hasRestoredPosition = true
-            if (posts[nearestIndex].pid.value.toLong() != targetPidLong) {
+            if (nearestPost.pid.value.toLong() != targetPidLong) {
                 snackbarHostState.showSnackbar("找不到指定的樓層，已跳轉至最接近的樓層")
             }
         }
@@ -496,7 +849,7 @@ internal fun ThreadReaderScreen(
         loadPage(initialPage)
 
         if (targetPid != null && posts.isNotEmpty()) {
-            val targetIndex = posts.indexOfFirst { it.pid == targetPid }
+            val targetIndex = entryIndexByPid[targetPid.value.toLong()] ?: -1
             if (targetIndex >= 0) {
                 listState.scrollToItem(targetIndex)
                 hasRestoredPosition = true
@@ -510,6 +863,10 @@ internal fun ThreadReaderScreen(
             try {
                 val savedPosition = readHistoryRepo.getPosition(tid, threadType, authorId)
                 if (savedPosition != null) {
+                    savedPosition.threadCover?.let { savedCover ->
+                        manualCoverUrlOverride = savedCover
+                        coverUrl = savedCover
+                    }
                     // Ensure the saved page is loaded
                     if (savedPosition.page != initialPage) {
                         loadPage(savedPosition.page)
@@ -518,19 +875,28 @@ internal fun ThreadReaderScreen(
                     // Restore by firstVisibleItemIndex/offset (most reliable) if post matches
                     val savedIndex = savedPosition.firstVisibleItemIndex
                     val savedOffset = savedPosition.firstVisibleItemOffset
-                    if (savedIndex != null && savedIndex >= 0 && savedIndex < posts.size) {
-                        val postAtSavedIndex = posts[savedIndex]
-                        if (postAtSavedIndex.pid.value.toLong() == savedPosition.anchorPostId) {
+                    if (savedIndex != null && savedIndex >= 0 && savedIndex < readerEntries.size) {
+                        val entryAtSavedIndex = readerEntries[savedIndex]
+                        if (
+                            entryAtSavedIndex.post.pid.value.toLong() == savedPosition.anchorPostId &&
+                            (savedPosition.anchorBlockId == null || entryAtSavedIndex.anchorBlockId == savedPosition.anchorBlockId)
+                        ) {
                             listState.scrollToItem(savedIndex, savedOffset ?: 0)
+                            hasRestoredPosition = true
+                        }
+                    }
+
+                    if (!hasRestoredPosition && !savedPosition.anchorBlockId.isNullOrEmpty()) {
+                        val blockIndex = entryIndexByAnchorBlockId[savedPosition.anchorBlockId]
+                        if (blockIndex != null) {
+                            listState.scrollToItem(blockIndex)
                             hasRestoredPosition = true
                         }
                     }
 
                     // Fallback: restore by post ID
                     if (!hasRestoredPosition && savedPosition.anchorPostId > 0) {
-                        val postIndex = posts.indexOfFirst {
-                            it.pid.value.toLong() == savedPosition.anchorPostId
-                        }
+                        val postIndex = entryIndexByPid[savedPosition.anchorPostId] ?: -1
                         if (postIndex >= 0) {
                             listState.scrollToItem(postIndex)
                             hasRestoredPosition = true
@@ -549,34 +915,84 @@ internal fun ThreadReaderScreen(
     LaunchedEffect(listState, state) {
         if (state != ReaderState.Success) return@LaunchedEffect
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .collect { scheduleSave() }
+            .debounce(2000)
+            .collect {
+                val history = buildHistory() ?: return@collect
+                try {
+                    readHistoryRepo.savePosition(history)
+                } catch (_: Exception) {
+                }
+            }
+    }
+
+    LaunchedEffect(listState, state, posts, readerEntries, tid) {
+        if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
+
+        val imageLoader = SingletonImageLoader.get(platformContext)
+        val cookie = authRepo.cookieStore.load().orEmpty()
+        val preloadBehindCount = 2
+        val preloadAheadCount = 2
+
+        snapshotFlow {
+            val visiblePostIndices = listState.layoutInfo.visibleItemsInfo
+                .mapNotNull { item -> readerEntries.getOrNull(item.index)?.postIndex }
+                .distinct()
+            visiblePostIndices.minOrNull() to visiblePostIndices.maxOrNull()
+        }
+            .distinctUntilChanged()
+            .collect { (firstIndexOrNull, lastIndexOrNull) ->
+                val firstVisibleItemIndex = firstIndexOrNull ?: return@collect
+                val lastVisibleItemIndex = lastIndexOrNull ?: return@collect
+                val startIndex = (firstVisibleItemIndex - preloadBehindCount).coerceAtLeast(0)
+                val endIndex = (lastVisibleItemIndex + preloadAheadCount).coerceAtMost(posts.lastIndex)
+
+                if (startIndex > endIndex) return@collect
+
+                for (index in startIndex..endIndex) {
+                    val post = posts[index]
+                    expectedImageUrlsByPost[post.pid.value.toLong()].orEmpty().forEach { imageUrl ->
+                        if (imageUrl in failedImageMessages) return@forEach
+                        if (!prefetchedImageUrls.add(imageUrl)) return@forEach
+                        imageLoader.enqueue(
+                            buildImageRequest(
+                                context = platformContext,
+                                url = imageUrl,
+                                cookie = cookie,
+                                enableCrossfade = false,
+                            )
+                        )
+                    }
+                }
+            }
     }
 
     // Infinite scroll detection
-    LaunchedEffect(listState, state, isLoadingNextPage) {
-        snapshotFlow { listState.layoutInfo }
-            .collect { layoutInfo ->
+    LaunchedEffect(listState, state, isLoadingNextPage, readerEntries) {
+        val pagePreloadThreshold = 5
+        snapshotFlow {
+            val visiblePostIndices = listState.layoutInfo.visibleItemsInfo
+                .mapNotNull { item -> readerEntries.getOrNull(item.index)?.postIndex }
+                .distinct()
+            visiblePostIndices.minOrNull() to visiblePostIndices.maxOrNull()
+        }
+            .distinctUntilChanged()
+            .collect { (firstIndexOrNull, lastIndexOrNull) ->
                 if (state != ReaderState.Success || isLoadingNextPage) return@collect
 
-                val visibleItems = layoutInfo.visibleItemsInfo
-                if (visibleItems.isEmpty()) return@collect
-
-                val firstVisibleItemIndex = visibleItems.first().index
-                val lastVisibleItemIndex = visibleItems.last().index
+                val firstVisibleItemIndex = firstIndexOrNull ?: return@collect
+                val lastVisibleItemIndex = lastIndexOrNull ?: return@collect
 
                 // Detect if we are close to the beginning of the CURRENT loaded page block
                 val firstPost = posts.getOrNull(firstVisibleItemIndex)
                 if (firstPost != null) {
-                    val page =
-                        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == firstPost.pid } }?.key
-                            ?: 1
-                    val firstIndex =
-                        posts.indexOfFirst { p -> loadedPostsByPage[page]?.any { it.pid == p.pid } == true }
-                    if (firstVisibleItemIndex - firstIndex <= 5) {
+                    val page = pageByPid[firstPost.pid.value.toLong()] ?: 1
+                    val bounds = pageIndexBounds[page]
+                    if (bounds != null && firstVisibleItemIndex - bounds.first <= pagePreloadThreshold) {
                         val prevPage = page - 1
-                        if (prevPage >= 1 && prevPage !in loadedPages) {
+                        if (prevPage >= 1 && prevPage !in loadedPages && prevPage !in failedAutoLoadPages) {
                             currentPageFetching = prevPage
-                            scope.launch { loadPage(prevPage) }
+                            debugPerfLog("auto_preload_prev|page=$prevPage|first=$firstVisibleItemIndex|last=$lastVisibleItemIndex")
+                            scope.launch { loadPage(prevPage, autoTriggered = true) }
                             return@collect
                         }
                     }
@@ -585,15 +1001,14 @@ internal fun ThreadReaderScreen(
                 // Detect if we are close to the end of the CURRENT loaded page block
                 val lastPost = posts.getOrNull(lastVisibleItemIndex)
                 if (lastPost != null) {
-                    val page =
-                        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == lastPost.pid } }?.key
-                            ?: 1
-                    val lastIndex = posts.indexOfLast { p -> loadedPostsByPage[page]?.any { it.pid == p.pid } == true }
-                    if (lastIndex - lastVisibleItemIndex <= 5) {
+                    val page = pageByPid[lastPost.pid.value.toLong()] ?: 1
+                    val bounds = pageIndexBounds[page]
+                    if (bounds != null && bounds.last - lastVisibleItemIndex <= pagePreloadThreshold) {
                         val nextPage = page + 1
-                        if (nextPage <= totalPages && nextPage !in loadedPages) {
+                        if (nextPage <= totalPages && nextPage !in loadedPages && nextPage !in failedAutoLoadPages) {
                             currentPageFetching = nextPage
-                            scope.launch { loadPage(nextPage) }
+                            debugPerfLog("auto_preload_next|page=$nextPage|first=$firstVisibleItemIndex|last=$lastVisibleItemIndex")
+                            scope.launch { loadPage(nextPage, autoTriggered = true) }
                             return@collect
                         }
                     }
@@ -604,7 +1019,6 @@ internal fun ThreadReaderScreen(
     /** Save on leaving screen — use runBlocking since scope is already canceled */
     DisposableEffect(tid) {
         onDispose {
-            saveJob?.cancel()
             val history = buildHistory()
             if (history != null) {
                 runBlocking {
@@ -618,11 +1032,13 @@ internal fun ThreadReaderScreen(
     }
 
     val currentVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
-    val currentVisiblePost = posts.getOrNull(currentVisibleItemIndex)
-    val currentPage = currentVisiblePost?.let { p ->
-        loadedPostsByPage.entries.firstOrNull { (_, list) -> list.any { it.pid == p.pid } }?.key
-    } ?: initialPage
+    val currentVisiblePost = readerEntries.getOrNull(currentVisibleItemIndex)?.post
+    val currentPage = currentVisiblePost?.let { pageByPid[it.pid.value.toLong()] } ?: initialPage
     val currentPid = currentVisiblePost?.pid
+    val nextFailedAutoLoadPage = remember(loadedPages, failedAutoLoadPages, totalPages) {
+        val candidate = loadedPages.maxOrNull()?.plus(1) ?: return@remember null
+        if (candidate <= totalPages && candidate in failedAutoLoadPages) candidate else null
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -645,7 +1061,7 @@ internal fun ThreadReaderScreen(
                                     loadPage(page)
                                     delay(50.milliseconds) // Wait briefly for Compose to layout the new items
                                 }
-                                val targetIndex = posts.indexOfFirst { it.pid == post.pid }
+                                val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
                                 if (targetIndex >= 0) listState.scrollToItem(targetIndex)
                             } else {
                                 // User just clicked the page header to expand catalog, load the page, don't close drawer
@@ -685,7 +1101,8 @@ internal fun ThreadReaderScreen(
         CompositionLocalProvider(
             LocalReaderOverlayVisible provides showMenu,
             LocalImageClickListener provides { showMenu = !showMenu },
-            LocalImageDoubleClickListener provides handleImageDoubleTap
+            LocalImageDoubleClickListener provides handleImageDoubleTap,
+            LocalImageSetCoverListener provides ::applySelectedCover,
         ) {
             Box(
                 modifier = Modifier
@@ -700,6 +1117,7 @@ internal fun ThreadReaderScreen(
                                 val width = size.width
                                 if (x in (width / 3f)..(width * 2f / 3f)) {
                                     showMenu = !showMenu
+                                    debugPerfLog("toggle_overlay|showMenu=$showMenu")
                                 }
                             }
                         }
@@ -729,24 +1147,131 @@ internal fun ThreadReaderScreen(
                                 bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 40.dp
                             )
                         ) {
-                            itemsIndexed(posts, key = { _, post -> post.pid.value }) { index, post ->
-                                PostRenderer(
-                                    post = post,
-                                    threadTitle = title,
-                                    onVote = { optionIds -> handleVote(optionIds) },
-                                    onRate = { score, reason -> handleRate(post.pid, score, reason) },
-                                    onComment = { message -> handleComment(post.pid, message) },
-                                    onReply = { handleReply(post.pid) }
-                                )
+                            itemsIndexed(
+                                items = readerEntries,
+                                key = { _, entry -> entry.key },
+                                contentType = { _, entry -> entry.contentType }
+                            ) { _, entry ->
+                                val post = entry.post
+                                val postId = post.pid.value.toLong()
+                                val hasTrackedImages = expectedImageUrlsByPost[postId].orEmpty().isNotEmpty()
 
-                                // Tag Banner (Always shown in the first post of the first page, tags are fetched via API by TagListScreen)
-                                if (post.floor == 1 && currentPage == 1) {
-                                    val fid = threadInfo?.forum?.fid
-                                    val isManga = fid?.let { YamiboForum.isMangaForum(it) } == true
-                                    val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
+                                when (entry.kind) {
+                                    ReaderEntryKind.WholePost -> {
+                                        PostRenderer(
+                                            post = post,
+                                            threadTitle = if (post.floor == 1) title else null,
+                                            onVote = { optionIds -> handleVote(optionIds) },
+                                            onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                            onComment = { message -> handleComment(post.pid, message) },
+                                            onReply = { handleReply(post.pid) },
+                                            cachedHeightPx = if (hasTrackedImages) postHeightCache[postId] else null,
+                                            onHeightChanged = if (hasTrackedImages) {
+                                                { heightPx -> handlePostHeightChanged(post, heightPx) }
+                                            } else {
+                                                null
+                                            },
+                                            onImageSuccess = { imageUrl -> handlePostImageSuccess(post, imageUrl) },
+                                            onImageError = { imageUrl, message -> handlePostImageError(imageUrl, message) },
+                                            onImageReload = { imageUrl -> handlePostImageReload(imageUrl) },
+                                            imageErrorMessageFor = { imageUrl ->
+                                                failedImageMessages[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imageRetryKeyFor = { imageUrl ->
+                                                imageRetryKeys[normalizeImageUrl(imageUrl)] ?: 0
+                                            },
+                                            imageCachedHeightFor = { imageUrl ->
+                                                imageHeightCache[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imagePlaceholderAspectRatioFor = { imageUrl ->
+                                                imagePlaceholderAspectRatioFor(post, imageUrl)
+                                            },
+                                            onImageHeightChanged = { imageUrl, heightPx ->
+                                                handleImageHeightChanged(imageUrl, heightPx)
+                                            },
+                                            onImageAspectRatioChanged = { imageUrl, aspectRatio ->
+                                                handleImageAspectRatioChanged(imageUrl, aspectRatio)
+                                            },
+                                        )
+                                    }
 
-                                    // Manga forum / Other forum (non-novel, non-authorOnly): Place after PostRenderer
-                                    if (isManga || (!isNovel && !isNovelThread)) {
+                                    ReaderEntryKind.SegmentedHeader -> {
+                                        PostRenderer(
+                                            post = post,
+                                            threadTitle = if (post.floor == 1) title else null,
+                                            bodyBlocks = emptyList(),
+                                            showFooter = false,
+                                            onImageSuccess = { imageUrl -> handlePostImageSuccess(post, imageUrl) },
+                                            onImageError = { imageUrl, message -> handlePostImageError(imageUrl, message) },
+                                            onImageReload = { imageUrl -> handlePostImageReload(imageUrl) },
+                                            imageErrorMessageFor = { imageUrl ->
+                                                failedImageMessages[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imageRetryKeyFor = { imageUrl ->
+                                                imageRetryKeys[normalizeImageUrl(imageUrl)] ?: 0
+                                            },
+                                            imageCachedHeightFor = { imageUrl ->
+                                                imageHeightCache[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imagePlaceholderAspectRatioFor = { imageUrl ->
+                                                imagePlaceholderAspectRatioFor(post, imageUrl)
+                                            },
+                                            onImageHeightChanged = { imageUrl, heightPx ->
+                                                handleImageHeightChanged(imageUrl, heightPx)
+                                            },
+                                            onImageAspectRatioChanged = { imageUrl, aspectRatio ->
+                                                handleImageAspectRatioChanged(imageUrl, aspectRatio)
+                                            },
+                                        )
+                                    }
+
+                                    ReaderEntryKind.SegmentedBody -> {
+                                        PostRenderer(
+                                            post = post,
+                                            bodyBlocks = entry.bodyBlocks,
+                                            showHeader = false,
+                                            showFooter = false,
+                                            verticalPadding = 0.dp,
+                                            onImageSuccess = { imageUrl -> handlePostImageSuccess(post, imageUrl) },
+                                            onImageError = { imageUrl, message -> handlePostImageError(imageUrl, message) },
+                                            onImageReload = { imageUrl -> handlePostImageReload(imageUrl) },
+                                            imageErrorMessageFor = { imageUrl ->
+                                                failedImageMessages[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imageRetryKeyFor = { imageUrl ->
+                                                imageRetryKeys[normalizeImageUrl(imageUrl)] ?: 0
+                                            },
+                                            imageCachedHeightFor = { imageUrl ->
+                                                imageHeightCache[normalizeImageUrl(imageUrl)]
+                                            },
+                                            imagePlaceholderAspectRatioFor = { imageUrl ->
+                                                imagePlaceholderAspectRatioFor(post, imageUrl)
+                                            },
+                                            onImageHeightChanged = { imageUrl, heightPx ->
+                                                handleImageHeightChanged(imageUrl, heightPx)
+                                            },
+                                            onImageAspectRatioChanged = { imageUrl, aspectRatio ->
+                                                handleImageAspectRatioChanged(imageUrl, aspectRatio)
+                                            },
+                                        )
+                                    }
+
+                                    ReaderEntryKind.SegmentedFooter -> {
+                                        PostRenderer(
+                                            post = post,
+                                            bodyBlocks = emptyList(),
+                                            showHeader = false,
+                                            showFooter = true,
+                                            verticalPadding = 0.dp,
+                                            onVote = { optionIds -> handleVote(optionIds) },
+                                            onRate = { score, reason -> handleRate(post.pid, score, reason) },
+                                            onComment = { message -> handleComment(post.pid, message) },
+                                            onReply = { handleReply(post.pid) },
+                                        )
+                                    }
+
+                                    ReaderEntryKind.RegularTagBanner,
+                                    ReaderEntryKind.NovelTagBanner -> {
                                         CommentBanner(
                                             text = "查看標籤列表",
                                             icon = "🏷️",
@@ -760,34 +1285,12 @@ internal fun ThreadReaderScreen(
                                             }
                                         )
                                     }
-                                }
 
-                                // Author-only mode: tag banner + comment banner
-                                if (isNovelThread) {
-                                    // Novel forum: Tag Banner is above the comments button
-                                    if (post.floor == 1 && currentPage == 1) {
-                                        val fid = threadInfo?.forum?.fid
-                                        val isNovel = fid?.let { YamiboForum.isNovelForum(it) } == true
-                                        if (isNovel) {
-                                            CommentBanner(
-                                                text = "查看標籤列表",
-                                                icon = "🏷️",
-                                                onClick = {
-                                                    navigator.navigate(
-                                                        ITagListScreen(
-                                                            tid = tid,
-                                                            initialTags = post.tags.value
-                                                        )
-                                                    )
-                                                }
-                                            )
-                                        }
-                                    }
-
-                                    CommentBanner(
-                                        text = "點擊跳轉到評論區",
-                                        onClick = {
-                                            navigator.navigate(
+                                    ReaderEntryKind.NovelCommentBanner -> {
+                                        CommentBanner(
+                                            text = "點擊跳轉到評論區",
+                                            onClick = {
+                                                navigator.navigate(
                                                     ICommentReaderScreen(
                                                         tid = tid,
                                                         postTitle = post.title.ifEmpty { "第${post.floor}樓" },
@@ -796,15 +1299,15 @@ internal fun ThreadReaderScreen(
                                                     )
                                                 )
                                             }
-                                    )
-                                }
+                                        )
+                                    }
 
-                                // Separator between posts
-                                if (index < posts.size - 1) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                        color = colors.brownPrimary.copy(alpha = 0.15f)
-                                    )
+                                    ReaderEntryKind.Separator -> {
+                                        HorizontalDivider(
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                            color = colors.brownPrimary.copy(alpha = 0.15f)
+                                        )
+                                    }
                                 }
                             }
 
@@ -821,6 +1324,21 @@ internal fun ThreadReaderScreen(
                                             modifier = Modifier.size(24.dp)
                                         )
                                     }
+                                }
+                            }
+
+                            if (nextFailedAutoLoadPage != null) {
+                                item(key = "retry_page_$nextFailedAutoLoadPage") {
+                                    CommentBanner(
+                                        text = "第 ${nextFailedAutoLoadPage} 頁載入失敗，點擊重試",
+                                        icon = "↻",
+                                        onClick = {
+                                            scope.launch {
+                                                failedAutoLoadPages.remove(nextFailedAutoLoadPage)
+                                                loadPage(nextFailedAutoLoadPage)
+                                            }
+                                        }
+                                    )
                                 }
                             }
 
@@ -845,7 +1363,6 @@ internal fun ThreadReaderScreen(
                 }
 
                 // Manga reader button visibility
-                val isMangaForum = threadInfo?.forum?.fid?.let { YamiboForum.isMangaForum(it) } == true
                 val isFirstPage = currentPage == 1
                 val showMangaReader = isMangaForum && isFirstPage
 

@@ -25,6 +25,7 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelThreadCacheRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
@@ -245,16 +246,7 @@ internal fun CommentReaderScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = colors.creamBackground,
         snackbarHost = {
-            SnackbarHost(
-                hostState = snackbarHostState,
-                snackbar = { data ->
-                    Snackbar(
-                        snackbarData = data,
-                        containerColor = colors.brownDeep,
-                        contentColor = Color.White
-                    )
-                }
-            )
+            YamiboSnackbarHost(hostState = snackbarHostState)
         },
         topBar = {
             ThreadTopBar(

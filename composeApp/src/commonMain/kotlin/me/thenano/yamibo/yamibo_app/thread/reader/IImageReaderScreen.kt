@@ -7,26 +7,64 @@ import io.github.littlesurvival.dto.value.PostId
 import io.github.littlesurvival.dto.value.TagId
 import io.github.littlesurvival.dto.value.ThreadId
 import io.github.littlesurvival.dto.value.UserId
-import me.thenano.yamibo.yamibo_app.navigation.Navigatable
+import kotlinx.serialization.Serializable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
+import me.thenano.yamibo.yamibo_app.navigation.RestorableScreenSnapshot
+import me.thenano.yamibo.yamibo_app.navigation.TypedRestorableNavigatableDecoder
+import me.thenano.yamibo.yamibo_app.navigation.decodeRestorePayload
+import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
+
+@Serializable
+private data class ImageReaderRestorePayload(
+    val tid: Int,
+    val postId: Int? = null,
+    val fid: Int? = null,
+    val threadTitle: String,
+    val initialPage: Int = 1,
+    val loadHistory: Boolean = false,
+    val tagId: Int? = null,
+    val tagName: String? = null,
+    val authorId: Int? = null,
+    val tagPage: Int? = null,
+    val tagTotalPages: Int? = null,
+)
 
 class IImageReaderScreen(
-    private val tid: ThreadId,
-    private val postId: PostId?,
-    private val fid: ForumId?,
-    private val threadTitle: String,
-    private val imageList: List<String>,
-    private val initialPage: Int = 1,
-    private val loadHistory: Boolean = false,
+    val tid: ThreadId,
+    val postId: PostId?,
+    val fid: ForumId?,
+    val threadTitle: String,
+    private val imageList: List<String> = emptyList(),
+    val initialPage: Int = 1,
+    val loadHistory: Boolean = false,
     
     // Tag Manga Mode Fields:
-    private val tagId: TagId? = null,
-    private val tagName: String? = null,
-    private val authorId: UserId? = null,
+    val tagId: TagId? = null,
+    val tagName: String? = null,
+    val authorId: UserId? = null,
     private val tagThreads: List<ThreadSummary>? = null,
-    private val tagPage: Int? = null,
-    private val tagTotalPages: Int? = null,
-) : Navigatable {
+    val tagPage: Int? = null,
+    val tagTotalPages: Int? = null,
+) : RestorableNavigatable {
     override val id: String = buildId(tid.value, postId?.value, tagId?.value)
+    override val restoreDecoder = Decoder
+
+    override fun toRestoreSnapshot(): RestorableScreenSnapshot = restoreSnapshot(
+        decoder = restoreDecoder,
+        payload = ImageReaderRestorePayload(
+            tid = tid.value,
+            postId = postId?.value,
+            fid = fid?.value,
+            threadTitle = threadTitle,
+            initialPage = initialPage,
+            loadHistory = loadHistory,
+            tagId = tagId?.value,
+            tagName = tagName,
+            authorId = authorId?.value,
+            tagPage = tagPage,
+            tagTotalPages = tagTotalPages,
+        ),
+    )
 
     @Composable
     override fun Content() {
@@ -45,5 +83,26 @@ class IImageReaderScreen(
             tagPage = tagPage,
             tagTotalPages = tagTotalPages
         )
+    }
+
+    companion object Decoder : TypedRestorableNavigatableDecoder<IImageReaderScreen>(IImageReaderScreen::class) {
+        override fun decode(payload: String): RestorableNavigatable {
+            val data = decodeRestorePayload<ImageReaderRestorePayload>(payload)
+            return IImageReaderScreen(
+                tid = ThreadId(data.tid),
+                postId = data.postId?.let(::PostId),
+                fid = data.fid?.let(::ForumId),
+                threadTitle = data.threadTitle,
+                imageList = emptyList(),
+                initialPage = data.initialPage,
+                loadHistory = data.loadHistory,
+                tagId = data.tagId?.let(::TagId),
+                tagName = data.tagName,
+                authorId = data.authorId?.let(::UserId),
+                tagThreads = null,
+                tagPage = data.tagPage,
+                tagTotalPages = data.tagTotalPages,
+            )
+        }
     }
 }

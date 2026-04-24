@@ -27,6 +27,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
+import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors
 
 @Composable
@@ -230,19 +231,12 @@ fun ProfilePage() {
             Spacer(Modifier.height(24.dp))
         }
 
-        SnackbarHost(
+        YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 12.dp)
-        ) { data ->
-            Snackbar(
-                snackbarData = data,
-                containerColor = colors.brownDeep,
-                contentColor = colors.creamSurface,
-                shape = RoundedCornerShape(12.dp),
-            )
-        }
+        )
     }
 }
 
