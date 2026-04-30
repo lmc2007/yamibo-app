@@ -30,6 +30,7 @@ class AndroidUserStore(context: Context) : UserStore {
             putInt("partner", userInfo.partner)
             putInt("totalPoints", userInfo.totalPoints)
             putString("avatarUrl", userInfo.avatarUrl)
+            putString("avatarBackgroundUrl", userInfo.avatarBackgroundUrl)
             putString("gender", userInfo.gender)
             putString("birthday", userInfo.birthday)
             putInt("onlineHours", userInfo.onlineHours)
@@ -51,6 +52,7 @@ class AndroidUserStore(context: Context) : UserStore {
             val partner = getInt("partner", 0)
             val totalPoints = getInt("totalPoints", 0)
             val avatarUrl = getString("avatarUrl", null)
+            val avatarBackgroundUrl = getString("avatarBackgroundUrl", null)
             val gender = getString("gender", null)
             val birthday = getString("birthday", null)
             val onlineHours = getInt("onlineHours", 0)
@@ -66,6 +68,7 @@ class AndroidUserStore(context: Context) : UserStore {
                 partner = partner,
                 totalPoints = totalPoints,
                 avatarUrl = avatarUrl,
+                avatarBackgroundUrl = avatarBackgroundUrl,
                 gender = gender,
                 birthday = birthday,
                 onlineHours = onlineHours,

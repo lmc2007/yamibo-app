@@ -43,6 +43,7 @@ import me.thenano.yamibo.yamibo_app.navigation.emptyRestoreSnapshot
 import me.thenano.yamibo.yamibo_app.store.auth.UserStore
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.webview.PlatformWebViewScreen
 
 @Serializable
@@ -184,7 +185,18 @@ private fun UserInfoContent(
     onRefresh: suspend () -> Unit,
     onLogout: suspend () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
+    val navigator = LocalNavigator.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                navigator.navigate(IUserSpaceScreen(user.uid, user.username))
+            }
+            .padding(20.dp)
+    ) {
         /* top actions */
         /* top actions */
         Row(

@@ -39,7 +39,9 @@ import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 /** Search result state */
 private sealed interface SearchState {
@@ -307,6 +309,7 @@ private fun SearchResultContent(
     onPageChange: (Int) -> Unit
 ) {
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
@@ -324,7 +327,11 @@ private fun SearchResultContent(
 
         /** thread cards */
         items(searchPage.threads, key = { it.tid.value }) { thread ->
-            ThreadCard(thread = thread, onClick = { onThreadClick(thread) })
+            ThreadCard(
+                thread = thread,
+                onClick = { onThreadClick(thread) },
+                onAuthorClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
+            )
         }
 
         /** pagination */

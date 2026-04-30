@@ -96,6 +96,7 @@ fun ProfilePage() {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
         ) {
             UserProfileCard(

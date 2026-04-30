@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.thread.detail.tag.components
 
 import YamiboIcons
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -18,7 +19,9 @@ import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.dto.model.AttachmentType
 import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.forum.components.StatBadge
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 /** Thread card for the Tag Detail page */
 @Composable
@@ -30,6 +33,7 @@ fun TagThreadCard(
     readingProgressText: String? = null
 ) {
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
 
     Surface(
         onClick = onClick,
@@ -59,7 +63,11 @@ fun TagThreadCard(
                         text = thread.author!!.name,
                         fontSize = 12.sp,
                         color = colors.brownPrimary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable {
+                            val author = thread.author!!
+                            navigator.navigate(IUserSpaceScreen(author.uid, author.name))
+                        }
                     )
                 }
                 val lastUpdate = thread.lastUpdate

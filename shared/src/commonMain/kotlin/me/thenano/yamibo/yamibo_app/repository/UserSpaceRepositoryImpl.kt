@@ -1,0 +1,153 @@
+package me.thenano.yamibo.yamibo_app.repository
+
+import io.github.littlesurvival.YamiboClient
+import io.github.littlesurvival.YamiboRoute
+import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.dto.page.ProfilePage
+import io.github.littlesurvival.dto.page.UserSpaceBlogPage
+import io.github.littlesurvival.dto.page.UserSpaceFriendPage
+import io.github.littlesurvival.dto.page.UserSpaceNoticePage
+import io.github.littlesurvival.dto.page.UserSpacePrivateMessagePage
+import io.github.littlesurvival.dto.page.UserSpaceThreadPage
+import io.github.littlesurvival.dto.page.UserSpaceThreadReplyPage
+import io.github.littlesurvival.dto.value.UserId
+import kotlin.time.Duration.Companion.hours
+import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
+import me.thenano.yamibo.yamibo_app.store.auth.CookieStore
+
+class UserSpaceRepositoryImpl(
+    private val cookieStore: CookieStore,
+    private val yamiboClient: YamiboClient,
+    diskCacheFactory: DiskCacheFactory
+) : UserSpaceRepository {
+    private val profileCache = diskCacheFactory.create<ProfilePage>("userspace_profile", maxSize = 20, expiration = 12.hours)
+    private val threadCache = diskCacheFactory.create<UserSpaceThreadPage>("userspace_threads", maxSize = 30, expiration = 12.hours)
+    private val replyCache = diskCacheFactory.create<UserSpaceThreadReplyPage>("userspace_replies", maxSize = 30, expiration = 12.hours)
+    private val blogCache = diskCacheFactory.create<UserSpaceBlogPage>("userspace_blogs", maxSize = 30, expiration = 12.hours)
+    private val friendCache = diskCacheFactory.create<UserSpaceFriendPage>("userspace_friends", maxSize = 20, expiration = 12.hours)
+    private val messageCache = diskCacheFactory.create<UserSpacePrivateMessagePage>("userspace_messages", maxSize = 10, expiration = 2.hours)
+    private val noticeCache = diskCacheFactory.create<UserSpaceNoticePage>("userspace_notices", maxSize = 10, expiration = 2.hours)
+
+    override suspend fun fetchProfile(userId: UserId?): YamiboResult<ProfilePage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchProfileInfo(userId)
+        if (result is YamiboResult.Success) {
+            profileCache.set(profileKey(userId), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchThreads(userId: UserId?, page: Int): YamiboResult<UserSpaceThreadPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceThreads(userId, page)
+        if (result is YamiboResult.Success) {
+            threadCache.set(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchReplies(userId: UserId?, page: Int): YamiboResult<UserSpaceThreadReplyPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceThreadReplies(userId, page)
+        if (result is YamiboResult.Success) {
+            replyCache.set(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchMyBlogs(userId: UserId?, page: Int): YamiboResult<UserSpaceBlogPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceMyBlogs(userId, page)
+        if (result is YamiboResult.Success) {
+            blogCache.set(UserSpaceRepository.TypedPageCacheKey("my", userId?.value, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchFriendBlogs(page: Int): YamiboResult<UserSpaceBlogPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceFriendBlogs(page)
+        if (result is YamiboResult.Success) {
+            blogCache.set(UserSpaceRepository.TypedPageCacheKey("friend", null, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int): YamiboResult<UserSpaceBlogPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceViewAllBlogs(type, page)
+        if (result is YamiboResult.Success) {
+            blogCache.set(UserSpaceRepository.TypedPageCacheKey("all_${type.name}", null, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int): YamiboResult<UserSpaceFriendPage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceFriends(type, page)
+        if (result is YamiboResult.Success) {
+            friendCache.set(UserSpaceRepository.TypedPageCacheKey(type.name, null, page).toCacheKey(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchPrivateMessages(page: Int): YamiboResult<UserSpacePrivateMessagePage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpacePrivateMessages(page)
+        if (result is YamiboResult.Success) {
+            messageCache.set(page.toString(), result.value)
+        }
+        return result
+    }
+
+    override suspend fun fetchNotices(page: Int): YamiboResult<UserSpaceNoticePage> {
+        yamiboClient.setCookie(cookieStore.load() ?: "")
+        val result = yamiboClient.fetchUserSpaceNotices(page)
+        if (result is YamiboResult.Success) {
+            noticeCache.set(page.toString(), result.value)
+        }
+        return result
+    }
+
+    override fun getCachedProfile(userId: UserId?): ProfilePage? = profileCache.get(profileKey(userId))
+    override fun getCachedThreads(userId: UserId?, page: Int): UserSpaceThreadPage? =
+        threadCache.get(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey())
+    override fun getCachedReplies(userId: UserId?, page: Int): UserSpaceThreadReplyPage? =
+        replyCache.get(UserSpaceRepository.UserPageCacheKey(userId?.value, page).toCacheKey())
+    override fun getCachedMyBlogs(userId: UserId?, page: Int): UserSpaceBlogPage? =
+        blogCache.get(UserSpaceRepository.TypedPageCacheKey("my", userId?.value, page).toCacheKey())
+    override fun getCachedFriendBlogs(page: Int): UserSpaceBlogPage? =
+        blogCache.get(UserSpaceRepository.TypedPageCacheKey("friend", null, page).toCacheKey())
+    override fun getCachedViewAllBlogs(type: YamiboRoute.UserSpace.Blog.ViewAllType, page: Int): UserSpaceBlogPage? =
+        blogCache.get(UserSpaceRepository.TypedPageCacheKey("all_${type.name}", null, page).toCacheKey())
+    override fun getCachedFriends(type: YamiboRoute.UserSpace.FriendPageType, page: Int): UserSpaceFriendPage? =
+        friendCache.get(UserSpaceRepository.TypedPageCacheKey(type.name, null, page).toCacheKey())
+    override fun getCachedPrivateMessages(page: Int): UserSpacePrivateMessagePage? = messageCache.get(page.toString())
+    override fun getCachedNotices(page: Int): UserSpaceNoticePage? = noticeCache.get(page.toString())
+
+    override fun clearUserPages(userId: UserId?) {
+        val prefix = UserSpaceRepository.UserPageCacheKey.keyPrefix(userId?.value)
+        threadCache.removeByPrefix(prefix)
+        replyCache.removeByPrefix(prefix)
+        blogCache.removeByPrefix(UserSpaceRepository.TypedPageCacheKey.keyPrefix("my", userId?.value))
+        profileCache.remove(profileKey(userId))
+    }
+
+    override fun clearFriendPages(type: YamiboRoute.UserSpace.FriendPageType?) {
+        if (type == null) {
+            YamiboRoute.UserSpace.FriendPageType.entries.forEach { friendCache.removeByPrefix("${it.name}_") }
+        } else {
+            friendCache.removeByPrefix("${type.name}_")
+        }
+    }
+
+    override fun clearMessagePages() {
+        messageCache.clear()
+    }
+
+    override fun clearNoticePages() {
+        noticeCache.clear()
+    }
+
+    private fun profileKey(userId: UserId?): String = userId?.value?.toString() ?: "self"
+}

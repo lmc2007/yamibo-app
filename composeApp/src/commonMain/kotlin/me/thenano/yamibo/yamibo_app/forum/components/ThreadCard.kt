@@ -25,11 +25,16 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import io.github.littlesurvival.dto.model.ThreadSummary
+import io.github.littlesurvival.dto.model.User
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Thread Card */
 @Composable
-fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
+fun ThreadCard(
+    thread: ThreadSummary,
+    onClick: () -> Unit,
+    onAuthorClick: ((User) -> Unit)? = null,
+) {
     val colors = YamiboTheme.colors
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -62,32 +67,45 @@ fun ThreadCard(thread: ThreadSummary, onClick: () -> Unit) {
             ) {
                 thread.author?.let { user ->
                     val avatarUrl = user.avatarUrl
-                    if (!avatarUrl.isNullOrEmpty()) {
-                        SubcomposeAsyncImage(
-                            model = rememberImageRequest(url = avatarUrl),
-                            contentDescription = "Avatar",
-                            modifier = Modifier.size(28.dp).clip(CircleShape),
-                            contentScale = ContentScale.Crop,
-                            error = {
-                                Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
-                            },
-                            loading = {
-                                CircularProgressIndicator(
-                                    color = colors.brownPrimary,
-                                    modifier = Modifier.padding(6.dp),
-                                    strokeWidth = 1.5.dp
-                                )
-                            }
-                        )
-                    } else {
-                        Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
+                    Box(
+                        modifier = Modifier.clickable(
+                            enabled = onAuthorClick != null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onAuthorClick?.invoke(user) }
+                    ) {
+                        if (!avatarUrl.isNullOrEmpty()) {
+                            SubcomposeAsyncImage(
+                                model = rememberImageRequest(url = avatarUrl),
+                                contentDescription = "Avatar",
+                                modifier = Modifier.size(28.dp).clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                                error = {
+                                    Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
+                                },
+                                loading = {
+                                    CircularProgressIndicator(
+                                        color = colors.brownPrimary,
+                                        modifier = Modifier.padding(6.dp),
+                                        strokeWidth = 1.5.dp
+                                    )
+                                }
+                            )
+                        } else {
+                            Icon(imageVector = YamiboIcons.PersonFill, contentDescription = null, modifier = Modifier.size(28.dp), tint = colors.textDark.copy(alpha = 0.5f))
+                        }
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = user.name,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = colors.brownPrimary
+                        color = colors.brownPrimary,
+                        modifier = Modifier.clickable(
+                            enabled = onAuthorClick != null,
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                        ) { onAuthorClick?.invoke(user) }
                     )
                 }
                 thread.lastUpdate?.let { time ->

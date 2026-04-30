@@ -25,6 +25,7 @@ import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ThreadSummary
+import io.github.littlesurvival.dto.model.User
 import io.github.littlesurvival.dto.page.ForumPage
 import io.github.littlesurvival.dto.page.PinnedItem
 import io.github.littlesurvival.dto.value.ForumId
@@ -39,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 /** Forum page state */
@@ -250,7 +252,10 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                         )
                                     )
                                 }
-                            }
+                            },
+                            onAuthorClick = { user ->
+                                navigator.navigate(IUserSpaceScreen(user.uid, user.name))
+                            },
                         )
                     }
             }
@@ -431,7 +436,8 @@ private fun ForumContent(
     onPageChange: (Int) -> Unit,
     onSubForumClick: (ForumId, String) -> Unit,
     onPinnedItemClick: (PinnedItem) -> Unit,
-    onThreadClick: (ThreadSummary) -> Unit
+    onThreadClick: (ThreadSummary) -> Unit,
+    onAuthorClick: (User) -> Unit,
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         /** forum stats bar */
@@ -449,7 +455,11 @@ private fun ForumContent(
 
         /** thread list */
         items(forumPage.threads, key = { it.tid.value }) { thread ->
-            ThreadCard(thread = thread, onClick = { onThreadClick(thread) })
+            ThreadCard(
+                thread = thread,
+                onClick = { onThreadClick(thread) },
+                onAuthorClick = onAuthorClick,
+            )
         }
 
         /** page navigation */

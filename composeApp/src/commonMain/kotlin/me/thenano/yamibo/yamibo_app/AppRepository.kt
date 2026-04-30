@@ -12,6 +12,7 @@ import me.thenano.yamibo.yamibo_app.repository.SignRepository
 import me.thenano.yamibo.yamibo_app.repository.TagRepository
 import me.thenano.yamibo.yamibo_app.repository.ThemeRepository
 import me.thenano.yamibo.yamibo_app.repository.ThreadRepository
+import me.thenano.yamibo.yamibo_app.repository.UserSpaceRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.access.BackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
@@ -26,6 +27,9 @@ val LocalForumRepository =
 
 val LocalThreadRepository =
     compositionLocalOf<ThreadRepository> { error("LocalThreadRepository not provided") }
+
+val LocalUserSpaceRepository =
+    compositionLocalOf<UserSpaceRepository> { error("LocalUserSpaceRepository not provided") }
 
 val LocalFavoriteRepository =
     compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }

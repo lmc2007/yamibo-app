@@ -219,6 +219,7 @@ private fun HomeHeader(onSearch: () -> Unit) {
     Row(
         modifier =
             Modifier.fillMaxWidth()
+                .statusBarsPadding()
                 .background(
                     Brush.verticalGradient(
                         colors =

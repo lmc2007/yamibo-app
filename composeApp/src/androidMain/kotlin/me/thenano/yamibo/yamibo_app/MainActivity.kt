@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.widget.Toast
@@ -102,6 +103,7 @@ class MainActivity : ComponentActivity() {
             
             val forumRepository = remember { AndroidForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
             val threadRepository = remember { AndroidThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
+            val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
             val favoriteRepository = remember { AndroidLocalFavoriteRepository(dbFactory) }
             val remoteFavoriteRepository = remember { AndroidFavoriteRepository(cookieStore, yamiboClient) }
             val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -115,6 +117,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val backgroundTaskRepository = remember { AndroidBackgroundTaskRepository(context) }
+            @SuppressLint("RememberReturnType")
             val favoriteSyncRunner = remember { FavoriteSyncRunner(favoriteSyncRepository, backgroundTaskRepository) }
             val backgroundAccessRepository = remember { AndroidBackgroundAccessRepository(context) }
             val novelCacheRepository = remember { AndroidNovelThreadCacheRepository(diskCacheFactory) }
@@ -129,6 +132,7 @@ class MainActivity : ComponentActivity() {
                 LocalAuthRepository provides authRepository,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
+                LocalUserSpaceRepository provides userSpaceRepository,
                 LocalFavoriteRepository provides favoriteRepository,
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,

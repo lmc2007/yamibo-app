@@ -29,12 +29,14 @@ import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PollOptionId
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.DebugRecomposeProbe
 import me.thenano.yamibo.yamibo_app.thread.reader.debug.debugPerfLog
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.*
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 @Composable
 fun PostRenderer(
@@ -66,6 +68,7 @@ fun PostRenderer(
     var showRateDialog by remember { mutableStateOf(false) }
     var showCommentDialog by remember { mutableStateOf(false) }
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
     val density = LocalDensity.current
@@ -142,8 +145,11 @@ fun PostRenderer(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     val avatarUrl = post.author.avatarUrl
-                    // TODO: Long-press or tap to navigate to author profile (post.author.uid)
-                    Box(modifier = Modifier.clickable { /* TODO: navigate to user profile */ }) {
+                    Box(
+                        modifier = Modifier.clickable {
+                            navigator.navigate(IUserSpaceScreen(post.author.uid, post.author.name))
+                        }
+                    ) {
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
@@ -168,7 +174,15 @@ fun PostRenderer(
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(post.author.name, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = YamiboTheme.colors.brownPrimary)
+                        Text(
+                            post.author.name,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = YamiboTheme.colors.brownPrimary,
+                            modifier = Modifier.clickable {
+                                navigator.navigate(IUserSpaceScreen(post.author.uid, post.author.name))
+                            }
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(post.timeCreate.text, fontSize = 12.sp, color = YamiboTheme.colors.textDark.copy(alpha = 0.5f))
                     }

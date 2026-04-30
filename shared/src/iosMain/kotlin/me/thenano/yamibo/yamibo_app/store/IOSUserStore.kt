@@ -18,6 +18,7 @@ class IOSUserStore : UserStore {
         defaults.setInteger(userInfo.partner.toLong(), forKey = "partner")
         defaults.setInteger(userInfo.totalPoints.toLong(), forKey = "totalPoints")
         defaults.setObject(userInfo.avatarUrl, forKey = "avatarUrl")
+        defaults.setObject(userInfo.avatarBackgroundUrl, forKey = "avatarBackgroundUrl")
         defaults.setObject(userInfo.gender, forKey = "gender")
         defaults.setObject(userInfo.birthday, forKey = "birthday")
         defaults.setInteger(userInfo.onlineHours.toLong(), forKey = "onlineHours")
@@ -37,6 +38,7 @@ class IOSUserStore : UserStore {
         val partner = defaults.integerForKey("partner").toInt()
         val totalPoints = defaults.integerForKey("totalPoints").toInt()
         val avatarUrl = defaults.stringForKey("avatarUrl")
+        val avatarBackgroundUrl = defaults.stringForKey("avatarBackgroundUrl")
         val gender = defaults.stringForKey("gender")
         val birthday = defaults.stringForKey("birthday")
         val onlineHours = defaults.integerForKey("onlineHours").toInt()
@@ -52,6 +54,7 @@ class IOSUserStore : UserStore {
             partner = partner,
             totalPoints = totalPoints,
             avatarUrl = avatarUrl,
+            avatarBackgroundUrl = avatarBackgroundUrl,
             gender = gender,
             birthday = birthday,
             onlineHours = onlineHours,
@@ -70,6 +73,7 @@ class IOSUserStore : UserStore {
             "partner",
             "totalPoints",
             "avatarUrl",
+            "avatarBackgroundUrl",
             "gender",
             "birthday",
             "onlineHours",

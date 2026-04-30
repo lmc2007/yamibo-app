@@ -43,7 +43,9 @@ import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.dto.page.ThreadPage
 import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -63,6 +65,7 @@ internal fun ThreadHeader(
 ) {
     @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
+    val navigator = LocalNavigator.current
     val colors = YamiboTheme.colors
     val thread = threadPage.thread
     val firstPost = threadPage.posts.firstOrNull { it.floor == 1 } ?: threadPage.posts.firstOrNull()
@@ -169,6 +172,9 @@ internal fun ThreadHeader(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = colors.brownPrimary.copy(alpha = 0.8f),
+                                onClick = {
+                                    navigator.navigate(IUserSpaceScreen(firstPost.author.uid, firstPost.author.name))
+                                },
                                 onCopy = {
                                     clipboardManager.setText(AnnotatedString(firstPost.author.name))
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -332,6 +338,7 @@ private fun CopyableLabel(
     fontSize: androidx.compose.ui.unit.TextUnit,
     fontWeight: FontWeight,
     color: Color,
+    onClick: () -> Unit = {},
     onCopy: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -351,7 +358,7 @@ private fun CopyableLabel(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = {},
+                onClick = onClick,
                 onLongClick = onCopy
             )
     )

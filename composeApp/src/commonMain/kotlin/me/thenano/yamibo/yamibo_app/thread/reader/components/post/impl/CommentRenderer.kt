@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -16,8 +17,10 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.page.PostComment
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 @Composable
 fun CommentRenderer(
@@ -25,6 +28,7 @@ fun CommentRenderer(
     modifier: Modifier = Modifier
 ) {
     val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
@@ -59,7 +63,10 @@ fun CommentRenderer(
                             contentDescription = "Avatar",
                             modifier = Modifier
                                 .size(36.dp)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .clickable {
+                                    navigator.navigate(IUserSpaceScreen(comment.user.uid, comment.user.name))
+                                },
                             contentScale = ContentScale.Crop
                         )
                     } else {
@@ -67,6 +74,9 @@ fun CommentRenderer(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
+                                .clickable {
+                                    navigator.navigate(IUserSpaceScreen(comment.user.uid, comment.user.name))
+                                }
                                 .background(colors.brownPrimary.copy(alpha = 0.2f))
                         )
                     }
@@ -83,7 +93,10 @@ fun CommentRenderer(
                                 text = comment.user.name,
                                 color = colors.brownPrimary,
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.clickable {
+                                    navigator.navigate(IUserSpaceScreen(comment.user.uid, comment.user.name))
+                                }
                             )
                             Text(
                                 text = comment.time.text,

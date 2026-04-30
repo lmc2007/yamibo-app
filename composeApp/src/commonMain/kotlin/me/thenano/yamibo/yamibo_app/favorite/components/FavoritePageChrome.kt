@@ -52,7 +52,8 @@ fun FavoriteHeaderMenuRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -62,7 +63,7 @@ fun FavoriteHeaderMenuRow(
             color = colors.brownDeep,
             modifier = Modifier.weight(1f),
         )
-        IconButton(onClick = onSearch) {
+        IconButton(onClick = onSearch, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = YamiboIcons.Search,
                 contentDescription = "搜尋收藏",
@@ -70,6 +71,7 @@ fun FavoriteHeaderMenuRow(
                 tint = colors.brownDeep,
             )
         }
+        Spacer(Modifier.width(4.dp))
         RowScopeMenuBox(
             showMenu = showMenu,
             onShowMenu = { showMenu = true },
@@ -92,11 +94,11 @@ private fun RowScopeMenuBox(
 ) {
     val colors = YamiboTheme.colors
     Box {
-        IconButton(onClick = onShowMenu) {
+        IconButton(onClick = onShowMenu, modifier = Modifier.size(36.dp)) {
             Icon(
                 imageVector = YamiboIcons.ThreeDots,
                 contentDescription = "收藏選單",
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(30.dp),
                 tint = colors.brownDeep,
             )
         }
@@ -162,6 +164,7 @@ fun FavoriteSearchTopBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

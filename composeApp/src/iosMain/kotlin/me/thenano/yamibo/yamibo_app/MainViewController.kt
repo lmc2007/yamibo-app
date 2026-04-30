@@ -50,6 +50,7 @@ fun MainViewController() = ComposeUIViewController {
 
     val forumRepository = remember { IOSForumRepository(cookieStore, yamiboClient, diskCacheFactory) }
     val threadRepository = remember { IOSThreadRepository(cookieStore, yamiboClient, diskCacheFactory) }
+    val userSpaceRepository = remember { UserSpaceRepositoryImpl(cookieStore, yamiboClient, diskCacheFactory) }
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
@@ -77,6 +78,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalAuthRepository provides authRepository,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
+        LocalUserSpaceRepository provides userSpaceRepository,
         LocalFavoriteRepository provides favoriteRepository,
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,

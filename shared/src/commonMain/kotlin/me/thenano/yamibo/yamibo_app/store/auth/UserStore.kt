@@ -24,6 +24,7 @@ interface UserStore {
                 totalPoints = 239,
                 avatarUrl =
                     "https://bbs.yamibo.com/uc_server/data/avatar/000/65/66/26_avatar_middle.jpg?ts=1725126833",
+                avatarBackgroundUrl = null,
                 gender = "保密",
                 birthday = "-",
                 onlineHours = 172,

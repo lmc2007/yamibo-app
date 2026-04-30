@@ -1,15 +1,17 @@
 package me.thenano.yamibo.yamibo_app.forum.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,7 +113,21 @@ private fun PagePickerDialog(
     onDismiss: () -> Unit
 ) {
     val colors = YamiboTheme.colors
-    val pages = (1..totalPages).toList()
+    var pageInput by remember(currentPage, totalPages) { mutableStateOf(currentPage.toString()) }
+    val nearbyPages = remember(currentPage, totalPages) {
+        buildList {
+            add(1)
+            for (page in (currentPage - 2)..(currentPage + 2)) {
+                if (page in 1..totalPages) add(page)
+            }
+            add(totalPages)
+        }.distinct().sorted()
+    }
+
+    fun submitInput() {
+        val page = pageInput.toIntOrNull()?.coerceIn(1, totalPages) ?: return
+        onPageSelected(page)
+    }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -120,7 +136,7 @@ private fun PagePickerDialog(
             elevation = CardDefaults.cardElevation(8.dp)
         ) {
             Column(
-                modifier = Modifier.padding(20.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier.padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
@@ -131,49 +147,106 @@ private fun PagePickerDialog(
                 )
                 Spacer(Modifier.height(16.dp))
 
-                /** Grid of page buttons */
-                pages.chunked(5).forEach { row ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        row.forEach { page ->
-                            val isActive = page == currentPage
-                            Surface(
-                                onClick = { onPageSelected(page) },
-                                shape = RoundedCornerShape(10.dp),
-                                color =
-                                    if (isActive) colors.brownDeep
-                                    else colors.creamBackground,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "$page",
-                                    modifier =
-                                        Modifier.padding(vertical = 10.dp).fillMaxWidth(),
-                                    textAlign = TextAlign.Center,
-                                    color = if (isActive) Color.White else colors.textDark,
-                                    fontWeight =
-                                        if (isActive) FontWeight.Bold
-                                        else FontWeight.Medium,
-                                    fontSize = 14.sp
-                                )
-                            }
+                Text(
+                    text = "目前第 $currentPage / $totalPages 頁",
+                    color = colors.textDark.copy(alpha = 0.65f),
+                    fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    nearbyPages.forEachIndexed { index, page ->
+                        if (index > 0 && page - nearbyPages[index - 1] > 1) {
+                            Text(
+                                text = "...",
+                                modifier = Modifier.weight(0.6f),
+                                textAlign = TextAlign.Center,
+                                color = colors.textDark.copy(alpha = 0.45f),
+                            )
                         }
-                        /** fill remaining space */
-                        val remaining = 5 - row.size
-                        repeat(remaining) { Spacer(Modifier.weight(1f)) }
+                        PageNumberButton(
+                            page = page,
+                            active = page == currentPage,
+                            onPageSelected = onPageSelected,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
-                    Spacer(Modifier.height(6.dp))
                 }
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(14.dp))
 
-                /** Cancel button */
-                TextButton(onClick = onDismiss) {
-                    Text(text = "取消", color = colors.brownPrimary, fontWeight = FontWeight.Medium)
+                OutlinedTextField(
+                    value = pageInput,
+                    onValueChange = { value ->
+                        pageInput = value.filter(Char::isDigit).take(6)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("輸入頁碼") },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Go,
+                    ),
+                    keyboardActions = KeyboardActions(onGo = { submitInput() }),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = colors.textDark,
+                        unfocusedTextColor = colors.textDark,
+                        cursorColor = colors.brownDeep,
+                        focusedBorderColor = colors.brownDeep,
+                        unfocusedBorderColor = colors.brownPrimary.copy(alpha = 0.35f),
+                    ),
+                    shape = RoundedCornerShape(12.dp),
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(text = "取消", color = colors.brownPrimary, fontWeight = FontWeight.Medium)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Button(
+                        onClick = ::submitInput,
+                        colors = ButtonDefaults.buttonColors(containerColor = colors.brownDeep),
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text("跳轉", color = Color.White)
+                    }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PageNumberButton(
+    page: Int,
+    active: Boolean,
+    onPageSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = YamiboTheme.colors
+    Surface(
+        onClick = { onPageSelected(page) },
+        shape = RoundedCornerShape(10.dp),
+        color = if (active) colors.brownDeep else colors.creamBackground,
+        modifier = modifier,
+    ) {
+        Text(
+            text = "$page",
+            modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
+            textAlign = TextAlign.Center,
+            color = if (active) Color.White else colors.textDark,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 14.sp,
+        )
     }
 }
