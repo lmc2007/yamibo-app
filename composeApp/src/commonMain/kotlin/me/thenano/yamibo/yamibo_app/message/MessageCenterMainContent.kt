@@ -99,7 +99,7 @@ internal fun MessageCenterMainContent(
                         onToggleFavoriteUpdateFid = onToggleFavoriteUpdateFid,
                     )
                 }
-                if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(appString(Res.string.auto_e43b656c69)) }
+                if (content.events.isEmpty()) item { MessageCenterEmptyListMessage(appString(Res.string.ui_no_updates_detected)) }
                 items(content.events, key = { it.id }) { event ->
                     FavoriteUpdateCard(event = event, onClick = { onUpdateEventClick(event) })
                 }
@@ -164,13 +164,13 @@ private fun FavoriteUpdateHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(appString(Res.string.auto_0176d04aa4), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(appString(Res.string.ui_favorite_updates), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 YamiboActionChip(appString(Res.string.message_update_interval_chip, favoriteUpdateInterval.localizedLabel()), onClick = { showIntervalDialog = true })
                 YamiboActionChip(appString(Res.string.read_history_filter_prefix), onClick = { showFilterDialog = true })
                 when {
-                    interrupted != null -> YamiboActionChip(appString(Res.string.auto_6549c4bcbc), onClick = onResumeFavoriteUpdate)
-                    running == null -> YamiboActionChip(appString(Res.string.auto_c4ed6b222f), onClick = onGlobalFavoriteUpdate)
+                    interrupted != null -> YamiboActionChip(appString(Res.string.ui_continue), onClick = onResumeFavoriteUpdate)
+                    running == null -> YamiboActionChip(appString(Res.string.ui_global_refresh), onClick = onGlobalFavoriteUpdate)
                 }
             }
         }
@@ -212,7 +212,7 @@ private fun FavoriteUpdateIntervalDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_199c31f587), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_refresh_cycle), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             LazyColumn(modifier = Modifier.height(360.dp)) {
                 items(FavoriteUpdateInterval.entries, key = { it.name }) { interval ->
@@ -233,7 +233,7 @@ private fun FavoriteUpdateIntervalDialog(
                                 modifier = Modifier.weight(1f),
                             )
                             if (interval == selected) {
-                                Text(appString(Res.string.auto_1d20dbc3b3), color = colors.brownDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.ui_selected), color = colors.brownDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -255,7 +255,7 @@ private fun FavoriteUpdateFidFilterDialog(
     var localFilters by remember(filters) { mutableStateOf(filters) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_d1f269df62), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_filter_categories), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             LazyColumn(modifier = Modifier.height(360.dp)) {
                 items(localFilters, key = { it.fid }) { filter ->
@@ -404,14 +404,14 @@ private fun formatUpdateRelativeTime(timestamp: Long): String {
         days > 0L -> appString(Res.string.time_days_ago, days)
         hours > 0L -> appString(Res.string.time_hours_ago, hours)
         minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
-        else -> appString(Res.string.auto_7a453f8268)
+        else -> appString(Res.string.ui_just)
     }
 }
 
 private fun emptyMessage(tab: MessageCenterTab): String = when (tab) {
-    MessageCenterTab.Updates -> appString(Res.string.auto_e43b656c69)
-    MessageCenterTab.PrivateMessages -> appString(Res.string.auto_3b69690ec1)
-    MessageCenterTab.Notices -> appString(Res.string.auto_5e9ae44022)
+    MessageCenterTab.Updates -> appString(Res.string.ui_no_updates_detected)
+    MessageCenterTab.PrivateMessages -> appString(Res.string.ui_no_message_found)
+    MessageCenterTab.Notices -> appString(Res.string.ui_reminder_not_found)
 }
 
 @Composable

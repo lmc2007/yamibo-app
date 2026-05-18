@@ -110,7 +110,7 @@ class FavoriteSyncRunner(
             latest.runId !in runningRunIds &&
             latest.runId !in pendingActivationStartedAt.keys
         ) {
-            repository.markRunInterrupted(latest.runId, appString(Res.string.auto_0feac0d17d))
+            repository.markRunInterrupted(latest.runId, appString(Res.string.ui_the_background_synchronization_task_has_interrupted_can))
         }
 
         stateFlow.value = repository.getLatestSnapshot()?.let { snapshot ->

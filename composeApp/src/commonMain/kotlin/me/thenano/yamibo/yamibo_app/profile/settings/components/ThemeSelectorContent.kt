@@ -42,7 +42,7 @@ fun ThemeSelectorContent(
 
     Column(modifier = modifier) {
         Text(
-            text = appString(Res.string.auto_13782c0fa9),
+            text = appString(Res.string.ui_color_theme),
             color = colors.textDark,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,

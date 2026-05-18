@@ -41,7 +41,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
         ) {
             /** prev button */
             PageButton(
-                text = appString(Res.string.auto_0b5d407fec),
+                text = appString(Res.string.ui_previous_page),
                 enabled = pageNav.prevUrl != null,
                 onClick = { if (current > 1) onPageChange(current - 1) }
             )
@@ -63,7 +63,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
 
             /** next button */
             PageButton(
-                text = appString(Res.string.auto_2ca9eb6d51),
+                text = appString(Res.string.ui_next_page),
                 enabled = pageNav.nextUrl != null,
                 onClick = { if (current < total) onPageChange(current + 1) }
             )
@@ -144,7 +144,7 @@ private fun PagePickerDialog(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = appString(Res.string.auto_1c87acc74e),
+                    text = appString(Res.string.ui_select_page),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.textDark
@@ -190,7 +190,7 @@ private fun PagePickerDialog(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    label = { Text(appString(Res.string.auto_ddab81e196)) },
+                    label = { Text(appString(Res.string.ui_enter_page_number)) },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Go,
@@ -222,7 +222,7 @@ private fun PagePickerDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = colors.brownDeep),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Text(appString(Res.string.auto_15004e41f6), color = Color.White)
+                        Text(appString(Res.string.ui_jump), color = Color.White)
                     }
                 }
             }

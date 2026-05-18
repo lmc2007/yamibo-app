@@ -137,7 +137,7 @@ fun YamiboMainTabIconAction(
  * Typical usage:
  * ```
  * YamiboTopBar(
- *     title = appString(Res.string.auto_456d29ef8b),
+ *     title = appString(Res.string.ui_blog),
  *     onBack = navigator::pop,
  *     actions = { YamiboTopBarIconAction(YamiboIcons.Home, appString(Res.string.main_home), navigator::popToRoot) }
  * )

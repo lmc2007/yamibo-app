@@ -59,9 +59,9 @@ import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class MessageCenterTab(val title: String) {
-    Updates(appString(Res.string.auto_32ac152be1)),
-    PrivateMessages(appString(Res.string.auto_3f5a6da489)),
-    Notices(appString(Res.string.auto_ea5944ab0c)),
+    Updates(appString(Res.string.ui_renew)),
+    PrivateMessages(appString(Res.string.ui_my_messages)),
+    Notices(appString(Res.string.ui_my_notifications)),
 }
 
 private sealed interface MessageCenterState {
@@ -240,14 +240,14 @@ fun MessageCenterScreen(
                                 scope.launch {
                                     favoriteUpdateRunner.cancelUpdate(runId)
                                     loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar(appString(Res.string.auto_f7dfdce6da), duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_update_check_canceled), duration = SnackbarDuration.Short)
                                 }
                             },
                             onInterruptFavoriteUpdate = { runId ->
                                 scope.launch {
                                     favoriteUpdateRunner.interruptUpdate(runId)
                                     loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar(appString(Res.string.auto_b64bd6687a), duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_update_check_interrupted), duration = SnackbarDuration.Short)
                                 }
                             },
                             onResumeFavoriteUpdate = {
@@ -256,13 +256,13 @@ fun MessageCenterScreen(
                                         is FavoriteUpdateRunner.LaunchResult.Started -> {
                                             appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
                                             loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                            snackbarHostState.showSnackbar(appString(Res.string.auto_40cf859ed7), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.ui_keep_checking_for_favorite_updates), duration = SnackbarDuration.Short)
                                         }
                                         is FavoriteUpdateRunner.LaunchResult.Rejected -> {
                                             snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
                                         }
                                         null -> {
-                                            snackbarHostState.showSnackbar(appString(Res.string.auto_68b66b6eb1), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.ui_there_no_favorite_update_task_continue), duration = SnackbarDuration.Short)
                                         }
                                     }
                                 }
@@ -289,7 +289,7 @@ fun MessageCenterScreen(
                             onOpenPrivateMessage = { user -> navigator.navigate(IPrivateMessageScreen(user.uid, user.name)) },
                             onMessageAction = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(appString(Res.string.auto_80a906bd32), duration = SnackbarDuration.Short)
+                                    snackbarHostState.showSnackbar(appString(Res.string.ui_todo_message_interaction_has_not_connected_yet), duration = SnackbarDuration.Short)
                                 }
                             },
                         )
@@ -302,16 +302,16 @@ fun MessageCenterScreen(
     if (showGlobalRefreshConfirm) {
         AlertDialog(
             onDismissRequest = { showGlobalRefreshConfirm = false },
-            title = { Text(appString(Res.string.auto_dc2668b3dd)) },
-            text = { Text(appString(Res.string.auto_e2e8682fec)) },
+            title = { Text(appString(Res.string.ui_global_refresh_favorite_update)) },
+            text = { Text(appString(Res.string.ui_all_favorites_rechecked_new_update_tasks_created_large_number_error)) },
             confirmButton = {
-                YamiboActionChip(text = appString(Res.string.auto_881d186bab), onClick = {
+                YamiboActionChip(text = appString(Res.string.ui_start_refreshing), onClick = {
                     showGlobalRefreshConfirm = false
                     scope.launch {
                         when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
                             is FavoriteUpdateRunner.LaunchResult.Started -> {
                                 appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
-                                snackbarHostState.showSnackbar(appString(Res.string.auto_82daad5e9a), duration = SnackbarDuration.Short)
+                                snackbarHostState.showSnackbar(appString(Res.string.ui_start_global_refresh_favorite_updates), duration = SnackbarDuration.Short)
                             }
                             is FavoriteUpdateRunner.LaunchResult.Rejected -> {
                                 snackbarHostState.showSnackbar(result.reason, duration = SnackbarDuration.Short)
@@ -332,7 +332,7 @@ private fun MessageCenterMainTopBar(
     onSpaceClick: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    YamiboMainTabTopBar(title = appString(Res.string.auto_3f5a6da489)) {
+    YamiboMainTabTopBar(title = appString(Res.string.ui_my_messages)) {
         Surface(onClick = onSpaceClick, shape = RoundedCornerShape(18.dp), color = Color.Transparent) {
             Row(
                 modifier = Modifier.padding(start = 6.dp, end = 2.dp, top = 4.dp, bottom = 4.dp),
@@ -341,7 +341,7 @@ private fun MessageCenterMainTopBar(
             ) {
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
-                    text = appString(Res.string.auto_dc973db60a),
+                    text = appString(Res.string.ui_my_space),
                     color = colors.brownDeep,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -364,7 +364,7 @@ private fun MessageCenterTopBar(
         onBack = onBack,
     ) {
         if (showEdit) {
-            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.auto_aa3a615d69), onEdit)
+            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.ui_edit), onEdit)
         }
     }
 }
@@ -429,7 +429,7 @@ private suspend fun fetchContent(
     tab: MessageCenterTab,
     page: Int,
 ): YamiboResult<MessageCenterContent> = when (tab) {
-    MessageCenterTab.Updates -> YamiboResult.Failure(appString(Res.string.auto_723f6ba455))
+    MessageCenterTab.Updates -> YamiboResult.Failure(appString(Res.string.ui_the_update_page_does_not_require_network_loading))
     MessageCenterTab.PrivateMessages -> repository.fetchPrivateMessages(page).mapSuccess { MessageCenterContent.PrivateMessages(it) }
     MessageCenterTab.Notices -> repository.fetchNotices(page).mapSuccess { MessageCenterContent.Notices(it) }
 }
@@ -499,7 +499,7 @@ private fun navigateFavoriteUpdateEvent(
 
 private fun sendPrivateMessageWebView(): IActionWebView =
     IActionWebView(
-        title = appString(Res.string.auto_3c2c2bd849),
+        title = appString(Res.string.ui_send_message),
         initialUrl = YamiboRoute.SendPrivateMessagePage.build(),
         successCondition = { url -> isMessageListUrl(url) },
     )

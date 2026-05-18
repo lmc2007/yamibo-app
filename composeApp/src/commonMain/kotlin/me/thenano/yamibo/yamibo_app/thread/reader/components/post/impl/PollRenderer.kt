@@ -175,7 +175,7 @@ fun PollRenderer(
                         disabledContainerColor = colors.brownLight.copy(alpha = 0.5f)
                     )
                 ) {
-                    Text(text = if (isSubmitting) appString(Res.string.auto_abe2c5d2b9) else appString(Res.string.auto_9efe59f75a), color = colors.creamBackground)
+                    Text(text = if (isSubmitting) appString(Res.string.ui_submitting) else appString(Res.string.ui_submit_vote), color = colors.creamBackground)
                 }
             }
         }

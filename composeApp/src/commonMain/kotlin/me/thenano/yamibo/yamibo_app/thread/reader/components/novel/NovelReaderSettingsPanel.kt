@@ -68,7 +68,7 @@ fun NovelReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Typography Section
-                SectionTitle(appString(Res.string.auto_4ae7f423d9), color = colors.textDark)
+                SectionTitle(appString(Res.string.ui_text_layout), color = colors.textDark)
                 
                 Spacer(Modifier.height(8.dp))
                 NovelFontSizeSetting()
@@ -81,7 +81,7 @@ fun NovelReaderSettingsPanel(
 
                 Spacer(Modifier.height(24.dp))
 
-                SectionTitle(appString(Res.string.auto_789d3745fc), color = colors.textDark)
+                SectionTitle(appString(Res.string.ui_conversion_between_simplified_traditional_chinese), color = colors.textDark)
                 NovelChineseConversionSetting()
 
                 Spacer(Modifier.height(24.dp))

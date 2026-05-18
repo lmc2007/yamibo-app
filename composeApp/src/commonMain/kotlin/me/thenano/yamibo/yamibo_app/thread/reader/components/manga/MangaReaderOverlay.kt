@@ -251,7 +251,7 @@ fun MangaReaderOverlay(
                             ) {
                                 Icon(
                                     imageVector = YamiboIcons.Share,
-                                    contentDescription = appString(Res.string.auto_c31f48f84e),
+                                    contentDescription = appString(Res.string.ui_share),
                                     tint = Color.White,
                                     modifier = Modifier.size(28.dp)
                                 )

@@ -97,7 +97,7 @@ fun SearchModal(
             val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
             if (page == 1 && looksLikeUrl) {
                 if (directThreadId == null) {
-                    state = SearchState.Error(appString(Res.string.auto_28b382476b))
+                    state = SearchState.Error(appString(Res.string.ui_unrecognized_yamibo_post_link))
                     return@launch
                 }
                 state = when (val result = threadRepository.fetchThread(directThreadId)) {
@@ -121,7 +121,7 @@ fun SearchModal(
 
             val formHash = authRepository.currentUser()?.formHash
             if (formHash == null) {
-                state = SearchState.Error(appString(Res.string.auto_20506b0bba))
+                state = SearchState.Error(appString(Res.string.ui_currently_not_logged_in_site_search_not_available))
                 return@launch
             }
 
@@ -135,7 +135,7 @@ fun SearchModal(
                 when (result) {
                     is YamiboResult.Success -> {
                         if (result.value.threads.isEmpty()) {
-                            SearchState.Error(appString(Res.string.auto_823a19b790))
+                            SearchState.Error(appString(Res.string.ui_no_related_topics_found))
                         } else {
                             if (page == 1) {
                                 currentSearchId = result.value.searchId
@@ -177,7 +177,7 @@ fun SearchModal(
                         modifier = Modifier.weight(1f).focusRequester(focusRequester),
                         placeholder = {
                             Text(
-                                text = appString(Res.string.auto_b7634416b4),
+                                text = appString(Res.string.ui_search_posts),
                                 color = Color.White.copy(alpha = 0.5f),
                                 fontSize = 15.sp
                             )
@@ -254,7 +254,7 @@ private fun SearchIdleContent() {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = appString(Res.string.auto_2b4ac902e7),
+                text = appString(Res.string.ui_enter_keywords_urls_search_for_posts),
                 color = colors.brownPrimary.copy(alpha = 0.6f),
                 fontSize = 15.sp
             )
@@ -274,7 +274,7 @@ private fun SearchLoadingContent() {
                 modifier = Modifier.size(36.dp)
             )
             Spacer(Modifier.height(12.dp))
-            Text(text = appString(Res.string.auto_51e2752c28), color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+            Text(text = appString(Res.string.ui_searching), color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
         }
     }
 }

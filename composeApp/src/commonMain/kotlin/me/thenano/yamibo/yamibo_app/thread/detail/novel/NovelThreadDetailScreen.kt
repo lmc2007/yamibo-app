@@ -89,7 +89,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var favoritePaths by remember { mutableStateOf<List<String>>(emptyList()) }
     var favoriteRefreshToken by remember { mutableStateOf(0) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
-    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.auto_3b66a4b8b2)) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.ui_favorite_removed)) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
@@ -186,7 +186,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             scope = scope,
             snackbarHostState = snackbarHostState,
             successMessage = pendingFavoriteRemovalSuccessMessage,
-            failureMessage = appString(Res.string.auto_4332f902a2),
+            failureMessage = appString(Res.string.ui_failed_remove_favorites),
             onRefreshRequested = { favoriteRefreshToken += 1 },
         )
         pendingFavoriteRemovalSelection = null
@@ -213,7 +213,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalSelection = selection
-            pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
+            pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed)
             if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
@@ -493,7 +493,7 @@ if (showFavoriteDialog) {
                 } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                     showFavoriteDialog = false
                     pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
-                    pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
+                    pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed_from_all_locations)
                     if (appSettingsRepo.skipFavoriteRemovalConfirm.getValue()) {
                         if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
                             showFavoriteMultiPathDialog = true
@@ -507,7 +507,7 @@ if (showFavoriteDialog) {
                     favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                     showFavoriteDialog = false
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_6788887252))
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_location_updated))
                 }
             }
         }
@@ -528,7 +528,7 @@ if (showFavoriteRemovalConfirm) {
                 if ((selection?.paths?.size ?: 0) > 1) {
                     showFavoriteMultiPathDialog = true
                 } else {
-                    pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
+                    pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed)
                     maybePromptRemoteRemoval()
                 }
             }
@@ -573,14 +573,14 @@ if (showFavoriteRemoveSyncConfirm) {
 if (showFavoriteMultiPathDialog) {
     FavoriteMultiPathRemoveDialog(
         paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-        tip = appString(Res.string.auto_96fd606a93),
+        tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
         onDismiss = {
             showFavoriteMultiPathDialog = false
             pendingFavoriteRemovalSelection = null
         },
         onRemoveAll = {
             showFavoriteMultiPathDialog = false
-            pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
+            pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed_from_all_locations)
             scope.launch {
                 maybePromptRemoteRemoval()
             }
@@ -603,7 +603,7 @@ if (showNoteDialog) {
                 )
                 reloadNote()
                 snackbarHostState.showSnackbar(
-                    if (content.isBlank()) appString(Res.string.auto_c092ed8925) else appString(Res.string.auto_d2617b4478),
+                    if (content.isBlank()) appString(Res.string.ui_note_deleted) else appString(Res.string.ui_note_saved),
                     duration = SnackbarDuration.Short,
                 )
             }
@@ -617,7 +617,7 @@ if (showNoteDialog) {
                     authorId = noteAuthorId,
                 )
                 reloadNote()
-                snackbarHostState.showSnackbar(appString(Res.string.auto_c092ed8925), duration = SnackbarDuration.Short)
+                snackbarHostState.showSnackbar(appString(Res.string.ui_note_deleted), duration = SnackbarDuration.Short)
             }
         },
     )
@@ -637,12 +637,12 @@ actionPost?.let { post ->
                     targetType = BookMarkRepository.TargetType.ThreadPost,
                     parentId = tid.value.toLong(),
                     targetId = post.pid.value.toLong(),
-                    title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                    title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                     bookmarked = next,
                 )
                 reloadPostBookMarks()
                 snackbarHostState.showSnackbar(
-                    if (next) appString(Res.string.auto_18546825fb) else appString(Res.string.auto_2995275617),
+                    if (next) appString(Res.string.ui_bookmark_added) else appString(Res.string.ui_bookmark_removed),
                     duration = SnackbarDuration.Short,
                 )
             }
@@ -655,12 +655,12 @@ actionPost?.let { post ->
                     targetType = BookMarkRepository.TargetType.ThreadPost,
                     parentId = tid.value.toLong(),
                     targetId = post.pid.value.toLong(),
-                    title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                    title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                     read = next,
                 )
                 reloadPostBookMarks()
                 snackbarHostState.showSnackbar(
-                    if (next) appString(Res.string.auto_7e65beff49) else appString(Res.string.auto_ef4524ac9f),
+                    if (next) appString(Res.string.ui_marked_as_read) else appString(Res.string.ui_marked_as_unread),
                     duration = SnackbarDuration.Short,
                 )
             }
@@ -672,12 +672,12 @@ actionPost?.let { post ->
                     targetType = BookMarkRepository.TargetType.ThreadPost,
                     parentId = tid.value.toLong(),
                     targetId = post.pid.value.toLong(),
-                    title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                    title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                     read = false,
                 )
                 readHistory = null
                 reloadPostBookMarks()
-                snackbarHostState.showSnackbar(appString(Res.string.auto_112483893b), duration = SnackbarDuration.Short)
+                snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_cleared), duration = SnackbarDuration.Short)
             }
         },
     )
@@ -799,12 +799,12 @@ private fun BookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_760d5e0077), color = colors.brownDeep) },
+        title = { Text(appString(Res.string.ui_read_mark), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                YamiboActionRow(if (bookmarked) appString(Res.string.auto_33d65b9d55) else appString(Res.string.auto_e6bd0a4f22), onToggleBookMark)
-                YamiboActionRow(if (read) appString(Res.string.auto_990f638bce) else appString(Res.string.auto_0aad49a7eb), onToggleRead)
-                YamiboActionRow(appString(Res.string.auto_30921bfe20), onClearHistory)
+                YamiboActionRow(if (bookmarked) appString(Res.string.ui_remove_bookmark) else appString(Res.string.ui_add_bookmark), onToggleBookMark)
+                YamiboActionRow(if (read) appString(Res.string.ui_mark_as_unread) else appString(Res.string.ui_mark_as_read), onToggleRead)
+                YamiboActionRow(appString(Res.string.ui_clear_reading_history), onClearHistory)
             }
         },
         confirmButton = {},

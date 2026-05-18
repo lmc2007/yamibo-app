@@ -405,7 +405,7 @@ private fun HtmlBlockRenderer(
 
                     AlertDialog(
                         onDismissRequest = { showLongPressMenu = null },
-                        title = { Text(appString(Res.string.auto_3c01da21d7), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(appString(Res.string.ui_link_options), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -433,23 +433,23 @@ private fun HtmlBlockRenderer(
                                     TextButton(onClick = {
                                         navigator.navigate(IInAppLinkResolvingScreen(fullUrl, linkContext))
                                         showLongPressMenu = null
-                                    }) { Text(appString(Res.string.auto_0c44930108), color = colors.brownPrimary, fontSize = 16.sp) }
+                                    }) { Text(appString(Res.string.ui_open_in_app), color = colors.brownPrimary, fontSize = 16.sp) }
                                 }
 
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.auto_4d7e0dd771), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_webview_open), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.auto_936a98ae26), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_copy_link), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(menu.linkText))
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.auto_d9156479ff), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_copy_text), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -457,7 +457,7 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showLongPressMenu = null
-                                }) { Text(appString(Res.string.auto_a1dc089d03), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_external_browser), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
@@ -594,7 +594,7 @@ private fun HtmlBlockRenderer(
                 DisableSelection {
                     AlertDialog(
                         onDismissRequest = { showAttachmentMenu = false },
-                        title = { Text(appString(Res.string.auto_88998d60cd), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
+                        title = { Text(appString(Res.string.ui_accessory_options), style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 20.sp)) },
                         text = {
                             Column(modifier = Modifier.fillMaxWidth()) {
                                 Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
@@ -636,17 +636,17 @@ private fun HtmlBlockRenderer(
                                 TextButton(onClick = {
                                     navigator.navigate(IPlatformWebView(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.auto_249c058c9a), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_open_link_within_app), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(fullUrl))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.auto_adb5285529), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_copy_link_address), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     clipboardManager.setText(AnnotatedString(block.fileName))
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.auto_9468fabdd2), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_copy_link_text), color = colors.brownPrimary, fontSize = 16.sp) }
 
                                 TextButton(onClick = {
                                     try {
@@ -654,7 +654,7 @@ private fun HtmlBlockRenderer(
                                     } catch (_: Exception) {
                                     }
                                     showAttachmentMenu = false
-                                }) { Text(appString(Res.string.auto_ac6e8014fc), color = colors.brownPrimary, fontSize = 16.sp) }
+                                }) { Text(appString(Res.string.ui_open_using_external_browser), color = colors.brownPrimary, fontSize = 16.sp) }
                             }
                         },
                         confirmButton = {},
@@ -689,7 +689,7 @@ private fun HtmlBlockRenderer(
             ) {
                 Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
                     Text(
-                        text = if (expanded) "▼ ${block.title ?: appString(Res.string.auto_a34db389f3)}" else "▶ ${block.title ?: appString(Res.string.auto_a34db389f3)}",
+                        text = if (expanded) "▼ ${block.title ?: appString(Res.string.ui_click_expand_collapse)}" else "▶ ${block.title ?: appString(Res.string.ui_click_expand_collapse)}",
                         color = colors.brownDeep,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp

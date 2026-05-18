@@ -88,7 +88,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 TopAppBar(
                     title = {
                         Text(
-                            text = appString(Res.string.auto_232479ab38),
+                            text = appString(Res.string.ui_synchronous_yamibo_favorite),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
@@ -118,7 +118,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                 when {
                     snapshot == null || snapshot.runId != runId -> {
                         Text(
-                            text = appString(Res.string.auto_c490dfaf7a),
+                            text = appString(Res.string.ui_the_synchronization_task_cannot_found),
                             color = colors.textDark,
                             style = MaterialTheme.typography.bodyLarge,
                         )
@@ -140,7 +140,7 @@ fun FavoriteSyncProgressScreen(runId: String) {
                             },
                         )
                         Text(
-                            text = appString(Res.string.auto_dbb1fba1ce),
+                            text = appString(Res.string.ui_closing_screen_not_abort_synchronization_can_still_check_progress),
                             color = colors.textDark.copy(alpha = 0.72f),
                             fontSize = 13.sp,
                         )
@@ -213,7 +213,7 @@ fun FavoriteSyncStatusCard(
                         fontSize = 18.sp,
                     )
                     Text(
-                        text = appString(Res.string.favorite_sync_target_category, categoryName?.let(::localizedAppMessage) ?: appString(Res.string.auto_3ee4f647b2)),
+                        text = appString(Res.string.favorite_sync_target_category, categoryName?.let(::localizedAppMessage) ?: appString(Res.string.ui_default)),
                         color = colors.textDark.copy(alpha = 0.72f),
                         fontSize = 13.sp,
                     )
@@ -241,8 +241,8 @@ fun FavoriteSyncStatusCard(
                     color = colors.brownDeep,
                     trackColor = colors.brownPrimary.copy(alpha = 0.18f),
                 )
-                SyncMetricRow(appString(Res.string.auto_80d0daecfc), formatSyncDateTime(lastSyncTimestamp))
-                SyncMetricRow(appString(Res.string.auto_8242fc76fc), formatSyncDuration(displayedElapsedDuration))
+                SyncMetricRow(appString(Res.string.ui_last_sync_time), formatSyncDateTime(lastSyncTimestamp))
+                SyncMetricRow(appString(Res.string.ui_synchronization_takes_time), formatSyncDuration(displayedElapsedDuration))
                 progressUi.lines.forEach { line ->
                     SyncMetricRow(line.first, line.second)
                 }
@@ -250,7 +250,7 @@ fun FavoriteSyncStatusCard(
 
             snapshot.logMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.auto_dccc309f3d),
+                    title = appString(Res.string.ui_blog_traditional_label),
                     message = localizedAppMessage(it),
                     tint = colors.brownPrimary,
                     maxHeight = messageMaxHeight,
@@ -259,7 +259,7 @@ fun FavoriteSyncStatusCard(
 
             snapshot.warningMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.auto_4b027f3979),
+                    title = appString(Res.string.ui_remind),
                     message = localizedAppMessage(it),
                     tint = colors.brownDeep,
                     maxHeight = messageMaxHeight,
@@ -268,7 +268,7 @@ fun FavoriteSyncStatusCard(
 
             snapshot.errorMessage?.takeIf { it.isNotBlank() }?.let {
                 SyncMessageBlock(
-                    title = appString(Res.string.auto_e91a6ab98f),
+                    title = appString(Res.string.ui_mistake),
                     message = localizedAppMessage(it),
                     tint = Color(0xFFB74D42),
                     maxHeight = messageMaxHeight,
@@ -287,7 +287,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Running) appString(Res.string.auto_5f85564fa8) else appString(Res.string.auto_3612900095))
+                        Text(if (state is FavoriteSyncState.Running) appString(Res.string.ui_view_progress) else appString(Res.string.ui_open_progress))
                     }
                 }
                 if (onInterrupt != null && state is FavoriteSyncState.Running) {
@@ -298,7 +298,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = Color.White,
                         ),
                     ) {
-                        Text(appString(Res.string.auto_c93cb1ccc4))
+                        Text(appString(Res.string.ui_interrupt_synchronization))
                     }
                 }
                 if (onResume != null && state !is FavoriteSyncState.Running) {
@@ -309,7 +309,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.brownDeep,
                         ),
                     ) {
-                        Text(if (state is FavoriteSyncState.Completed) appString(Res.string.auto_c761d4982b) else appString(Res.string.auto_d072c3908f))
+                        Text(if (state is FavoriteSyncState.Completed) appString(Res.string.ui_resync) else appString(Res.string.ui_continue_syncing))
                     }
                 }
                 if (onDismiss != null) {
@@ -320,7 +320,7 @@ fun FavoriteSyncStatusCard(
                             contentColor = colors.textDark.copy(alpha = 0.82f),
                         ),
                     ) {
-                        Text(appString(Res.string.auto_2671918958))
+                        Text(appString(Res.string.ui_hide))
                     }
                 }
             }

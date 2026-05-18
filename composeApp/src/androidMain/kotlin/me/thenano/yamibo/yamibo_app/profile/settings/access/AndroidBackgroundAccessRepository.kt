@@ -90,26 +90,26 @@ class AndroidBackgroundAccessRepository(
         val notificationItem = when {
             !notificationPermissionGranted -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = appString(Res.string.auto_5cead0090e),
-                    subtitle = appString(Res.string.auto_9de49d6a14),
+                    title = appString(Res.string.ui_notification_permissions),
+                    subtitle = appString(Res.string.ui_background_synchronization_must_display_progress_in_notification_bar),
                     status = BackgroundAccessRepository.SetupStatus.Required,
-                    actionLabel = appString(Res.string.auto_2808aa1a67),
+                    actionLabel = appString(Res.string.ui_grant),
                     action = BackgroundAccessRepository.SetupAction.RequestNotificationPermission,
                 )
             }
             !notificationsEnabled -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = appString(Res.string.auto_5a9f6672a2),
-                    subtitle = appString(Res.string.auto_36d8d41239),
+                    title = appString(Res.string.ui_app_notification_switch),
+                    subtitle = appString(Res.string.ui_notifications_for_app_turned_off_turn_back_on_otherwise),
                     status = BackgroundAccessRepository.SetupStatus.Required,
-                    actionLabel = appString(Res.string.auto_60233828b6),
+                    actionLabel = appString(Res.string.ui_go),
                     action = BackgroundAccessRepository.SetupAction.OpenNotificationSettings,
                 )
             }
             else -> {
                 BackgroundAccessRepository.SetupItem(
-                    title = appString(Res.string.auto_5cead0090e),
-                    subtitle = appString(Res.string.auto_60372ee1dd),
+                    title = appString(Res.string.ui_notification_permissions),
+                    subtitle = appString(Res.string.ui_the_notification_bar_can_display_background_synchronization_progress),
                     status = BackgroundAccessRepository.SetupStatus.Granted,
                 )
             }
@@ -117,32 +117,32 @@ class AndroidBackgroundAccessRepository(
 
         val batteryItem = if (!batteryOptimizationIgnored) {
             BackgroundAccessRepository.SetupItem(
-                title = appString(Res.string.auto_7a331081ad),
-                subtitle = appString(Res.string.auto_d4d511fe98),
+                title = appString(Res.string.ui_battery_optimization),
+                subtitle = appString(Res.string.ui_some_devices_terminate_background_network_early_due_battery),
                 status = BackgroundAccessRepository.SetupStatus.Recommended,
-                actionLabel = appString(Res.string.auto_60233828b6),
+                actionLabel = appString(Res.string.ui_go),
                 action = BackgroundAccessRepository.SetupAction.OpenBatteryOptimizationSettings,
             )
         } else {
             BackgroundAccessRepository.SetupItem(
-                title = appString(Res.string.auto_7a331081ad),
-                subtitle = appString(Res.string.auto_08ac566c17),
+                title = appString(Res.string.ui_battery_optimization),
+                subtitle = appString(Res.string.ui_the_system_does_not_prioritize_background_sync_for_app_due),
                 status = BackgroundAccessRepository.SetupStatus.Granted,
             )
         }
 
         val appSettingsItem = BackgroundAccessRepository.SetupItem(
-            title = appString(Res.string.auto_18d17b4f1c),
-            subtitle = appString(Res.string.auto_2114b8c90d),
+            title = appString(Res.string.ui_app_system_settings),
+            subtitle = appString(Res.string.ui_if_device_manufacturer_imposes_additional_restrictions_on_background),
             status = BackgroundAccessRepository.SetupStatus.Info,
-            actionLabel = appString(Res.string.auto_60233828b6),
+            actionLabel = appString(Res.string.ui_go),
             action = BackgroundAccessRepository.SetupAction.OpenAppSettings,
         )
         val dontKillMyAppItem = BackgroundAccessRepository.SetupItem(
-            title = appString(Res.string.auto_c96782a112),
-            subtitle = appString(Res.string.auto_b2f73ce461),
+            title = appString(Res.string.ui_manufacturer_background_restrictions),
+            subtitle = appString(Res.string.ui_some_brands_impose_additional_restrictions_on_background),
             status = BackgroundAccessRepository.SetupStatus.Info,
-            actionLabel = appString(Res.string.auto_607e7a4f37),
+            actionLabel = appString(Res.string.ui_check),
             action = BackgroundAccessRepository.SetupAction.OpenDontKillMyApp,
         )
 
@@ -155,13 +155,13 @@ class AndroidBackgroundAccessRepository(
         val summary = when {
             requiredMissingCount > 0 -> appString(Res.string.background_access_required_missing, requiredMissingCount)
             recommendedCount > 0 -> appString(Res.string.background_access_recommended_missing, recommendedCount)
-            else -> appString(Res.string.auto_c3dd2b4e97)
+            else -> appString(Res.string.ui_the_main_access_required_for_background_synchronization_now_in_place)
         }
 
         return BackgroundAccessRepository.SetupState(
             summary = summary,
             items = listOf(notificationItem, batteryItem, appSettingsItem, dontKillMyAppItem),
-            platformNote = appString(Res.string.auto_64afbee29e),
+            platformNote = appString(Res.string.ui_android_s_background_sync_relies_on_foreground_notifications),
         )
     }
 }

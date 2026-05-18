@@ -114,7 +114,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
             TopAppBar(
                 title = {
                     Text(
-                        text = appString(Res.string.auto_ff9c9aa426),
+                        text = appString(Res.string.ui_sign_in_information),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -155,7 +155,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        SectionCard(title = appString(Res.string.auto_a37c6e6a4c), items = listOf(localizedAppMessage(errorMessage!!)))
+                        SectionCard(title = appString(Res.string.ui_read_failed), items = listOf(localizedAppMessage(errorMessage!!)))
                         OutlinedButton(
                             onClick = ::refreshInfo,
                             modifier = Modifier.fillMaxWidth(),
@@ -165,7 +165,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.auto_fbffa546da))
+                            Text(appString(Res.string.ui_manually_refresh_information))
                         }
                         ElevatedButton(
                             onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
@@ -175,7 +175,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.auto_8be8128f1b))
+                            Text(appString(Res.string.ui_open_check_in_page_webview))
                         }
                     }
                 }
@@ -192,27 +192,27 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                         val summaryItems = buildList {
                             pageInfo.currentDateText?.let { add(it) }
                             pageInfo.monthLabel?.let { add(appString(Res.string.sign_calendar_month, it)) }
-                            add(if (pageInfo.hasSignedToday) appString(Res.string.auto_ba003f24bf) else appString(Res.string.auto_2c29afbe48))
+                            add(if (pageInfo.hasSignedToday) appString(Res.string.ui_today_s_status_signed_in) else appString(Res.string.ui_today_s_status_not_signed_in))
                             if (pageInfo.repairOptions.isNotEmpty()) {
                                 add(appString(Res.string.sign_repair_options, pageInfo.repairOptions.joinToString { it.label }))
                             }
                         }
                         if (summaryItems.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.auto_3ae14696f8), items = summaryItems)
+                            SectionCard(title = appString(Res.string.ui_summary), items = summaryItems)
                         }
-                        pageInfo.notice?.let { SectionCard(title = appString(Res.string.auto_ceb6b09947), items = listOf(it)) }
+                        pageInfo.notice?.let { SectionCard(title = appString(Res.string.ui_check_in_announcement), items = listOf(it)) }
                         if (pageInfo.calendarDays.isNotEmpty()) {
                             CalendarSectionCard(
-                                title = appString(Res.string.auto_c65c885981),
+                                title = appString(Res.string.ui_sign_in_form_for_month),
                                 monthLabel = pageInfo.monthLabel,
                                 days = pageInfo.calendarDays,
                             )
                         }
                         if (pageInfo.myActivity.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.auto_a2c49a0a84), items = pageInfo.myActivity)
+                            SectionCard(title = appString(Res.string.ui_my_check_in_status_2), items = pageInfo.myActivity)
                         }
                         if (pageInfo.statistics.isNotEmpty()) {
-                            SectionCard(title = appString(Res.string.auto_136fe1ebc7), items = pageInfo.statistics)
+                            SectionCard(title = appString(Res.string.ui_check_in_statistics), items = pageInfo.statistics)
                         }
                         pageInfo.extraSections.forEach { section ->
                             SectionCard(title = section.title, items = section.items)
@@ -225,7 +225,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.auto_8be8128f1b))
+                            Text(appString(Res.string.ui_open_check_in_page_webview))
                         }
                         OutlinedButton(
                             onClick = ::refreshInfo,
@@ -236,7 +236,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.auto_fbffa546da))
+                            Text(appString(Res.string.ui_manually_refresh_information))
                         }
                     }
                 }
@@ -249,8 +249,8 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
                         SectionCard(
-                            title = appString(Res.string.auto_448ec48544),
-                            items = listOf(appString(Res.string.auto_eb6b44a802)),
+                            title = appString(Res.string.ui_sign_in_information_has_not_obtained_yet),
+                            items = listOf(appString(Res.string.ui_please_open_check_in_page_webview_first_let_program_capture)),
                         )
                         ElevatedButton(
                             onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
@@ -260,7 +260,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                                 contentColor = colors.creamSurface,
                             ),
                         ) {
-                            Text(appString(Res.string.auto_8be8128f1b))
+                            Text(appString(Res.string.ui_open_check_in_page_webview))
                         }
                         OutlinedButton(
                             onClick = ::refreshInfo,
@@ -271,7 +271,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             ),
                             border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
                         ) {
-                            Text(appString(Res.string.auto_fbffa546da))
+                            Text(appString(Res.string.ui_manually_refresh_information))
                         }
                     }
                 }
@@ -288,7 +288,7 @@ private fun CalendarSectionCard(
 ) {
     val colors = YamiboTheme.colors
     val rows = days.chunked(7)
-    val weekLabels = listOf(appString(Res.string.auto_7941da94db), appString(Res.string.auto_2d8be272c9), appString(Res.string.auto_e662ff59a0), appString(Res.string.auto_21716cf311), appString(Res.string.auto_1fcc29d077), appString(Res.string.auto_61b453523d), appString(Res.string.auto_3edddd85ac))
+    val weekLabels = listOf(appString(Res.string.ui_one), appString(Res.string.ui_two), appString(Res.string.ui_three), appString(Res.string.ui_four), appString(Res.string.ui_five), appString(Res.string.ui_six), appString(Res.string.ui_day))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -387,9 +387,9 @@ private fun RowScope.CalendarDayCell(day: SignRepository.CalendarDay) {
             )
             Text(
                 text = when {
-                    day.isToday && day.isSigned -> appString(Res.string.auto_3147810628)
-                    day.isToday -> appString(Res.string.auto_800dfdd902)
-                    day.isSigned -> appString(Res.string.auto_a5801cd339)
+                    day.isToday && day.isSigned -> appString(Res.string.ui_signed_today)
+                    day.isToday -> appString(Res.string.ui_today_2)
+                    day.isSigned -> appString(Res.string.ui_signed)
                     else -> ""
                 },
                 fontSize = 10.sp,

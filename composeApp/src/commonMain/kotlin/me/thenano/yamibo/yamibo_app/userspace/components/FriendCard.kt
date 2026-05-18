@@ -44,7 +44,7 @@ internal fun FriendCard(
             }
         }
         if (onMessageClick != null) {
-            SmallActionButton(appString(Res.string.auto_3c2c2bd849), onMessageClick)
+            SmallActionButton(appString(Res.string.ui_send_message), onMessageClick)
             Spacer(Modifier.width(6.dp))
         }
         if (item.deleteUrl != null) {

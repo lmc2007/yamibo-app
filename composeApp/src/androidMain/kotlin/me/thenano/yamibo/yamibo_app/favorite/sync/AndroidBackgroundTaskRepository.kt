@@ -20,10 +20,10 @@ class AndroidBackgroundTaskRepository(
 
     override suspend fun startFavoriteSync(runId: String): BackgroundTaskRepository.StartResult {
         if (!AndroidAppForegroundTracker.isForeground()) {
-            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_8e040c66da))
+            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.ui_please_keep_app_in_foreground_starting_sync))
         }
         if (!NotificationManagerCompat.from(appContext).areNotificationsEnabled()) {
-            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_2c6e553441))
+            return BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.ui_please_allow_notification_permission_first_background_synchronization))
         }
 
         return try {
@@ -31,7 +31,7 @@ class AndroidBackgroundTaskRepository(
             ContextCompat.startForegroundService(appContext, intent)
             BackgroundTaskRepository.StartResult.Started
         } catch (_: Throwable) {
-            BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.auto_db648abb65))
+            BackgroundTaskRepository.StartResult.Rejected(appString(Res.string.ui_background_sync_cannot_started_at_time_try_again_with_app))
         }
     }
 

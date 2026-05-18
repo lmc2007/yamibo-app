@@ -67,7 +67,7 @@ internal enum class FavoritePageMode { Normal, Search, Select }
 internal data class FavoriteCollectionDraft(
     val collectionId: Long? = null,
     val parentCategoryId: Long? = null,
-    val title: String = appString(Res.string.auto_fff8441870),
+    val title: String = appString(Res.string.ui_synthetic_collection),
     val initialName: String = "",
     val initialColorKey: String = "brown",
     val removeOriginalItems: Boolean = true,
@@ -292,8 +292,8 @@ fun FavoritePage() {
         }
         showSnackbarMessage(
             when {
-                deleteResult.failedCount == 0 -> appString(Res.string.auto_29ea104e3d)
-                deleteResult.deletedCount == 0 -> deleteResult.messages.firstOrNull() ?: appString(Res.string.auto_1b5beb3523)
+                deleteResult.failedCount == 0 -> appString(Res.string.ui_favorites_deleted)
+                deleteResult.deletedCount == 0 -> deleteResult.messages.firstOrNull() ?: appString(Res.string.ui_failed_delete_favorites)
                 else -> appString(Res.string.favorite_selected_deleted_failed, deleteResult.deletedCount, deleteResult.failedCount)
             }
         )
@@ -345,7 +345,7 @@ fun FavoritePage() {
         selectedCollectionIds = emptySet()
         mode = FavoritePageMode.Normal
         reload(request.categoryId)
-        showSnackbarMessage(appString(Res.string.auto_7447f784f9))
+        showSnackbarMessage(appString(Res.string.ui_the_current_directory_favorite_has_removed))
         deleteRequest = null
     }
 
@@ -446,7 +446,7 @@ fun FavoritePage() {
                     if (runId != null) {
                         scope.launch {
                             favoriteSyncRunner.interruptImport(runId)
-                            showSnackbarMessage(appString(Res.string.auto_fc782b1ad1))
+                            showSnackbarMessage(appString(Res.string.ui_sync_canceled_2))
                         }
                     }
                 },
@@ -490,7 +490,7 @@ fun FavoritePage() {
                     pickerReturnState = null
                     collectionDraft = FavoriteCollectionDraft(
                         parentCategoryId = ready.selectedCategoryId,
-                        title = appString(Res.string.auto_fff8441870),
+                        title = appString(Res.string.ui_synthetic_collection),
                         showRemoveOriginalOption = true,
                     )
                 },
@@ -499,7 +499,7 @@ fun FavoritePage() {
                     collectionDraft = FavoriteCollectionDraft(
                         collectionId = collection.id,
                         parentCategoryId = collection.categoryId,
-                        title = appString(Res.string.auto_97e80c296d),
+                        title = appString(Res.string.ui_edit_collection),
                         initialName = collection.name,
                         initialColorKey = collection.colorKey,
                         removeOriginalItems = false,
@@ -517,7 +517,7 @@ fun FavoritePage() {
                         selectedCollectionIds = emptySet()
                         mode = FavoritePageMode.Normal
                         reload(ready.selectedCategoryId)
-                        showSnackbarMessage(appString(Res.string.auto_e0f93202a3))
+                        showSnackbarMessage(appString(Res.string.ui_disbanded_collection))
                     }
                 },
                 onDeleteSelectedItems = {
@@ -561,7 +561,7 @@ fun FavoritePage() {
                 )
                 showMoveDialog = false
                 collectionDraft = FavoriteCollectionDraft(parentCategoryId = categoryId)
-                    .copy(title = appString(Res.string.auto_d60e143e33), showRemoveOriginalOption = false)
+                    .copy(title = appString(Res.string.ui_add_new_collection), showRemoveOriginalOption = false)
             },
             onConfirm = { selectedCategories, selectedCollections ->
                 scope.launch {
@@ -576,7 +576,7 @@ fun FavoritePage() {
                     selectedCollectionIds = emptySet()
                     mode = FavoritePageMode.Normal
                     reload(current.selectedCategoryId)
-                    showSnackbarMessage(appString(Res.string.auto_78614b2c9c))
+                    showSnackbarMessage(appString(Res.string.ui_favorite_location_updated_2))
                 }
             },
         )
@@ -587,20 +587,20 @@ fun FavoritePage() {
             onDismissRequest = { showSyncConfirmDialog = false },
             title = {
                 Text(
-                    appString(Res.string.auto_232479ab38),
+                    appString(Res.string.ui_synchronous_yamibo_favorite),
                     color = colors.brownDeep,
                     fontWeight = FontWeight.Bold,
                 )
             },
             text = {
                 Text(
-                    appString(Res.string.auto_a48c55280e),
+                    appString(Res.string.ui_are_sure_want_synchronize_yamibo_favorites_local_computer),
                     color = colors.textDark,
                 )
             },
             confirmButton = {
                 FavoriteDialogButton(
-                    text = appString(Res.string.auto_ba0fcf6954),
+                    text = appString(Res.string.ui_sure),
                     background = colors.brownDeep,
                     contentColor = Color.White,
                     onClick = {
@@ -672,7 +672,7 @@ fun FavoritePage() {
                             selectedCollectionIds = emptySet()
                             mode = FavoritePageMode.Normal
                             reload(current.selectedCategoryId)
-                            showSnackbarMessage(appString(Res.string.auto_b899bfd4d2))
+                            showSnackbarMessage(appString(Res.string.ui_collection_updated))
                         } else if (draft.parentCategoryId != null) {
                             val createdCollection = withContext(Dispatchers.Default) {
                                 favoriteRepository.createCollection(
@@ -700,7 +700,7 @@ fun FavoritePage() {
                                 selectedCollectionIds = emptySet()
                                 mode = FavoritePageMode.Normal
                                 reload(current.selectedCategoryId)
-                                showSnackbarMessage(appString(Res.string.auto_af44784bcf))
+                                showSnackbarMessage(appString(Res.string.ui_collection_created))
                             } else {
                                 val (categories, options) = withContext(Dispatchers.Default) {
                                     favoriteRepository.getCategories() to favoriteRepository.getCollectionOptions()
@@ -713,13 +713,13 @@ fun FavoritePage() {
                                 collectionDraft = null
                                 showMoveDialog = true
                                 pickerReturnState = null
-                                showSnackbarMessage(appString(Res.string.auto_b68c576d6d))
+                                showSnackbarMessage(appString(Res.string.ui_collection_added))
                             }
                         } else {
                             collectionDraft = null
                         }
                     } catch (error: IllegalArgumentException) {
-                        showSnackbarMessage(error.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_868de401bd))
+                        showSnackbarMessage(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
                     }
                 }
             },
@@ -808,15 +808,15 @@ fun FavoritePage() {
                 showDeleteScopeDialog = false
                 deleteRequest = null
             },
-            title = { Text(appString(Res.string.auto_6b126fb91d), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
-            text = { Text(appString(Res.string.auto_5a3b5b1217), color = colors.textDark, fontSize = 14.sp) },
+            title = { Text(appString(Res.string.ui_do_want_delete_favorites_under_all_paths), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+            text = { Text(appString(Res.string.ui_at_least_one_item_in_selected_favorite_exists_in_multiple), color = colors.textDark, fontSize = 14.sp) },
             dismissButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ActionChip(appString(Res.string.common_cancel)) {
                         showDeleteScopeDialog = false
                         deleteRequest = null
                     }
-                    ActionChip(appString(Res.string.auto_0a60ac8f02)) {
+                    ActionChip(appString(Res.string.ui_yes)) {
                         val request = deleteRequest ?: return@ActionChip
                         showDeleteScopeDialog = false
                         scope.launch {
@@ -840,7 +840,7 @@ fun FavoritePage() {
                         color = colors.brownDeep,
                     ) {
                         Text(
-                            text = appString(Res.string.auto_e9591b0d9a),
+                            text = appString(Res.string.ui_remove_only_current_directory),
                             color = Color.White,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,

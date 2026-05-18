@@ -204,37 +204,37 @@ private fun LanguageContent() {
 
 @Composable
 private fun NovelReaderContent() {
-    SectionLabel(appString(Res.string.auto_62788ede5c))
+    SectionLabel(appString(Res.string.ui_preview))
     NovelReaderPreviewSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_6416a013a9))
+    SectionLabel(appString(Res.string.ui_font_size))
     NovelFontSizeSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_6ca4489d0c))
+    SectionLabel(appString(Res.string.ui_line_spacing))
     NovelLineSpacingSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_748fd8d8ee))
+    SectionLabel(appString(Res.string.ui_content_width))
     NovelContentWidthSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_aab73bd75a))
+    SectionLabel(appString(Res.string.ui_system_column))
     NovelSystemBarsBackgroundSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_789d3745fc))
+    SectionLabel(appString(Res.string.ui_conversion_between_simplified_traditional_chinese))
     NovelChineseConversionSetting()
 }
 
 @Composable
 private fun MangaReaderContent() {
-    SectionLabel(appString(Res.string.auto_a38439eabc))
+    SectionLabel(appString(Res.string.ui_reading_mode))
     MangaReadingModeSetting()
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_796443a53a))
+    SectionLabel(appString(Res.string.ui_touch_area_2))
     MangaTouchZoneSetting()
 }
 
@@ -259,16 +259,16 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     SectionLabel(appString(Res.string.settings_favorite_title))
     SettingsActionRow(
-        title = appString(Res.string.auto_4bf91e3c32),
-        subtitle = appString(Res.string.auto_79f56a3a2a),
+        title = appString(Res.string.ui_manage_favorite_categories),
+        subtitle = appString(Res.string.ui_add_edit_delete_adjust_favorite_categories),
         onClick = { navigator.navigate(IFavoriteCategoryManageScreen()) },
     )
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_324f5307ef))
+    SectionLabel(appString(Res.string.ui_favorite_display))
     Text(
-        text = appString(Res.string.auto_5e3406cb54),
+        text = appString(Res.string.ui_arrangement),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -284,7 +284,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(18.dp))
     Text(
-        text = appString(Res.string.auto_a2946a1a42),
+        text = appString(Res.string.ui_sort_by),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -312,7 +312,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_b86aecf8e2))
+    SectionLabel(appString(Res.string.ui_favorite_delete))
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,14 +325,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.auto_8e2e474ac2),
+                text = appString(Res.string.ui_skip_deletion_confirmation),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = appString(Res.string.auto_7be098868f),
+                text = appString(Res.string.ui_after_turning_on_confirmation_window_no_longer_pop_up_deleting),
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )
@@ -351,16 +351,16 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_60536184ad))
+    SectionLabel(appString(Res.string.ui_favorite_sync_preferences))
     SettingsActionRow(
-        title = appString(Res.string.auto_6f6c9bbb3a),
-        subtitle = appString(Res.string.auto_8f60f3d422),
+        title = appString(Res.string.ui_notification_background_synchronization_settings),
+        subtitle = appString(Res.string.ui_check_system_settings_required_for_notification_permissions_battery),
         onClick = { navigator.navigate(IBackgroundAccessSetupScreen()) },
     )
 
     Spacer(Modifier.height(18.dp))
     Text(
-        text = appString(Res.string.auto_bb348e505e),
+        text = appString(Res.string.ui_favorite_update_check_cycle),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -375,7 +375,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
             coroutineScope.launch {
                 favoriteUpdateRunner.schedulePeriodicUpdate(interval)
                 if (interval == FavoriteUpdateInterval.SMART) {
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_1f165f5d19))
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_the_smart_update_policy_has_not_accessed_yet_periodic_background))
                 }
             }
         },
@@ -385,14 +385,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     Spacer(Modifier.height(18.dp))
 
     SettingsToggleRow(
-        title = appString(Res.string.auto_5dcec1785b),
-        subtitle = appString(Res.string.auto_e825069b64),
+        title = appString(Res.string.ui_ask_for_synchronization_adding_favorite),
+        subtitle = appString(Res.string.ui_after_turning_on_creating_new_favorite_asked_whether_synchronize),
         checked = addSyncPromptEnabled,
         onCheckedChange = { appSettingsRepository.favoriteAddSyncPromptEnabled.setValue(it) },
     )
     Spacer(Modifier.height(10.dp))
     Text(
-        text = appString(Res.string.auto_d632df396a),
+        text = appString(Res.string.ui_added_new_favorite_preset_actions),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -400,7 +400,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     )
     Spacer(Modifier.height(6.dp))
     SettingsChipRow(
-        options = listOf(true to appString(Res.string.auto_70a22368fc), false to appString(Res.string.auto_439aaf66b6)),
+        options = listOf(true to appString(Res.string.ui_sync_yamibo), false to appString(Res.string.ui_only_save_local)),
         selectedValue = addSyncDefault,
         onSelect = { appSettingsRepository.favoriteAddSyncDefault.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -408,14 +408,14 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(18.dp))
     SettingsToggleRow(
-        title = appString(Res.string.auto_fc52b98d7c),
-        subtitle = appString(Res.string.auto_3dfba3e58b),
+        title = appString(Res.string.ui_ask_for_simultaneous_deletion_completely_removing_favorites),
+        subtitle = appString(Res.string.ui_after_turning_on_favorite_disappears_completely_asked_whether),
         checked = removeSyncPromptEnabled,
         onCheckedChange = { appSettingsRepository.favoriteRemoveSyncPromptEnabled.setValue(it) },
     )
     Spacer(Modifier.height(10.dp))
     Text(
-        text = appString(Res.string.auto_c7e17132a9),
+        text = appString(Res.string.ui_completely_remove_favorite_preset_actions),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -423,7 +423,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
     )
     Spacer(Modifier.height(6.dp))
     SettingsChipRow(
-        options = listOf(true to appString(Res.string.auto_dcb2ac5891), false to appString(Res.string.auto_e3f4ddd261)),
+        options = listOf(true to appString(Res.string.ui_synchronous_removal), false to appString(Res.string.ui_only_delete_local)),
         selectedValue = removeSyncDefault,
         onSelect = { appSettingsRepository.favoriteRemoveSyncDefault.setValue(it) },
         modifier = Modifier.padding(horizontal = 4.dp),
@@ -431,7 +431,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_e4ea5cdab7))
+    SectionLabel(appString(Res.string.ui_favorite_synchronization))
     if (syncState != FavoriteSyncState.Idle) {
         FavoriteSyncStatusCard(
             state = syncState,
@@ -463,7 +463,7 @@ private fun FavoriteSettingsContent(snackbarHostState: SnackbarHostState) {
         )
     } else {
         Text(
-            text = appString(Res.string.auto_6639747c5a),
+            text = appString(Res.string.ui_the_status_progress_latest_favorite_synchronization_displayed_here),
             fontSize = 13.sp,
             color = colors.textDark.copy(alpha = 0.68f),
             modifier = Modifier.padding(horizontal = 4.dp),
@@ -565,7 +565,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     val coroutineScope = rememberCoroutineScope()
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
-    var cacheSizeText by remember { mutableStateOf(appString(Res.string.auto_5844cdf5ef)) }
+    var cacheSizeText by remember { mutableStateOf(appString(Res.string.ui_calculating)) }
     var cacheBreakdown by remember { mutableStateOf(CacheStorageBreakdown(rootPath = "", usages = emptyList())) }
 
     suspend fun refreshCacheUsage() {
@@ -589,7 +589,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.auto_9508759f08),
+                text = appString(Res.string.ui_clear_cache_app_starts),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.textDark,
@@ -615,14 +615,14 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
     }
 
     SettingsActionRow(
-        title = appString(Res.string.auto_367a4693bb),
+        title = appString(Res.string.ui_clear_all_caches_now),
         subtitle = appString(Res.string.settings_storage_subtitle_with_size, cacheSizeText),
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()
                 cacheSizeText = "0 kB"
                 cacheBreakdown = cacheBreakdown.copy(usages = emptyList())
-                snackbarHostState.showSnackbar(appString(Res.string.auto_e5119a7ce1))
+                snackbarHostState.showSnackbar(appString(Res.string.ui_all_cache_cleared))
             }
         },
     )
@@ -640,7 +640,7 @@ private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
     val totalBytes = breakdown.usages.sumOf { it.bytes }.coerceAtLeast(1L)
 
     Text(
-        text = appString(Res.string.auto_9dab6052e6),
+        text = appString(Res.string.ui_storage_usage),
         fontSize = 16.sp,
         fontWeight = FontWeight.SemiBold,
         color = colors.brownDeep,
@@ -718,9 +718,9 @@ private fun SignSettingsContent() {
     val signMode = appSettingsRepository.signInMode.state()
     val allowRepair = appSettingsRepository.signInAllowRepair.state()
 
-    SectionLabel(appString(Res.string.auto_65f815f857))
+    SectionLabel(appString(Res.string.ui_check_in_mode))
     Text(
-        text = appString(Res.string.auto_a957778e9e),
+        text = appString(Res.string.ui_check_in_behavior),
         fontSize = 16.sp,
         fontWeight = FontWeight.Medium,
         color = colors.textDark,
@@ -736,12 +736,12 @@ private fun SignSettingsContent() {
 
     Spacer(Modifier.height(24.dp))
 
-    SectionLabel(appString(Res.string.auto_8d62c3e345))
+    SectionLabel(appString(Res.string.ui_re_signing))
     SettingsToggleRow(
-        title = appString(Res.string.auto_b8f5e836ab),
+        title = appString(Res.string.ui_automatic_re_signing),
         subtitle = when (signMode) {
-            SignInMode.FULL_MANUAL -> appString(Res.string.auto_be37b23fd3)
-            SignInMode.SEMI_AUTOMATIC -> appString(Res.string.auto_0c2901a3f5)
+            SignInMode.FULL_MANUAL -> appString(Res.string.ui_in_manual_mode_only_preference_saved_in_semi_automatic_mode)
+            SignInMode.SEMI_AUTOMATIC -> appString(Res.string.ui_after_completing_cloudflare_verification_program_fill_in_all_time)
         },
         checked = allowRepair,
         onCheckedChange = { appSettingsRepository.signInAllowRepair.setValue(it) },

@@ -155,7 +155,7 @@ private fun ContextMenuContainer(
                 ) {
                     ContextMenuItem(
                         icon = YamiboIcons.Copy,
-                        label = appString(Res.string.auto_1fde1cf12b),
+                        label = appString(Res.string.ui_copy),
                         onClick = {
                             scope.launch {
                                 copyImageToClipboard(context, imageUrl, cookie, referer)
@@ -165,7 +165,7 @@ private fun ContextMenuContainer(
                     )
                     ContextMenuItem(
                         icon = YamiboIcons.Share,
-                        label = appString(Res.string.auto_c31f48f84e),
+                        label = appString(Res.string.ui_share),
                         onClick = {
                             scope.launch {
                                 shareImageToApp(context, imageUrl, cookie, referer)
@@ -175,7 +175,7 @@ private fun ContextMenuContainer(
                     )
                     ContextMenuItem(
                         icon = YamiboIcons.Save,
-                        label = appString(Res.string.auto_e9dabecb44),
+                        label = appString(Res.string.ui_store),
                         onClick = {
                             scope.launch {
                                 saveImageToGallery(context, imageUrl, cookie, referer)
@@ -186,7 +186,7 @@ private fun ContextMenuContainer(
                     if (onSetAsCover != null) {
                         ContextMenuItem(
                             icon = YamiboIcons.StarOutline,
-                            label = appString(Res.string.auto_94ae6ed6d4),
+                            label = appString(Res.string.ui_set_as_cover),
                             onClick = {
                                 onSetAsCover(imageUrl)
                                 onDismiss()
@@ -204,7 +204,7 @@ private fun ContextMenuContainer(
             ) {
                 ContextMenuItem(
                     icon = YamiboIcons.Copy,
-                    label = appString(Res.string.auto_1fde1cf12b),
+                    label = appString(Res.string.ui_copy),
                     onClick = {
                         scope.launch {
                             copyImageToClipboard(context, imageUrl, cookie, referer)
@@ -214,7 +214,7 @@ private fun ContextMenuContainer(
                 )
                 ContextMenuItem(
                     icon = YamiboIcons.Share,
-                    label = appString(Res.string.auto_c31f48f84e),
+                    label = appString(Res.string.ui_share),
                     onClick = {
                         scope.launch {
                             shareImageToApp(context, imageUrl, cookie, referer)
@@ -224,7 +224,7 @@ private fun ContextMenuContainer(
                 )
                 ContextMenuItem(
                     icon = YamiboIcons.Save,
-                    label = appString(Res.string.auto_e9dabecb44),
+                    label = appString(Res.string.ui_store),
                     onClick = {
                         scope.launch {
                             saveImageToGallery(context, imageUrl, cookie, referer)
@@ -235,7 +235,7 @@ private fun ContextMenuContainer(
                 if (onSetAsCover != null) {
                     ContextMenuItem(
                         icon = YamiboIcons.StarOutline,
-                        label = appString(Res.string.auto_94ae6ed6d4),
+                        label = appString(Res.string.ui_set_as_cover),
                         onClick = {
                             onSetAsCover(imageUrl)
                             onDismiss()

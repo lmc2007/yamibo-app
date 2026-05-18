@@ -348,7 +348,7 @@ internal fun formatFavoriteTime(timestamp: Long): String {
         days > 0L -> appString(Res.string.time_days_ago, days)
         hours > 0L -> appString(Res.string.time_hours_ago, hours)
         minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
-        else -> appString(Res.string.auto_7a453f8268)
+        else -> appString(Res.string.ui_just)
     }
 }
 

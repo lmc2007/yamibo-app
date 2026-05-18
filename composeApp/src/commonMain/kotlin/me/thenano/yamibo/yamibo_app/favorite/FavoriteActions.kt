@@ -100,7 +100,7 @@ internal suspend fun syncExistingFavoriteIfRequested(
 ): FavoriteSyncActionResult? {
     if (!syncToRemote || !target.supportsRemoteWebsiteSync()) return null
     val item = favoriteRepository.findFavoriteItem(target)
-        ?: return FavoriteSyncActionResult(false, appString(Res.string.auto_8bf94c8e91))
+        ?: return FavoriteSyncActionResult(false, appString(Res.string.ui_added_local_favorite_but_sync_target_not_found))
     return favoriteSyncRepository.syncLocalFavoriteItem(item.id)
 }
 
@@ -126,9 +126,9 @@ internal suspend fun completeFavoriteAddWithFeedback(
     }
     onRefreshRequested()
     val message = when {
-        syncResult == null -> appString(Res.string.auto_1512861213)
-        syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
-        else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
+        syncResult == null -> appString(Res.string.ui_added_favorites)
+        syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
+        else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -145,7 +145,7 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
     val syncingSnackbarJob = if (syncToRemote) {
         scope.launch {
             snackbarHostState.showSnackbar(
-                message = appString(Res.string.auto_af7b64507d),
+                message = appString(Res.string.ui_synchronizing_yamibo),
                 duration = SnackbarDuration.Indefinite,
             )
         }
@@ -159,9 +159,9 @@ internal suspend fun completeSavedFavoriteSyncWithFeedback(
     snackbarHostState.currentSnackbarData?.dismiss()
     onRefreshRequested()
     val message = when {
-        syncResult == null -> appString(Res.string.auto_0b221c720d)
-        syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
-        else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
+        syncResult == null -> appString(Res.string.ui_added_local_favorites)
+        syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
+        else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
     }
     snackbarHostState.showSnackbar(message)
 }
@@ -180,7 +180,7 @@ internal suspend fun completeFavoriteRemovalWithFeedback(
     val syncingSnackbarJob = if (removeRemote) {
         scope.launch {
             snackbarHostState.showSnackbar(
-                message = appString(Res.string.auto_1294f453e8),
+                message = appString(Res.string.ui_removing_favorites_from_yamibo),
                 duration = SnackbarDuration.Indefinite,
             )
         }
@@ -337,7 +337,7 @@ fun FavoriteCollectionPickerDialog(
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Text(
-                    text = appString(Res.string.auto_8a72dbc24e),
+                    text = appString(Res.string.ui_select_category),
                     color = colors.brownDeep,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
@@ -345,7 +345,7 @@ fun FavoriteCollectionPickerDialog(
 
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = currentCategory?.let { "${localizedAppMessage(it.categoryName)}/" } ?: appString(Res.string.auto_b114150a8a),
+                    text = currentCategory?.let { "${localizedAppMessage(it.categoryName)}/" } ?: appString(Res.string.ui_check_major_categories_click_in_select_small_collections),
                     color = colors.textDark.copy(alpha = if (currentCategory == null) 0.58f else 0.82f),
                     fontSize = 12.sp,
                     fontWeight = if (currentCategory == null) FontWeight.Normal else FontWeight.Medium,
@@ -431,7 +431,7 @@ fun FavoriteCollectionPickerDialog(
                 ) {
                     if (currentCategory != null) {
                         FavoriteDialogButton(
-                            text = appString(Res.string.auto_5f411223ca),
+                            text = appString(Res.string.ui_return),
                             background = colors.brownPrimary.copy(alpha = 0.12f),
                             contentColor = colors.brownDeep,
                             onClick = { currentCategoryId = null },
@@ -439,7 +439,7 @@ fun FavoriteCollectionPickerDialog(
                     }
 
                     FavoriteDialogButton(
-                        text = appString(Res.string.auto_aa3a615d69),
+                        text = appString(Res.string.ui_edit),
                         background = colors.brownPrimary.copy(alpha = 0.08f),
                         contentColor = colors.brownDeep,
                         onClick = onEdit,
@@ -447,7 +447,7 @@ fun FavoriteCollectionPickerDialog(
 
                     if (currentCategory != null) {
                         FavoriteDialogButton(
-                            text = appString(Res.string.auto_d60e143e33),
+                            text = appString(Res.string.ui_add_new_collection),
                             background = colors.brownPrimary.copy(alpha = 0.08f),
                             contentColor = colors.brownDeep,
                             onClick = { onCreateCollection(currentCategory.categoryId) },
@@ -464,7 +464,7 @@ fun FavoriteCollectionPickerDialog(
                     )
 
                     FavoriteDialogButton(
-                        text = appString(Res.string.auto_ba0fcf6954),
+                        text = appString(Res.string.ui_sure),
                         background = colors.brownDeep,
                         contentColor = Color.White,
                         onClick = { onConfirm(selectedCategories, selectedCollections) },
@@ -514,13 +514,13 @@ private fun FavoriteCategoryRow(
             Text(
                 text = buildString {
                     if (category.categoryId in selectedCategories) {
-                        append(appString(Res.string.auto_28ff9eb5cc))
+                        append(appString(Res.string.ui_already_added_major_categories))
                     }
                     if (selectedCollectionCount > 0) {
                         if (isNotEmpty()) append(" / ")
                         append(appString(Res.string.favorite_selected_collection_count, selectedCollectionCount))
                     }
-                    if (isEmpty()) append(appString(Res.string.auto_e032485bce))
+                    if (isEmpty()) append(appString(Res.string.ui_not_yet_joined))
                 },
                 color = colors.textDark.copy(alpha = 0.5f),
                 fontSize = 11.sp,
@@ -589,9 +589,9 @@ private fun FavoriteCategoryRootRow(
                 )
                 Text(
                     text = when (toggleState) {
-                        ToggleableState.On -> appString(Res.string.auto_28ff9eb5cc)
-                        ToggleableState.Indeterminate -> appString(Res.string.auto_68f41c6739)
-                        ToggleableState.Off -> appString(Res.string.auto_6f9897f099)
+                        ToggleableState.On -> appString(Res.string.ui_already_added_major_categories)
+                        ToggleableState.Indeterminate -> appString(Res.string.ui_join_only_part_collection)
+                        ToggleableState.Off -> appString(Res.string.ui_not_added_major_categories)
                     },
                     color = colors.textDark.copy(alpha = 0.45f),
                     fontSize = 11.sp,
@@ -764,11 +764,11 @@ fun FavoriteRemovalConfirmDialog(
     var skipNextTime by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_0294844c49), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_confirm_remove_favorite), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = appString(Res.string.auto_1fd950316e),
+                    text = appString(Res.string.ui_cancellation_remove_current_favorite_item),
                     color = colors.textDark,
                     fontSize = 14.sp,
                 )
@@ -786,7 +786,7 @@ fun FavoriteRemovalConfirmDialog(
                         ),
                     )
                     Text(
-                        text = appString(Res.string.auto_705584849e),
+                        text = appString(Res.string.ui_don_t_prompt_again_next_time),
                         color = colors.textDark,
                         fontSize = 13.sp,
                     )
@@ -795,7 +795,7 @@ fun FavoriteRemovalConfirmDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_ba0fcf6954),
+                text = appString(Res.string.ui_sure),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { onConfirm(skipNextTime) },
@@ -820,11 +820,11 @@ fun FavoriteAddSyncConfirmDialog(
     onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
 ) {
     FavoriteRemoteSyncChoiceDialog(
-        title = appString(Res.string.auto_ff0f326a72),
-        message = appString(Res.string.auto_1b8ca83b6e),
-        rememberLabel = appString(Res.string.auto_ba798a8eb6),
-        primaryText = appString(Res.string.auto_70a22368fc),
-        secondaryText = appString(Res.string.auto_439aaf66b6),
+        title = appString(Res.string.ui_will_synchronized_yamibo_favorite),
+        message = appString(Res.string.ui_do_want_sync_favorite_yamibo),
+        rememberLabel = appString(Res.string.ui_remember_choice),
+        primaryText = appString(Res.string.ui_sync_yamibo),
+        secondaryText = appString(Res.string.ui_only_save_local),
         onDismiss = onDismiss,
         onConfirm = onConfirm,
     )
@@ -836,11 +836,11 @@ fun FavoriteRemoveSyncConfirmDialog(
     onConfirm: (rememberChoice: Boolean, syncRemote: Boolean) -> Unit,
 ) {
     FavoriteRemoteSyncChoiceDialog(
-        title = appString(Res.string.auto_c102681960),
-        message = appString(Res.string.auto_cfe436737a),
-        rememberLabel = appString(Res.string.auto_ba798a8eb6),
-        primaryText = appString(Res.string.auto_dcb2ac5891),
-        secondaryText = appString(Res.string.auto_e3f4ddd261),
+        title = appString(Res.string.ui_will_favorite_yamibo_removed_simultaneously),
+        message = appString(Res.string.ui_do_want_remove_favorite_from_yamibo_website),
+        rememberLabel = appString(Res.string.ui_remember_choice),
+        primaryText = appString(Res.string.ui_synchronous_removal),
+        secondaryText = appString(Res.string.ui_only_delete_local),
         onDismiss = onDismiss,
         onConfirm = onConfirm,
     )
@@ -919,7 +919,7 @@ fun FavoriteMultiPathRemoveDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_d62e16cb0f), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_cancel_all_favorites_2), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -936,7 +936,7 @@ fun FavoriteMultiPathRemoveDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_07a4547d40),
+                text = appString(Res.string.ui_cancel_all_favorites),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = colors.brownDeep,
                 onClick = onRemoveAll,
@@ -944,7 +944,7 @@ fun FavoriteMultiPathRemoveDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_c9744f45e7),
+                text = appString(Res.string.ui_no),
                 background = colors.textDark.copy(alpha = 0.06f),
                 contentColor = colors.textDark.copy(alpha = 0.8f),
                 onClick = onDismiss,

@@ -59,7 +59,7 @@ fun FavoriteHeaderMenuRow(
     YamiboMainTabTopBar(
         title = title,
     ) {
-        YamiboMainTabIconAction(YamiboIcons.Search, appString(Res.string.auto_0a1ec5c6d1), onSearch, iconSize = 28, iconOffsetY = 4)
+        YamiboMainTabIconAction(YamiboIcons.Search, appString(Res.string.ui_search_favorites), onSearch, iconSize = 28, iconOffsetY = 4)
         RowScopeMenuBox(
             showMenu = showMenu,
             onShowMenu = { showMenu = true },
@@ -82,14 +82,14 @@ private fun RowScopeMenuBox(
 ) {
     val colors = YamiboTheme.colors
     Box {
-        YamiboMainTabIconAction(YamiboIcons.ThreeDots, appString(Res.string.auto_ba309dd4d8), iconSize = 25, onClick = onShowMenu)
+        YamiboMainTabIconAction(YamiboIcons.ThreeDots, appString(Res.string.ui_favorites_menu), iconSize = 25, onClick = onShowMenu)
         DropdownMenu(
             expanded = showMenu,
             onDismissRequest = onDismissMenu,
             modifier = Modifier.background(colors.creamSurface),
         ) {
             DropdownMenuItem(
-                text = { Text(appString(Res.string.auto_708dd95c05), color = colors.brownDeep) },
+                text = { Text(appString(Res.string.ui_create_new_category), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Plus,
@@ -103,7 +103,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(appString(Res.string.auto_314a155d2c), color = colors.brownDeep) },
+                text = { Text(appString(Res.string.ui_management_category), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Setting,
@@ -117,7 +117,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(appString(Res.string.auto_232479ab38), color = colors.brownDeep) },
+                text = { Text(appString(Res.string.ui_synchronous_yamibo_favorite), color = colors.brownDeep) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Sync,
@@ -157,7 +157,7 @@ fun FavoriteSearchTopBar(
             onValueChange = onQueryChange,
             modifier = Modifier.weight(1f),
             placeholder = {
-                Text(appString(Res.string.auto_57bcfdf401), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp)
+                Text(appString(Res.string.ui_search_for_favorite_titles), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp)
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -201,7 +201,7 @@ fun FavoriteSyncCategoryDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                appString(Res.string.auto_cf19916aaa),
+                appString(Res.string.ui_which_category_sync),
                 color = colors.brownDeep,
                 fontWeight = FontWeight.Bold,
             )
@@ -237,7 +237,7 @@ fun FavoriteSyncCategoryDialog(
                             )
                             if (selected) {
                                 Text(
-                                    text = appString(Res.string.auto_1d20dbc3b3),
+                                    text = appString(Res.string.ui_selected),
                                     color = colors.brownDeep,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
@@ -250,7 +250,7 @@ fun FavoriteSyncCategoryDialog(
         },
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_0cd83a34b9),
+                text = appString(Res.string.ui_start_syncing),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { onConfirm(selectedCategoryId) },

@@ -193,7 +193,7 @@ private fun SearchScreen(fid: ForumId?) {
             val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
             if (page == 1 && looksLikeUrl) {
                 if (directThreadId == null) {
-                    state = SearchState.Error(appString(Res.string.auto_862deb50a3))
+                    state = SearchState.Error(appString(Res.string.ui_this_link_not_recognized))
                     return@launch
                 }
                 state = when (val result = threadRepository.fetchThread(directThreadId)) {
@@ -217,7 +217,7 @@ private fun SearchScreen(fid: ForumId?) {
 
             val formHash = authRepository.currentUser()?.formHash
             if (formHash == null) {
-                state = SearchState.Error(appString(Res.string.auto_a2340fd7c4))
+                state = SearchState.Error(appString(Res.string.ui_please_log_in_first_searching))
                 return@launch
             }
 
@@ -229,7 +229,7 @@ private fun SearchScreen(fid: ForumId?) {
             state = when (result) {
                 is YamiboResult.Success -> {
                     if (result.value.threads.isEmpty()) {
-                        SearchState.Error(appString(Res.string.auto_a6103cd15b))
+                        SearchState.Error(appString(Res.string.ui_no_search_results_found))
                     } else {
                         if (page == 1) currentSearchId = result.value.searchId
                         SearchState.Success(result.value)
@@ -269,7 +269,7 @@ private fun SearchScreen(fid: ForumId?) {
                     modifier = Modifier.weight(1f).focusRequester(focusRequester),
                     placeholder = {
                         Text(
-                            text = appString(Res.string.auto_39df531131),
+                            text = appString(Res.string.ui_search_title_link),
                             color = Color.White.copy(alpha = 0.5f),
                             fontSize = 15.sp,
                         )
@@ -337,7 +337,7 @@ private fun SearchIdleContent() {
                 modifier = Modifier.size(64.dp),
             )
             Spacer(Modifier.size(12.dp))
-            Text(appString(Res.string.auto_3cb01656ca), color = colors.brownPrimary.copy(alpha = 0.6f), fontSize = 15.sp)
+            Text(appString(Res.string.ui_enter_keyword_post_link), color = colors.brownPrimary.copy(alpha = 0.6f), fontSize = 15.sp)
         }
     }
 }
@@ -353,7 +353,7 @@ private fun SearchLoadingContent() {
                 modifier = Modifier.size(36.dp),
             )
             Spacer(Modifier.size(12.dp))
-            Text(appString(Res.string.auto_51e2752c28), color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
+            Text(appString(Res.string.ui_searching), color = colors.brownPrimary.copy(alpha = 0.7f), fontSize = 14.sp)
         }
     }
 }

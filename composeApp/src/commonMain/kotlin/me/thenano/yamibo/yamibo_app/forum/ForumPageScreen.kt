@@ -133,12 +133,12 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 onPostThread = {
                     navigator.navigate(
                         IActionWebView(
-                            title = appString(Res.string.auto_a67f86bbe9),
+                            title = appString(Res.string.ui_post_2),
                             initialUrl = YamiboRoute.PostThread(fid).build(),
                             successCondition = { url -> url.contains("mod=forumdisplay") && url.contains("fid=") },
                             onSuccess = {
                                 scope.launch {
-                                    snackbarHostState.showSnackbar(appString(Res.string.auto_16cc7b2265))
+                                    snackbarHostState.showSnackbar(appString(Res.string.ui_post_successfully))
                                 }
                             },
                         )
@@ -149,7 +149,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                     if (formHash == null) {
                         scope.launch {
                             snackbarHostState.showSnackbar(
-                                message = appString(Res.string.auto_b7db368fe9),
+                                message = appString(Res.string.ui_not_logged_in_log_in_first_adding_favorites),
                                 duration = SnackbarDuration.Short
                             )
                         }
@@ -250,7 +250,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                                     is PinnedItem.Announcement -> {
                                         scope.launch {
                                             snackbarHostState.showSnackbar(
-                                                appString(Res.string.auto_3502e3af58),
+                                                appString(Res.string.ui_jumping_announcement_page_not_supported_yet),
                                                 duration = SnackbarDuration.Short
                                             )
                                         }
@@ -353,7 +353,7 @@ private fun ForumTopBar(
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
                         imageVector = YamiboIcons.ThreeDots,
-                        contentDescription = appString(Res.string.auto_0ec9eaf9c3),
+                        contentDescription = appString(Res.string.ui_more),
                         tint = Color.White,
                         modifier = Modifier.size(24.dp)
                     )
@@ -364,7 +364,7 @@ private fun ForumTopBar(
                     modifier = Modifier.background(colors.creamSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.auto_a67f86bbe9), color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.ui_post_2), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.EditOrSign,
@@ -378,7 +378,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.auto_561921a651), color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.ui_bookmark_edition), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.StarOutline,
@@ -392,7 +392,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.auto_0ae3a1a9ee), color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.ui_jump_homepage), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Home,
@@ -406,7 +406,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(appString(Res.string.auto_e2a2a2069d), color = colors.brownDeep) },
+                        text = { Text(appString(Res.string.ui_jump_favorites), color = colors.brownDeep) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Explore,
@@ -492,7 +492,7 @@ private fun ForumOrderDialog(
     onSelect: (OrderType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = appString(Res.string.auto_c360e994db),
+        title = appString(Res.string.ui_sort),
         defaultLabel = appString(Res.string.common_all),
         options = options,
         selected = selected,
@@ -510,7 +510,7 @@ private fun ForumFilterTypeDialog(
     onSelect: (FilterType?) -> Unit,
 ) {
     ForumOptionDialog(
-        title = appString(Res.string.auto_e740046d8c),
+        title = appString(Res.string.ui_classification),
         defaultLabel = appString(Res.string.common_all),
         options = options,
         selected = selected,
@@ -668,7 +668,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = appString(Res.string.auto_0c830cfab7),
+                    text = appString(Res.string.ui_loading_failed),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -688,7 +688,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = appString(Res.string.auto_3d2b6505a6),
+                        text = appString(Res.string.ui_try_again),
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp

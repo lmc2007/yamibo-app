@@ -137,7 +137,7 @@ fun PrivateMessageScreen(
             PrivateMessageTopBar(
                 title = (state as? PrivateMessageState.Success)?.page?.title
                     ?: titleHint?.let { appString(Res.string.private_message_title_with_name, it) }
-                    ?: appString(Res.string.auto_c0abbfb414),
+                    ?: appString(Res.string.ui_chat),
                 onBack = { navigator.pop() },
                 onRefresh = {
                     scope.launch { loadPage(page = null, preferCache = false) }
@@ -157,10 +157,10 @@ fun PrivateMessageScreen(
                     val message = input.trim()
                     when {
                         formHash == null -> scope.launch {
-                            snackbarHostState.showSnackbar(appString(Res.string.auto_dc1f0dffd0), duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_log_in_first_sending_message), duration = SnackbarDuration.Short)
                         }
                         message.isBlank() -> scope.launch {
-                            snackbarHostState.showSnackbar(appString(Res.string.auto_bcd47d4bfc), duration = SnackbarDuration.Short)
+                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_content_2), duration = SnackbarDuration.Short)
                         }
                         else -> scope.launch {
                             sending = true
@@ -226,7 +226,7 @@ private fun PrivateMessageTopBar(title: String, onBack: () -> Unit, onRefresh: (
         titleFontSize = 18,
         onBack = onBack,
     ) {
-        YamiboTopBarIconAction(YamiboIcons.Reload, appString(Res.string.auto_694fc5efa9), onRefresh, iconSize = 22)
+        YamiboTopBarIconAction(YamiboIcons.Reload, appString(Res.string.ui_refresh_2), onRefresh, iconSize = 22)
     }
 }
 
@@ -298,11 +298,11 @@ private fun PrivateMessageInputBar(
 ) {
     YamiboMessageInputBar(
         value = value,
-        placeholder = appString(Res.string.auto_9d0724f77c),
+        placeholder = appString(Res.string.ui_please_enter_content),
         enabled = enabled,
         sending = sending,
-        sendText = appString(Res.string.auto_62c1c68eac),
-        sendingText = appString(Res.string.auto_2f83d23727),
+        sendText = appString(Res.string.ui_send),
+        sendingText = appString(Res.string.ui_sending),
         onValueChange = onValueChange,
         onSend = onSend,
     )
@@ -325,7 +325,7 @@ private fun PrivateMessageError(message: String, onRetry: () -> Unit) {
 
 @Composable
 private fun EmptyPrivateMessages() {
-    YamiboEmptyContent(message = appString(Res.string.auto_3b69690ec1), modifier = Modifier.padding(vertical = 80.dp))
+    YamiboEmptyContent(message = appString(Res.string.ui_no_message_found), modifier = Modifier.padding(vertical = 80.dp))
 }
 
 

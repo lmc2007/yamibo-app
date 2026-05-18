@@ -61,7 +61,7 @@ internal fun DetailNoteActionButton(
                 tint = colors.brownDeep,
             )
             Text(
-                text = if (hasNote) appString(Res.string.auto_9f08cb5587) else appString(Res.string.auto_8f748722de),
+                text = if (hasNote) appString(Res.string.ui_edit_notes) else appString(Res.string.ui_add_new_note),
                 color = colors.brownDeep,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -108,13 +108,13 @@ internal fun DetailNoteCard(
                         tint = colors.brownDeep,
                     )
                     Text(
-                        text = appString(Res.string.auto_d09b79b2b7),
+                        text = appString(Res.string.ui_notes),
                         color = colors.brownDeep,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                 }
-                YamiboActionChip(appString(Res.string.auto_aa3a615d69), onClick = onEdit)
+                YamiboActionChip(appString(Res.string.ui_edit), onClick = onEdit)
             }
             Text(
                 text = content,
@@ -143,7 +143,7 @@ internal fun DetailNoteEditorDialog(
         containerColor = colors.creamBackground,
         title = {
             Text(
-                text = if (hasExistingNote) appString(Res.string.auto_9f08cb5587) else appString(Res.string.auto_8f748722de),
+                text = if (hasExistingNote) appString(Res.string.ui_edit_notes) else appString(Res.string.ui_add_new_note),
                 color = colors.textDark,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -153,7 +153,7 @@ internal fun DetailNoteEditorDialog(
                 value = content,
                 onValueChange = { content = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp),
-                placeholder = { Text(appString(Res.string.auto_2ddba7797e)) },
+                placeholder = { Text(appString(Res.string.ui_enter_local_note)) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = colors.creamSurface,
                     unfocusedContainerColor = colors.creamSurface,
@@ -172,7 +172,7 @@ internal fun DetailNoteEditorDialog(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                    Text(appString(Res.string.auto_be5fbbe34c), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(appString(Res.string.ui_save), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         },

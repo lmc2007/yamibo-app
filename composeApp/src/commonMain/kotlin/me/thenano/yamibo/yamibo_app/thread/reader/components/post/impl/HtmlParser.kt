@@ -171,7 +171,7 @@ object HtmlParser {
                                 clazz.contains("showcollapse_box") -> {
                                     commitText()
                                     val titleNode = node.selectFirst(".showcollapse_title")
-                                    val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: appString(Res.string.auto_a34db389f3)
+                                    val titleText = titleNode?.text()?.takeIf { it.isNotBlank() } ?: appString(Res.string.ui_click_expand_collapse)
                                     titleNode?.remove()
                                     val innerBlocks = parseHtml(node.html())
                                     val aid = hashId("col", titleText, blockCounter++)

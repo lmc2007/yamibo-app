@@ -31,7 +31,6 @@ fun HomeScreenContent(
 }
 
 @Composable
-@androidx.compose.ui.tooling.preview.Preview
 fun App() {
     setSingletonImageLoaderFactory { context ->
         ImageLoader.Builder(context)

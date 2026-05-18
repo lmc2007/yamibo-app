@@ -25,9 +25,9 @@ internal fun groupByDate(
     for (item in items) {
         val diffMs = now - item.lastVisitTime
         val label = when {
-            diffMs < oneDayMs -> appString(Res.string.auto_800dfdd902)
-            diffMs < 2 * oneDayMs -> appString(Res.string.auto_2f8d6f1584)
-            diffMs < 3 * oneDayMs -> appString(Res.string.auto_94995c3174)
+            diffMs < oneDayMs -> appString(Res.string.ui_today_2)
+            diffMs < 2 * oneDayMs -> appString(Res.string.ui_yesterday)
+            diffMs < 3 * oneDayMs -> appString(Res.string.ui_the_day_yesterday)
             diffMs < 7 * oneDayMs -> appString(Res.string.time_days_ago, (diffMs / oneDayMs).toInt())
             else -> formatDate(item.lastVisitTime)
         }

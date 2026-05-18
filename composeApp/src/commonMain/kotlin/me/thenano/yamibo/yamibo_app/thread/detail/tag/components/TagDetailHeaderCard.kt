@@ -123,7 +123,7 @@ fun TagDetailHeaderCard(
                         color = colors.brownDeep.copy(alpha = 0.12f)
                     ) {
                         Text(
-                            text = appString(Res.string.auto_a87e69de55),
+                            text = appString(Res.string.ui_hash_hashtagcomics),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             fontSize = 11.sp,
                             color = colors.brownDeep
@@ -134,7 +134,7 @@ fun TagDetailHeaderCard(
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = appString(Res.string.auto_2064156d61),
+                            text = appString(Res.string.ui_comic_mode),
                             fontSize = 13.sp,
                             color = colors.brownPrimary.copy(alpha = 0.85f)
                         )
@@ -181,7 +181,7 @@ fun TagDetailHeaderCard(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = appString(Res.string.auto_c31f48f84e),
+                            contentDescription = appString(Res.string.ui_share),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -201,7 +201,7 @@ fun TagDetailHeaderCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (hasReadingHistory) appString(Res.string.auto_98c70f280f) else appString(Res.string.auto_5d9fd81879),
+                            text = if (hasReadingHistory) appString(Res.string.ui_continue_reading) else appString(Res.string.ui_start_reading),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -228,7 +228,7 @@ fun TagDetailHeaderCard(
             }
 
             Text(
-                text = appString(Res.string.auto_db62dc5b52),
+                text = appString(Res.string.ui_the_star_button_can_directly_collected_long_press_can_used),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)

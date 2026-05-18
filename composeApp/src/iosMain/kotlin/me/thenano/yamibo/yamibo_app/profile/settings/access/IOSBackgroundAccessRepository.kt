@@ -10,15 +10,15 @@ import kotlinx.coroutines.flow.StateFlow
 class IOSBackgroundAccessRepository : BackgroundAccessRepository {
     private val _state = MutableStateFlow(
         BackgroundAccessRepository.SetupState(
-            summary = appString(Res.string.auto_cc3c3071a5),
+            summary = appString(Res.string.ui_ios_does_not_have_persistent_foreground_notifications_long_term),
             items = listOf(
                 BackgroundAccessRepository.SetupItem(
-                    title = appString(Res.string.auto_f550e6a558),
-                    subtitle = appString(Res.string.auto_a21ad701d5),
+                    title = appString(Res.string.ui_platform_restrictions),
+                    subtitle = appString(Res.string.ui_ios_can_only_maintain_execution_for_short_period_time_entering),
                     status = BackgroundAccessRepository.SetupStatus.Info,
                 ),
             ),
-            platformNote = appString(Res.string.auto_48d3656712),
+            platformNote = appString(Res.string.ui_this_page_mainly_explains_restrictions_on_ios_does_not_provide),
         ),
     )
 

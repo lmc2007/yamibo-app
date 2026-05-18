@@ -160,7 +160,7 @@ internal fun FavoriteCategoryManageScreen() {
             TopAppBar(
                 title = {
                     Text(
-                        text = appString(Res.string.auto_314a155d2c),
+                        text = appString(Res.string.ui_management_category),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
@@ -178,7 +178,7 @@ internal fun FavoriteCategoryManageScreen() {
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            text = appString(Res.string.auto_dead1fe86c),
+                            text = appString(Res.string.ui_add_category),
                             color = Color.White,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -316,7 +316,7 @@ internal fun FavoriteCategoryManageScreen() {
                     border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.18f)),
                 ) {
                     Text(
-                        text = appString(Res.string.auto_5f411223ca),
+                        text = appString(Res.string.ui_return),
                         color = colors.brownDeep,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                         fontWeight = FontWeight.SemiBold,
@@ -324,7 +324,7 @@ internal fun FavoriteCategoryManageScreen() {
                 }
             },
             title = {
-                Text(appString(Res.string.auto_1e98e71518), color = colors.brownDeep, fontWeight = FontWeight.Bold)
+                Text(appString(Res.string.ui_delete_category), color = colors.brownDeep, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -407,7 +407,7 @@ private fun FavoriteCategoryCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(localizedAppMessage(category.name), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
             }
-            ReorderActionChip(text = appString(Res.string.auto_aa3a615d69), onClick = onEdit)
+            ReorderActionChip(text = appString(Res.string.ui_edit), onClick = onEdit)
             Box(modifier = Modifier.size(8.dp))
             if (isDefaultCategory) {
                 Surface(

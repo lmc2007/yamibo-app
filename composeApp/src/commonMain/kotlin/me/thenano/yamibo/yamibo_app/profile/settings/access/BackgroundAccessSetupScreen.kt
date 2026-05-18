@@ -124,7 +124,7 @@ internal fun BackgroundAccessSetupScreen() {
                     contentColor = Color.White,
                 ),
             ) {
-                Text(appString(Res.string.auto_c035c3f753))
+                Text(appString(Res.string.ui_recheck))
             }
 
             Spacer(Modifier.height(24.dp))
@@ -156,10 +156,10 @@ private fun BackgroundAccessItemCard(
 ) {
     val colors = YamiboTheme.colors
     val (statusText, statusColor) = when (item.status) {
-        BackgroundAccessRepository.SetupStatus.Granted -> appString(Res.string.auto_63a291add9) to colors.brownPrimary
-        BackgroundAccessRepository.SetupStatus.Required -> appString(Res.string.auto_ecca118d6a) to Color(0xFFB4573B)
-        BackgroundAccessRepository.SetupStatus.Recommended -> appString(Res.string.auto_167b16bcc6) to Color(0xFF8A6A2C)
-        BackgroundAccessRepository.SetupStatus.Info -> appString(Res.string.auto_d244b7ac86) to colors.textDark.copy(alpha = 0.55f)
+        BackgroundAccessRepository.SetupStatus.Granted -> appString(Res.string.ui_ready) to colors.brownPrimary
+        BackgroundAccessRepository.SetupStatus.Required -> appString(Res.string.ui_must_dealt_with) to Color(0xFFB4573B)
+        BackgroundAccessRepository.SetupStatus.Recommended -> appString(Res.string.ui_recommended_treatment) to Color(0xFF8A6A2C)
+        BackgroundAccessRepository.SetupStatus.Info -> appString(Res.string.ui_illustrate) to colors.textDark.copy(alpha = 0.55f)
     }
 
     Column(

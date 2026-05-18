@@ -63,8 +63,8 @@ fun YamiboActionChip(
 /**
  * Small inline action button used inside cards and list rows.
  *
- * Use for secondary object actions such as appString(Res.string.auto_3c2c2bd849), appString(Res.string.common_delete), appString(Res.string.auto_dd4e0b5788),
- * appString(Res.string.main_favorite), appString(Res.string.auto_c31f48f84e), or appString(Res.string.auto_89c7338fb6). It is intentionally smaller than full-width
+ * Use for secondary object actions such as appString(Res.string.ui_send_message), appString(Res.string.common_delete), appString(Res.string.ui_shield),
+ * appString(Res.string.main_favorite), appString(Res.string.ui_share), or appString(Res.string.ui_invite). It is intentionally smaller than full-width
  * submit buttons and should not be used as the main page CTA.
  *
  * @param text Button label.

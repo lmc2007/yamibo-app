@@ -82,7 +82,7 @@ internal fun TagListScreen(
             TopAppBar(
                 title = {
                     Text(
-                        appString(Res.string.auto_f3e3fab608),
+                        appString(Res.string.ui_tag_list),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.creamBackground
@@ -133,7 +133,7 @@ internal fun TagListScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    appString(Res.string.auto_1898bb598d),
+                                    appString(Res.string.ui_tag_not_found),
                                     color = colors.textDark.copy(alpha = 0.5f),
                                     fontSize = 14.sp
                                 )
@@ -146,7 +146,7 @@ internal fun TagListScreen(
                                     .padding(16.dp)
                             ) {
                                 Text(
-                                    appString(Res.string.auto_56c0a77b20),
+                                    appString(Res.string.ui_tips_tab_page_similar_regular_comic_app_recommended_for_collecting),
                                     color = colors.textDark.copy(alpha = 0.6f),
                                     fontSize = 13.sp,
                                     modifier = Modifier.padding(bottom = 16.dp)

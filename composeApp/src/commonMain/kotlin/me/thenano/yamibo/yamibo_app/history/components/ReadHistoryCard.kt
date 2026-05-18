@@ -66,10 +66,10 @@ fun ReadHistoryCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val timingSummary = buildString {
-        append(appString(Res.string.auto_5ab4fa4e0f))
+        append(appString(Res.string.ui_recently_read))
         append(timeLabel)
         history.lastUpdatedTime?.takeIf { it > 0L }?.let {
-            append(appString(Res.string.auto_4ab8663d92))
+            append(appString(Res.string.ui_last_updated))
             append(formatHistoryRelativeTime(it))
         }
     }
@@ -257,7 +257,7 @@ private fun formatHistoryRelativeTime(timestamp: Long): String {
         days > 0L -> appString(Res.string.time_days_ago, days)
         hours > 0L -> appString(Res.string.time_hours_ago, hours)
         minutes > 0L -> appString(Res.string.time_minutes_ago, minutes)
-        else -> appString(Res.string.auto_7a453f8268)
+        else -> appString(Res.string.ui_just)
     }
 }
 

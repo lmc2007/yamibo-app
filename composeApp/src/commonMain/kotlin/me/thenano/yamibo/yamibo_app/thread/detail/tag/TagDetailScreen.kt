@@ -219,7 +219,7 @@ internal fun TagDetailScreen(
                 } else {
                     withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_3b66a4b8b2))
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed))
                     pendingFavoriteRemovalSelection = null
                 }
             } else {
@@ -230,7 +230,7 @@ internal fun TagDetailScreen(
 
         favoriteRepository.saveFavorite(target)
         favoriteRefreshToken += 1
-        snackbarHostState.showSnackbar(appString(Res.string.auto_1512861213))
+        snackbarHostState.showSnackbar(appString(Res.string.ui_added_favorites))
     }
 
     LaunchedEffect(tagId, currentTagName, favoriteRefreshToken) {
@@ -474,7 +474,7 @@ internal fun TagDetailScreen(
                         )
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_1512861213))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_added_favorites))
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
@@ -484,7 +484,7 @@ internal fun TagDetailScreen(
                             } else {
                                 withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, target) }
                                 favoriteRefreshToken += 1
-                                snackbarHostState.showSnackbar(appString(Res.string.auto_eb73358eb7))
+                                snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed_from_all_locations))
                                 pendingFavoriteRemovalSelection = null
                             }
                         } else {
@@ -494,7 +494,7 @@ internal fun TagDetailScreen(
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_6788887252))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_location_updated))
                     }
                 }
             }
@@ -517,7 +517,7 @@ internal fun TagDetailScreen(
                     } else {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_3b66a4b8b2))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed))
                         pendingFavoriteRemovalSelection = null
                     }
                 }
@@ -528,7 +528,7 @@ internal fun TagDetailScreen(
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = appString(Res.string.auto_96fd606a93),
+            tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalSelection = null
@@ -538,7 +538,7 @@ internal fun TagDetailScreen(
                 scope.launch {
                         withContext(Dispatchers.Default) { removeFavoriteWithSync(favoriteRepository, favoriteSyncRepository, favoriteTarget()) }
                     favoriteRefreshToken += 1
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_eb73358eb7))
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_removed_from_all_locations))
                     pendingFavoriteRemovalSelection = null
                 }
             },
@@ -559,7 +559,7 @@ internal fun TagDetailScreen(
                     )
                     reloadNote()
                     snackbarHostState.showSnackbar(
-                        if (content.isBlank()) appString(Res.string.auto_c092ed8925) else appString(Res.string.auto_d2617b4478),
+                        if (content.isBlank()) appString(Res.string.ui_note_deleted) else appString(Res.string.ui_note_saved),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -572,7 +572,7 @@ internal fun TagDetailScreen(
                         targetId = tagId.value.toLong(),
                     )
                     reloadNote()
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_c092ed8925), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_note_deleted), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -597,7 +597,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.auto_18546825fb) else appString(Res.string.auto_2995275617),
+                        if (next) appString(Res.string.ui_bookmark_added) else appString(Res.string.ui_bookmark_removed),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -615,7 +615,7 @@ internal fun TagDetailScreen(
                     )
                     reloadThreadBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.auto_7e65beff49) else appString(Res.string.auto_ef4524ac9f),
+                        if (next) appString(Res.string.ui_marked_as_read) else appString(Res.string.ui_marked_as_unread),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -634,7 +634,7 @@ internal fun TagDetailScreen(
                         mangaTagHistory = null
                     }
                     reloadThreadBookMarks()
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_112483893b), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_cleared), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -653,12 +653,12 @@ private fun BookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_760d5e0077), color = colors.brownDeep) },
+        title = { Text(appString(Res.string.ui_read_mark), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                YamiboActionRow(if (bookmarked) appString(Res.string.auto_33d65b9d55) else appString(Res.string.auto_e6bd0a4f22), onToggleBookMark)
-                YamiboActionRow(if (read) appString(Res.string.auto_990f638bce) else appString(Res.string.auto_0aad49a7eb), onToggleRead)
-                YamiboActionRow(appString(Res.string.auto_30921bfe20), onClearHistory)
+                YamiboActionRow(if (bookmarked) appString(Res.string.ui_remove_bookmark) else appString(Res.string.ui_add_bookmark), onToggleBookMark)
+                YamiboActionRow(if (read) appString(Res.string.ui_mark_as_unread) else appString(Res.string.ui_mark_as_read), onToggleRead)
+                YamiboActionRow(appString(Res.string.ui_clear_reading_history), onClearHistory)
             }
         },
         confirmButton = {},

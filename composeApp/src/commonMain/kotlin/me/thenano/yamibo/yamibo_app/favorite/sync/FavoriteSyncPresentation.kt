@@ -26,11 +26,11 @@ internal fun FavoriteSyncState.snapshotOrNull(): FavoriteSyncSnapshot? {
 
 internal fun FavoriteSyncState.title(): String {
     return when (this) {
-        FavoriteSyncState.Idle -> appString(Res.string.auto_0d7fe90a73)
-        is FavoriteSyncState.Running -> appString(Res.string.auto_5b2af01686)
-        is FavoriteSyncState.Interrupted -> appString(Res.string.auto_416d31ec7e)
-        is FavoriteSyncState.Failed -> appString(Res.string.auto_c599384c8a)
-        is FavoriteSyncState.Completed -> appString(Res.string.auto_02f667de32)
+        FavoriteSyncState.Idle -> appString(Res.string.ui_sync_has_not_started_yet)
+        is FavoriteSyncState.Running -> appString(Res.string.ui_background_sync_in_progress)
+        is FavoriteSyncState.Interrupted -> appString(Res.string.ui_sync_interrupted)
+        is FavoriteSyncState.Failed -> appString(Res.string.ui_sync_failed)
+        is FavoriteSyncState.Completed -> appString(Res.string.ui_synchronization_completed)
     }
 }
 
@@ -61,16 +61,16 @@ internal fun FavoriteSyncSnapshot.toProgressUi(): SyncProgressUi {
     return when (phase) {
         FavoriteSyncPhase.PREPARING -> SyncProgressUi(
             progress = progress,
-            label = appString(Res.string.auto_945847ea7e),
-            lines = listOf(appString(Res.string.auto_bd91f6187b) to appString(Res.string.auto_bd84aa9f93)),
+            label = appString(Res.string.ui_prepare_synchronization_tasks),
+            lines = listOf(appString(Res.string.ui_state) to appString(Res.string.ui_creating_synchronization_task)),
         )
 
         FavoriteSyncPhase.FETCHING_REMOTE -> SyncProgressUi(
             progress = progress,
-            label = appString(Res.string.auto_0cd83a34b9),
+            label = appString(Res.string.ui_start_syncing),
             lines = buildList {
-                add(appString(Res.string.auto_e8202e1ba6) to if (currentPage <= 0) appString(Res.string.auto_640481ba4a) else appString(Res.string.favorite_sync_page_progress, currentPage.toString(), totalPages?.toString() ?: "?"))
-                add(appString(Res.string.auto_5ac0884b60) to appString(Res.string.favorite_sync_scanned_count, scannedCount))
+                add(appString(Res.string.ui_number_pages) to if (currentPage <= 0) appString(Res.string.ui_getting_favorites) else appString(Res.string.favorite_sync_page_progress, currentPage.toString(), totalPages?.toString() ?: "?"))
+                add(appString(Res.string.ui_obtained) to appString(Res.string.favorite_sync_scanned_count, scannedCount))
             },
         )
 
@@ -81,11 +81,11 @@ internal fun FavoriteSyncSnapshot.toProgressUi(): SyncProgressUi {
         FavoriteSyncPhase.INTERRUPTED,
         FavoriteSyncPhase.FAILED -> SyncProgressUi(
             progress = progress,
-            label = appString(Res.string.auto_4c41b6645f),
+            label = appString(Res.string.ui_import_website_posts),
             lines = buildList {
-                add(appString(Res.string.auto_bdfc325e15) to "$importedCount/${scannedCount.coerceAtLeast(importedCount)}")
-                add(appString(Res.string.auto_c219db0ba3) to uploadedCount.toString())
-                add(appString(Res.string.auto_c599384c8a) to failedCount.toString())
+                add(appString(Res.string.ui_imported_local) to "$importedCount/${scannedCount.coerceAtLeast(importedCount)}")
+                add(appString(Res.string.ui_already_synced_yamibo_2) to uploadedCount.toString())
+                add(appString(Res.string.ui_sync_failed) to failedCount.toString())
             },
         )
     }

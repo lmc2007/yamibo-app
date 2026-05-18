@@ -132,7 +132,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalTarget by remember { mutableStateOf<FavoriteTargetPayload?>(null) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
-    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.auto_3b66a4b8b2)) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.ui_favorite_removed)) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
@@ -219,7 +219,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             )
             currentPage = page
         } catch (e: Exception) {
-            state = HistoryState.Error(e.message ?: appString(Res.string.auto_0c830cfab7))
+            state = HistoryState.Error(e.message ?: appString(Res.string.ui_loading_failed))
         }
     }
 
@@ -240,7 +240,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             )
             currentPage = page
         } catch (e: Exception) {
-            state = HistoryState.Error(e.message ?: appString(Res.string.auto_c2d6593769))
+            state = HistoryState.Error(e.message ?: appString(Res.string.ui_search_failed))
         }
     }
 
@@ -272,9 +272,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
         favoriteRefreshToken += 1
         val message = when {
-            syncResult == null -> appString(Res.string.auto_bebbc55cf4)
-            syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
-            else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
+            syncResult == null -> appString(Res.string.ui_already_added_favorites_default_saved_uncategorized)
+            syncResult.success -> appString(Res.string.favorite_add_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
+            else -> appString(Res.string.favorite_add_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -283,7 +283,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         val syncingSnackbarJob = if (syncToRemote) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = appString(Res.string.auto_af7b64507d),
+                    message = appString(Res.string.ui_synchronizing_yamibo),
                     duration = SnackbarDuration.Indefinite,
                 )
             }
@@ -297,9 +297,9 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         val message = when {
-            syncResult == null -> appString(Res.string.auto_9edff0b173)
-            syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_2938876dc4))
-            else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_17e2a8be07))
+            syncResult == null -> appString(Res.string.ui_already_added_local_favorite_default_saved_uncategorized)
+            syncResult.success -> appString(Res.string.favorite_add_local_success, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_already_synced_yamibo))
+            else -> appString(Res.string.favorite_add_local_sync_failed, syncResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_please_try_again_later))
         }
         snackbarHostState.showSnackbar(message)
     }
@@ -308,7 +308,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         val syncingSnackbarJob = if (removeRemote) {
             scope.launch {
                 snackbarHostState.showSnackbar(
-                    message = appString(Res.string.auto_1294f453e8),
+                    message = appString(Res.string.ui_removing_favorites_from_yamibo),
                     duration = SnackbarDuration.Indefinite,
                 )
             }
@@ -327,7 +327,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         snackbarHostState.currentSnackbarData?.dismiss()
         favoriteRefreshToken += 1
         snackbarHostState.showSnackbar(
-            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_4332f902a2),
+            if (removeResult.success) pendingFavoriteRemovalSuccessMessage else removeResult.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_failed_remove_favorites),
         )
         pendingFavoriteRemovalTarget = null
         pendingFavoriteRemovalSelection = null
@@ -354,7 +354,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         if (selection.item != null) {
             pendingFavoriteRemovalTarget = target
             pendingFavoriteRemovalSelection = selection
-            pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
+            pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed)
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
@@ -465,7 +465,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                             selectedItems = emptySet()
                             mode = PageMode.Normal
                             state = HistoryState.Empty
-                            snackbarHostState.showSnackbar(appString(Res.string.auto_43afedcf5d))
+                            snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_has_refreshed))
                         }
                     },
                     onCancel = {
@@ -534,7 +534,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                             scope.launch {
                                                 readHistoryRepo.deleteHistoryBatch(listOf(history))
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar(appString(Res.string.auto_65ab864397))
+                                                snackbarHostState.showSnackbar(appString(Res.string.ui_this_record_has_deleted))
                                             }
                                         },
                                         onFavorite = {
@@ -568,7 +568,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                                             scope.launch {
                                                 readHistoryRepo.deleteMangaTagHistory(history.tagId)
                                                 loadPage(currentPage)
-                                                snackbarHostState.showSnackbar(appString(Res.string.auto_65ab864397))
+                                                snackbarHostState.showSnackbar(appString(Res.string.ui_this_record_has_deleted))
                                             }
                                         },
                                         onFavorite = {
@@ -665,7 +665,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         favoriteDialogTarget = null
                         pendingFavoriteRemovalTarget = target
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed_from_all_locations)
                         if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                             if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
                                 showFavoriteMultiPathDialog = true
@@ -679,7 +679,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         favoriteDialogTarget = null
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_6788887252))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_location_updated))
                     }
                 }
             }
@@ -702,7 +702,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3b66a4b8b2)
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed)
                         maybePromptRemoteRemoval(target)
                     }
                 }
@@ -755,7 +755,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = appString(Res.string.auto_96fd606a93),
+            tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalTarget = null
@@ -764,7 +764,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             onRemoveAll = {
                 val target = pendingFavoriteRemovalTarget ?: return@FavoriteMultiPathRemoveDialog
                 showFavoriteMultiPathDialog = false
-                pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_eb73358eb7)
+                pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_favorite_removed_from_all_locations)
                 scope.launch {
                     maybePromptRemoteRemoval(target)
                 }
@@ -798,7 +798,7 @@ private fun ReadHistoryFilterDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(appString(Res.string.auto_d1f269df62), color = colors.brownDeep, fontWeight = FontWeight.Bold)
+            Text(appString(Res.string.ui_filter_categories), color = colors.brownDeep, fontWeight = FontWeight.Bold)
         },
         text = {
             LazyColumn {

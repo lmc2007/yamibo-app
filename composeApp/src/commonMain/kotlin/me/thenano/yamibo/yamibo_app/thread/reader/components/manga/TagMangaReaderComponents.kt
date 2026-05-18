@@ -49,7 +49,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (item.isPrev) {
                 if (item.isEnd) {
-                    Text(appString(Res.string.auto_c436ca1259), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(appString(Res.string.ui_already_first_episode), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     if (item.nextTitle != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -60,7 +60,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                         )
                     }
                 } else {
-                    Text(appString(Res.string.auto_e705a998b8), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
+                    Text(appString(Res.string.ui_previous_episode), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         item.prevTitle ?: "",
@@ -86,7 +86,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                 }
             } else {
                 if (item.isEnd) {
-                    Text(appString(Res.string.auto_8d90e53f95), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(appString(Res.string.ui_read_all_chapters), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     if (item.prevTitle != null) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -112,7 +112,7 @@ internal fun InterstitialCard(item: ReaderItem.InterstitialItem) {
                     Text(arrow, color = Color.White.copy(alpha = 0.4f), fontSize = 24.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        appString(Res.string.auto_040fe94af0), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp
+                        appString(Res.string.ui_next_chapter), color = Color.White.copy(alpha = 0.5f), fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -170,7 +170,7 @@ internal fun TagCatalogPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    appString(Res.string.auto_b6181d16d3), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textDark
+                    appString(Res.string.ui_chapter_list), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textDark
                 )
                 IconButton(onClick = onDismiss) {
                     Text(

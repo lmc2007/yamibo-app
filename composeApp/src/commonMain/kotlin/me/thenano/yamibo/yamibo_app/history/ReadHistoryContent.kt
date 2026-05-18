@@ -67,7 +67,7 @@ internal fun EmptyContent(mode: PageMode) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            text = if (mode == PageMode.Search) appString(Res.string.auto_6076fa7728) else appString(Res.string.auto_c2e4d1d63e),
+            text = if (mode == PageMode.Search) appString(Res.string.ui_no_results_found) else appString(Res.string.ui_there_no_reading_history_yet),
             fontSize = 16.sp,
             color = colors.textDark.copy(alpha = 0.5f),
         )
@@ -92,7 +92,7 @@ internal fun ErrorContent(message: String, onRetry: () -> Unit) {
             onClick = onRetry,
             colors = ButtonDefaults.buttonColors(containerColor = colors.brownPrimary),
         ) {
-            Text(appString(Res.string.auto_d358e48704), color = Color.White)
+            Text(appString(Res.string.ui_reload), color = Color.White)
         }
     }
 }

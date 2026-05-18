@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
                         finish()
                     } else {
                         lastBackTime = now
-                        Toast.makeText(this@MainActivity, appString(Res.string.auto_aedd38fc33), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@MainActivity, appString(Res.string.ui_press_again_exit_app), Toast.LENGTH_SHORT).show()
                     }
                 }
                 onDispose { callback.remove() }

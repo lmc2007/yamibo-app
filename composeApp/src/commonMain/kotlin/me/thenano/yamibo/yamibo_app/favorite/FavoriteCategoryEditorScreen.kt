@@ -121,7 +121,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
     suspend fun createCategoryIfNeeded(): Boolean {
         if (workingCategoryId != 0L) return true
         if (categoryName.isBlank()) {
-            snackbarHostState.showSnackbar(appString(Res.string.auto_1b58326eac))
+            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_category_name_first))
             return false
         }
         return try {
@@ -134,7 +134,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             reloadCollections()
             true
         } catch (error: IllegalArgumentException) {
-            snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_609ed66469))
+            snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_failed_create_category))
             false
         }
     }
@@ -194,7 +194,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             TopAppBar(
                 title = {
                     Text(
-                        text = if (categoryId == null) appString(Res.string.auto_dead1fe86c) else appString(Res.string.auto_9832aafb2c),
+                        text = if (categoryId == null) appString(Res.string.ui_add_category) else appString(Res.string.ui_edit_categories),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 20.sp,
@@ -215,7 +215,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                                         return@launch
                                     }
                                     if (categoryName.isBlank()) {
-                                        snackbarHostState.showSnackbar(appString(Res.string.auto_1ec1e74c72))
+                                        snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_category_name))
                                         return@launch
                                     }
                                     if (workingCategoryId == 0L) {
@@ -227,7 +227,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                                     }
                                     navigator.pop()
                                 } catch (error: IllegalArgumentException) {
-                                    snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_868de401bd))
+                                    snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
                                 }
                             }
                         },
@@ -235,7 +235,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Text(
-                            text = if (isDefaultCategory) appString(Res.string.auto_769d88e425) else appString(Res.string.auto_be5fbbe34c),
+                            text = if (isDefaultCategory) appString(Res.string.ui_finish) else appString(Res.string.ui_save),
                             color = colors.creamBackground,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -256,7 +256,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
         ) {
             if (!isDefaultCategory) {
                 item {
-                    Text(appString(Res.string.auto_eba6408887), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp)
+                    Text(appString(Res.string.ui_category_name), color = colors.textDark.copy(alpha = 0.6f), fontSize = 13.sp)
                     Spacer(Modifier.size(8.dp))
                     OutlinedTextField(
                         value = categoryName,
@@ -272,7 +272,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(appString(Res.string.auto_508b37f195), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(appString(Res.string.ui_gather), color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
                     Surface(
                         onClick = {
@@ -288,7 +288,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         border = BorderStroke(1.dp, colors.brownPrimary.copy(alpha = 0.2f)),
                     ) {
                         Text(
-                            appString(Res.string.auto_d60e143e33),
+                            appString(Res.string.ui_add_new_collection),
                             color = colors.brownDeep,
                             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                             fontWeight = FontWeight.SemiBold,
@@ -429,7 +429,7 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         showCollectionDialog = false
                         reloadCollections()
                     } catch (error: IllegalArgumentException) {
-                        snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.auto_868de401bd))
+                        snackbarHostState.showSnackbar(error.message?.let(::localizedAppMessage) ?: appString(Res.string.ui_save_failed_2))
                     }
                 }
             },
@@ -481,7 +481,7 @@ private fun FavoriteCollectionEditorCard(
             Column(modifier = Modifier.weight(1f)) {
                 Text(localizedAppMessage(collection.name), color = colors.textDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
-            ReorderActionChip(text = appString(Res.string.auto_aa3a615d69), onClick = onEdit)
+            ReorderActionChip(text = appString(Res.string.ui_edit), onClick = onEdit)
             Spacer(Modifier.size(8.dp))
             ReorderActionChip(text = appString(Res.string.common_delete), onClick = onDelete, emphasized = true)
         }
@@ -504,7 +504,7 @@ private fun CollectionDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_ba0fcf6954),
+                text = appString(Res.string.ui_sure),
                 background = colors.brownDeep,
                 contentColor = Color.White,
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim(), colorKey) },
@@ -512,13 +512,13 @@ private fun CollectionDialog(
         },
         dismissButton = {
             FavoriteDialogButton(
-                text = appString(Res.string.auto_5f411223ca),
+                text = appString(Res.string.ui_return),
                 background = colors.brownPrimary.copy(alpha = 0.14f),
                 contentColor = colors.brownDeep,
                 onClick = onDismiss,
             )
         },
-        title = { Text(appString(Res.string.auto_508b37f195), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_gather), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
@@ -528,9 +528,9 @@ private fun CollectionDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     shape = RoundedCornerShape(14.dp),
-                    label = { Text(appString(Res.string.auto_d61a30911c)) },
+                    label = { Text(appString(Res.string.ui_name)) },
                 )
-                Text(appString(Res.string.auto_e47c7d0de2), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text(appString(Res.string.ui_color), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     palette.forEach { paletteKey ->
                         Surface(

@@ -98,10 +98,10 @@ class AndroidSystemNotificationRepository(
         val manager = appContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val channel = NotificationChannel(
             CHANNEL_ID,
-            appString(Res.string.auto_e4ea5cdab7),
+            appString(Res.string.ui_favorite_synchronization),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = appString(Res.string.auto_8411e9ebd1)
+            description = appString(Res.string.ui_display_yamibo_favorite_synchronization_progress)
         }
         manager.createNotificationChannel(channel)
     }

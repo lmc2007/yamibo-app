@@ -25,7 +25,7 @@ fun AttachmentRenderer(attachments: List<Attachment>, modifier: Modifier = Modif
 
     Column(modifier = modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(
-            text = appString(Res.string.auto_0b8e71b9f2),
+            text = appString(Res.string.ui_attachment),
             color = colors.textDark,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,

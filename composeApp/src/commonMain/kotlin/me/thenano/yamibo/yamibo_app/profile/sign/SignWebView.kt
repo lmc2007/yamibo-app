@@ -84,7 +84,7 @@ private fun SignWebViewScreen(
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Sign.build(),
-        initialTitle = appString(Res.string.auto_b04dcbd482),
+        initialTitle = appString(Res.string.ui_daily_check_in),
         useBackIcon = true,
         captureHtml = true,
         onPageFinished = { currentUrl ->
@@ -114,7 +114,7 @@ private fun SignWebViewScreen(
         onLoadError = { _, description ->
             if (semiAutomatic && !handledLoadFailure) {
                 handledLoadFailure = true
-                onLoadFailed(description.ifBlank { appString(Res.string.auto_979ae6146d) })
+                onLoadFailed(description.ifBlank { appString(Res.string.ui_sign_in_page_failed_load) })
                 navigator.pop()
             }
         },

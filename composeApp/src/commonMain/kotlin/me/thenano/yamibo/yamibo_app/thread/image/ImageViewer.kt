@@ -274,7 +274,7 @@ private fun ImageLoadingContent(
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = appString(Res.string.auto_9b0f8bc5ab),
+                text = appString(Res.string.ui_picture_loading),
                 color = colors.textDark.copy(alpha = 0.72f),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
@@ -282,7 +282,7 @@ private fun ImageLoadingContent(
             if (onImageRetry != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = appString(Res.string.auto_a4d1155b3f),
+                    text = appString(Res.string.ui_if_wait_too_long_can_reload),
                     color = colors.textDark.copy(alpha = 0.48f),
                     fontSize = 11.sp,
                 )
@@ -321,7 +321,7 @@ private fun ImageErrorContent(
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            text = appString(Res.string.auto_ec868abde2),
+            text = appString(Res.string.ui_image_loading_failed),
             color = errorTextColor,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
@@ -352,7 +352,7 @@ private fun ImageErrorContent(
             contentPadding = PaddingValues(horizontal = 28.dp, vertical = 8.dp)
         ) {
             Text(
-                text = appString(Res.string.auto_d358e48704),
+                text = appString(Res.string.ui_reload),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold
             )

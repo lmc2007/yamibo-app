@@ -36,8 +36,8 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         val progress = if (total > 0) ((processed * 100f) / total).toInt().coerceIn(0, 100) else 0
         return NotificationCompat.Builder(appContext, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(appString(Res.string.auto_0176d04aa4))
-            .setContentText(snapshot.currentItem?.let(::localizedAppMessage) ?: appString(Res.string.auto_4e60d9dccc))
+            .setContentTitle(appString(Res.string.ui_favorite_updates))
+            .setContentText(snapshot.currentItem?.let(::localizedAppMessage) ?: appString(Res.string.ui_checking_for_favorites_updates))
             .setOnlyAlertOnce(true)
             .setOngoing(true)
             .setProgress(100, progress, total == 0)
@@ -53,8 +53,8 @@ internal class AndroidFavoriteUpdateNotificationRepository(
             NOTIFICATION_ID,
             NotificationCompat.Builder(appContext, CHANNEL_ID)
                 .setSmallIcon(R.mipmap.ic_launcher)
-                .setContentTitle(appString(Res.string.auto_8507fc5c96))
-                .setContentText(if (snapshot.detectedCount > 0) appString(Res.string.favorite_update_notification_detected, snapshot.detectedCount) else appString(Res.string.auto_e43b656c69))
+                .setContentTitle(appString(Res.string.ui_favorite_update_completed))
+                .setContentText(if (snapshot.detectedCount > 0) appString(Res.string.favorite_update_notification_detected, snapshot.detectedCount) else appString(Res.string.ui_no_updates_detected))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(false)
                 .setContentIntent(createOpenAppPendingIntent())
@@ -85,10 +85,10 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                appString(Res.string.auto_0176d04aa4),
+                appString(Res.string.ui_favorite_updates),
                 NotificationManager.IMPORTANCE_LOW,
             ).apply {
-                description = appString(Res.string.auto_f011daae60)
+                description = appString(Res.string.ui_display_favorite_update_check_progress_results)
             },
         )
     }

@@ -53,12 +53,12 @@ class FavoriteUpdateWorker(
                 }
                 Result.success()
             } catch (throwable: CancellationException) {
-                repository.markRunInterrupted(runId, appString(Res.string.auto_0208c6c4be))
+                repository.markRunInterrupted(runId, appString(Res.string.ui_update_check_interrupted))
                 Result.failure()
             } catch (throwable: Throwable) {
-                repository.markRunInterrupted(runId, throwable.message ?: appString(Res.string.auto_873be1d8b4))
+                repository.markRunInterrupted(runId, throwable.message ?: appString(Res.string.ui_update_check_was_interrupted_by_system))
                 @Suppress("MissingPermission")
-                notifications.showFailed(appString(Res.string.auto_c4182e8c50), throwable.message ?: appString(Res.string.auto_873be1d8b4))
+                notifications.showFailed(appString(Res.string.ui_favorite_update_interrupted), throwable.message ?: appString(Res.string.ui_update_check_was_interrupted_by_system))
                 Result.retry()
             } finally {
                 notificationJob.cancel()

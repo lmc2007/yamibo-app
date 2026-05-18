@@ -472,7 +472,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = appString(Res.string.auto_0c830cfab7),
+                    text = appString(Res.string.ui_loading_failed),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = colors.brownDeep
@@ -492,7 +492,7 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
                     contentColor = Color.White
                 ) {
                     Text(
-                        text = appString(Res.string.auto_3d2b6505a6),
+                        text = appString(Res.string.ui_try_again),
                         modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp

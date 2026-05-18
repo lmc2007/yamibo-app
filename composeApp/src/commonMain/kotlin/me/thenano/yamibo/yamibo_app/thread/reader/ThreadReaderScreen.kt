@@ -225,7 +225,7 @@ internal fun ThreadReaderScreen(
     var isFavorited by remember { mutableStateOf(false) }
     var favoriteRefreshToken by remember { mutableIntStateOf(0) }
     var pendingFavoriteRemovalSelection by remember { mutableStateOf<FavoriteLocationSelection?>(null) }
-    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.auto_3a906c714a)) }
+    var pendingFavoriteRemovalSuccessMessage by remember { mutableStateOf(appString(Res.string.ui_canceled_favorites)) }
     var showFavoriteRemovalConfirm by remember { mutableStateOf(false) }
     var showFavoriteMultiPathDialog by remember { mutableStateOf(false) }
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
@@ -324,7 +324,7 @@ internal fun ThreadReaderScreen(
             scope = scope,
             snackbarHostState = snackbarHostState,
             successMessage = pendingFavoriteRemovalSuccessMessage,
-            failureMessage = appString(Res.string.auto_628477cce1),
+            failureMessage = appString(Res.string.ui_failed_cancel_favorite),
             onRefreshRequested = { favoriteRefreshToken += 1 },
         )
         pendingFavoriteRemovalSelection = null
@@ -351,7 +351,7 @@ internal fun ThreadReaderScreen(
         val selection = favoriteRepository.getFavoriteLocationSelection(target)
         if (selection.item != null) {
             pendingFavoriteRemovalSelection = selection
-            pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3a906c714a)
+            pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_canceled_favorites)
             if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                 if (selection.paths.size > 1) {
                     showFavoriteMultiPathDialog = true
@@ -389,12 +389,12 @@ internal fun ThreadReaderScreen(
         val formHash = getFormHash()
         val fId = threadInfo?.forum?.fid
         if (formHash == null || fId == null) {
-            snackbarHostState.showSnackbar(appString(Res.string.auto_09c8fb7426))
+            snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again))
             false
         } else {
             when (val res = threadRepository.votePoll(fId, tid, optionIds, formHash)) {
                 is YamiboResult.Success -> {
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_6f1c56553a))
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_the_vote_was_successful_refreshing_page))
                     refreshThreadAfterVote?.invoke()
                     true
                 }
@@ -409,11 +409,11 @@ internal fun ThreadReaderScreen(
     val handleRate: (PostId, Int, String) -> Unit = { pid, score, reason ->
         val formHash = getFormHash()
         if (formHash == null) {
-            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_09c8fb7426)) }
+            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
         } else {
             scope.launch {
                 when (val res = threadRepository.ratePost(tid, pid, score, reason, formHash)) {
-                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.auto_9da3d2ab35))
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_rating_successful_update_rating_review_status_refreshing))
                     else -> snackbarHostState.showSnackbar(appString(Res.string.thread_rate_failed, res.localizedMessage()))
                 }
             }
@@ -423,11 +423,11 @@ internal fun ThreadReaderScreen(
     val handleComment: (PostId, String) -> Unit = { pid, message ->
         val formHash = getFormHash()
         if (formHash == null) {
-            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_09c8fb7426)) }
+            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
         } else {
             scope.launch {
                 when (val res = threadRepository.commentPost(tid, pid, message, formHash)) {
-                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.auto_ce43852c31))
+                    is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_the_review_successful_rating_review_status_updated_refreshing))
                     else -> snackbarHostState.showSnackbar(appString(Res.string.thread_comment_failed, res.localizedMessage()))
                 }
             }
@@ -438,10 +438,10 @@ internal fun ThreadReaderScreen(
         val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
         navigator.navigate(
             IActionWebView(
-                title = appString(Res.string.auto_2d4f3ed6af),
+                title = appString(Res.string.ui_leave_reply),
                 initialUrl = replyPageUrl,
                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_a0aa30544c)) } },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) } },
             )
         )
     }
@@ -832,7 +832,7 @@ internal fun ThreadReaderScreen(
                 favoriteRepository.syncFavoriteMetadata(favoriteTarget(coverOverride = resolvedCoverUrl))
             } catch (_: Exception) {
             }
-            snackbarHostState.showSnackbar(appString(Res.string.auto_e5c29a3703))
+            snackbarHostState.showSnackbar(appString(Res.string.ui_already_set_as_cover))
         }
     }
 
@@ -934,7 +934,7 @@ internal fun ThreadReaderScreen(
             listState.scrollToItem(entryIndex)
             hasRestoredPosition = true
             if (nearestPost.pid.value.toLong() != targetPidLong) {
-                snackbarHostState.showSnackbar(appString(Res.string.auto_e65b977453))
+                snackbarHostState.showSnackbar(appString(Res.string.ui_the_specified_floor_cannot_found_jumped_nearest_floor))
             }
         }
     }
@@ -1427,7 +1427,7 @@ internal fun ThreadReaderScreen(
                                     ReaderEntryKind.RegularTagBanner,
                                     ReaderEntryKind.NovelTagBanner -> {
                                         CommentBanner(
-                                            text = appString(Res.string.auto_9ad15cfee4),
+                                            text = appString(Res.string.ui_view_tag_list),
                                             icon = "🏷️",
                                             onClick = {
                                                 navigator.navigate(
@@ -1442,7 +1442,7 @@ internal fun ThreadReaderScreen(
 
                                     ReaderEntryKind.NovelCommentBanner -> {
                                         CommentBanner(
-                                            text = appString(Res.string.auto_7667f4622b),
+                                            text = appString(Res.string.ui_click_jump_comment_area),
                                             onClick = {
                                                 navigator.navigate(
                                                     ICommentReaderScreen(
@@ -1505,7 +1505,7 @@ internal fun ThreadReaderScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = appString(Res.string.auto_e7c58d9a99),
+                                            text = appString(Res.string.ui_no_more_content),
                                             color = colors.textDark.copy(alpha = 0.5f),
                                             fontSize = 12.sp
                                         )
@@ -1564,11 +1564,11 @@ internal fun ThreadReaderScreen(
                         val replyUrl = YamiboRoute.ThreadReply(tid, loadedPages.maxOrNull() ?: 1).build()
                         navigator.navigate(
                             IActionWebView(
-                                title = appString(Res.string.auto_2d4f3ed6af),
+                                title = appString(Res.string.ui_leave_reply),
                                 initialUrl = replyUrl,
                                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
                                 onSuccess = {
-                                    scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_a0aa30544c)) }
+                                    scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) }
                                 },
                             )
                         )
@@ -1673,7 +1673,7 @@ internal fun ThreadReaderScreen(
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_8d31e1bdc9)
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_all_favorites_have_canceled)
                         if (appSettingsRepository.skipFavoriteRemovalConfirm.getValue()) {
                             if ((pendingFavoriteRemovalSelection?.paths?.size ?: 0) > 1) {
                                 showFavoriteMultiPathDialog = true
@@ -1687,7 +1687,7 @@ internal fun ThreadReaderScreen(
                         favoriteRepository.setItemLocations(existing.id, selectedCategories, selectedCollections)
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_2b4913f9f0))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_path_updated))
                     }
                 }
             }
@@ -1708,7 +1708,7 @@ internal fun ThreadReaderScreen(
                     if ((selection?.paths?.size ?: 0) > 1) {
                         showFavoriteMultiPathDialog = true
                     } else {
-                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_3a906c714a)
+                        pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_canceled_favorites)
                         maybePromptRemoteRemoval()
                     }
                 }
@@ -1753,14 +1753,14 @@ internal fun ThreadReaderScreen(
     if (showFavoriteMultiPathDialog) {
         FavoriteMultiPathRemoveDialog(
             paths = pendingFavoriteRemovalSelection?.paths.orEmpty(),
-            tip = appString(Res.string.auto_96fd606a93),
+            tip = appString(Res.string.ui_tip_long_press_edit_favorite_path_in_detail),
             onDismiss = {
                 showFavoriteMultiPathDialog = false
                 pendingFavoriteRemovalSelection = null
             },
             onRemoveAll = {
                 showFavoriteMultiPathDialog = false
-                pendingFavoriteRemovalSuccessMessage = appString(Res.string.auto_8d31e1bdc9)
+                pendingFavoriteRemovalSuccessMessage = appString(Res.string.ui_all_favorites_have_canceled)
                 scope.launch {
                     maybePromptRemoteRemoval()
                 }
@@ -1782,12 +1782,12 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                         bookmarked = next,
                     )
                     reloadPostBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.auto_18546825fb) else appString(Res.string.auto_2995275617),
+                        if (next) appString(Res.string.ui_bookmark_added) else appString(Res.string.ui_bookmark_removed),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -1800,12 +1800,12 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                         read = next,
                     )
                     reloadPostBookMarks()
                     snackbarHostState.showSnackbar(
-                        if (next) appString(Res.string.auto_7e65beff49) else appString(Res.string.auto_ef4524ac9f),
+                        if (next) appString(Res.string.ui_marked_as_read) else appString(Res.string.ui_marked_as_unread),
                         duration = SnackbarDuration.Short,
                     )
                 }
@@ -1817,11 +1817,11 @@ internal fun ThreadReaderScreen(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
-                        title = post.title.ifBlank { appString(Res.string.auto_72a54b7f13) },
+                        title = post.title.ifBlank { appString(Res.string.ui_untitled) },
                         read = false,
                     )
                     reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(appString(Res.string.auto_112483893b), duration = SnackbarDuration.Short)
+                    snackbarHostState.showSnackbar(appString(Res.string.ui_reading_history_cleared), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -1840,12 +1840,12 @@ private fun CatalogBookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_760d5e0077), color = colors.brownDeep) },
+        title = { Text(appString(Res.string.ui_read_mark), color = colors.brownDeep) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                CatalogActionRow(if (bookmarked) appString(Res.string.auto_33d65b9d55) else appString(Res.string.auto_e6bd0a4f22), onToggleBookMark)
-                CatalogActionRow(if (read) appString(Res.string.auto_990f638bce) else appString(Res.string.auto_0aad49a7eb), onToggleRead)
-                CatalogActionRow(appString(Res.string.auto_30921bfe20), onClearHistory)
+                CatalogActionRow(if (bookmarked) appString(Res.string.ui_remove_bookmark) else appString(Res.string.ui_add_bookmark), onToggleBookMark)
+                CatalogActionRow(if (read) appString(Res.string.ui_mark_as_unread) else appString(Res.string.ui_mark_as_read), onToggleRead)
+                CatalogActionRow(appString(Res.string.ui_clear_reading_history), onClearHistory)
             }
         },
         confirmButton = {},

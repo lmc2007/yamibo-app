@@ -46,16 +46,16 @@ import me.thenano.yamibo.yamibo_app.userspace.blog.IBlogReaderScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class UserSpaceSubPage(val selfTitle: String, val otherTitle: String = selfTitle) {
-    Profile(appString(Res.string.auto_340881558f), appString(Res.string.auto_3c5e693e40)),
-    Threads(appString(Res.string.auto_299587cb9b), appString(Res.string.auto_21af9560e8)),
-    Replies(appString(Res.string.auto_4fed571674), appString(Res.string.auto_f7cae0f8f1)),
-    MyBlogs(appString(Res.string.auto_39889a3751), appString(Res.string.auto_a8a934845e)),
-    FriendBlogs(appString(Res.string.auto_b447cb5466)),
-    ViewAllBlogs(appString(Res.string.auto_bcb18c1ff4)),
-    Friends(appString(Res.string.auto_6555ef98b5)),
-    Online(appString(Res.string.auto_379d88f545)),
-    Visitors(appString(Res.string.auto_ed4d6e181e)),
-    Traces(appString(Res.string.auto_67b5cd0cbb));
+    Profile(appString(Res.string.ui_my_profile), appString(Res.string.ui_their_profile)),
+    Threads(appString(Res.string.ui_my_threads), appString(Res.string.ui_their_threads)),
+    Replies(appString(Res.string.ui_my_reply), appString(Res.string.ui_their_replies)),
+    MyBlogs(appString(Res.string.ui_my_blogs), appString(Res.string.ui_their_blogs)),
+    FriendBlogs(appString(Res.string.ui_friends_blogs)),
+    ViewAllBlogs(appString(Res.string.ui_browse_random_blogs)),
+    Friends(appString(Res.string.ui_my_friends)),
+    Online(appString(Res.string.ui_online_members)),
+    Visitors(appString(Res.string.ui_my_visitors)),
+    Traces(appString(Res.string.ui_my_footprints));
 
     fun title(isSelf: Boolean): String = if (isSelf) selfTitle else otherTitle
 }
@@ -85,8 +85,8 @@ private enum class ViewAllBlogFilter(
     val title: String,
     val apiType: YamiboRoute.UserSpace.Blog.ViewAllType,
 ) {
-    Latest(appString(Res.string.auto_9b57b27dc5), YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
-    Hot(appString(Res.string.auto_9745136ad6), YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
+    Latest(appString(Res.string.ui_latest_published_logs), YamiboRoute.UserSpace.Blog.ViewAllType.Latest),
+    Hot(appString(Res.string.ui_recommended_reading_diary), YamiboRoute.UserSpace.Blog.ViewAllType.Hot),
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -267,12 +267,12 @@ fun UserSpaceScreen(
                                 },
                                 onReplyQuoteClick = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(appString(Res.string.auto_3677234a85), duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(appString(Res.string.ui_todo_reply_positioning_jump_has_not_accessed_yet), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onMessageAction = {
                                     scope.launch {
-                                        snackbarHostState.showSnackbar(appString(Res.string.auto_80a906bd32), duration = SnackbarDuration.Short)
+                                        snackbarHostState.showSnackbar(appString(Res.string.ui_todo_message_interaction_has_not_connected_yet), duration = SnackbarDuration.Short)
                                     }
                                 },
                                 onOpenWebView = { title, url ->
@@ -310,10 +310,10 @@ private fun tabsFor(group: UserSpaceSection, isSelf: Boolean): List<UserSpaceSub
 }
 
 private fun UserSpaceSection.mainTitle(): String = when (this) {
-    UserSpaceSection.Space -> appString(Res.string.auto_340881558f)
-    UserSpaceSection.Threads -> appString(Res.string.auto_299587cb9b)
-    UserSpaceSection.Blogs -> appString(Res.string.auto_39889a3751)
-    UserSpaceSection.Friends -> appString(Res.string.auto_6555ef98b5)
+    UserSpaceSection.Space -> appString(Res.string.ui_my_profile)
+    UserSpaceSection.Threads -> appString(Res.string.ui_my_threads)
+    UserSpaceSection.Blogs -> appString(Res.string.ui_my_blogs)
+    UserSpaceSection.Friends -> appString(Res.string.ui_my_friends)
 }
 
 @Composable
@@ -351,7 +351,7 @@ private fun UserSpaceTopBar(
         onBack = onBack,
     ) {
         if (showEdit) {
-            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.auto_aa3a615d69), onEdit)
+            YamiboTopBarIconAction(YamiboIcons.EditOrSign, appString(Res.string.ui_edit), onEdit)
         }
     }
 }
@@ -374,7 +374,7 @@ private fun UserSpaceMainTopBar(
             ) {
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
-                    text = appString(Res.string.auto_dc973db60a),
+                    text = appString(Res.string.ui_my_space),
                     color = colors.brownDeep,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -517,11 +517,11 @@ private fun topBarTitle(
     tab: UserSpaceSubPage,
     isSelf: Boolean,
 ): String {
-    val name = profile?.username ?: titleHint ?: appString(Res.string.auto_cb27030c7b)
+    val name = profile?.username ?: titleHint ?: appString(Res.string.ui_user)
     return when (group) {
-        UserSpaceSection.Space -> if (isSelf) appString(Res.string.auto_340881558f) else appString(Res.string.userspace_other_profile_title, name)
-        UserSpaceSection.Threads -> if (isSelf) appString(Res.string.auto_299587cb9b) else appString(Res.string.userspace_other_threads_title, name)
-        UserSpaceSection.Blogs -> if (isSelf) appString(Res.string.auto_39889a3751) else appString(Res.string.userspace_other_blogs_title, name)
+        UserSpaceSection.Space -> if (isSelf) appString(Res.string.ui_my_profile) else appString(Res.string.userspace_other_profile_title, name)
+        UserSpaceSection.Threads -> if (isSelf) appString(Res.string.ui_my_threads) else appString(Res.string.userspace_other_threads_title, name)
+        UserSpaceSection.Blogs -> if (isSelf) appString(Res.string.ui_my_blogs) else appString(Res.string.userspace_other_blogs_title, name)
         UserSpaceSection.Friends -> tab.title(isSelf)
     }
 }
@@ -541,7 +541,7 @@ private fun fullYamiboUrl(url: String): String =
 private fun userSpaceEditActionWebView(group: UserSpaceSection): IActionWebView {
     return when (group) {
         UserSpaceSection.Blogs -> IActionWebView(
-            title = appString(Res.string.auto_92b73212b5),
+            title = appString(Res.string.ui_post_log),
             initialUrl = YamiboRoute.SendBlogPage.build(),
             successCondition = { url -> isSendBlogSuccessUrl(url) },
         )

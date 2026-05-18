@@ -124,23 +124,23 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
     val navigator = LocalNavigator.current
     val repository = LocalInAppLinkNavigationRepository.current
     var state by remember(url, context) { mutableStateOf<InAppLinkResolvingState>(InAppLinkResolvingState.Loading) }
-    var progressText by remember(url, context) { mutableStateOf(appString(Res.string.auto_cf2fab1c56)) }
+    var progressText by remember(url, context) { mutableStateOf(appString(Res.string.ui_prepare_for_positioning)) }
     var attempt by remember(url, context) { mutableIntStateOf(0) }
 
     LaunchedEffect(url, context, attempt) {
         state = InAppLinkResolvingState.Loading
-        progressText = appString(Res.string.auto_cf2fab1c56)
+        progressText = appString(Res.string.ui_prepare_for_positioning)
         when (
             val result = repository.resolve(url, context) { progressText = localizedAppMessage(it) }
         ) {
             is InAppLinkResolveResult.Resolved -> {
                 val opened = navigator.navigateInAppLinkTarget(result.target, replaceCurrent = true)
                 if (!opened) {
-                    state = InAppLinkResolvingState.Error(appString(Res.string.auto_e9e902493a), result.target)
+                    state = InAppLinkResolvingState.Error(appString(Res.string.ui_this_link_does_not_support_opening_within_app), result.target)
                 }
             }
             is InAppLinkResolveResult.Failed -> {
-                state = InAppLinkResolvingState.Error(result.reason?.let(::localizedAppMessage) ?: appString(Res.string.auto_df7d1c40ba), result.target)
+                state = InAppLinkResolvingState.Error(result.reason?.let(::localizedAppMessage) ?: appString(Res.string.ui_positioning_failed), result.target)
             }
         }
     }
@@ -149,7 +149,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
         containerColor = colors.creamBackground,
         topBar = {
             ThreadTopBar(
-                title = appString(Res.string.auto_463c427e79),
+                title = appString(Res.string.ui_positioning),
                 onBack = { navigator.pop() },
             )
         },
@@ -172,7 +172,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(appString(Res.string.auto_d4db282af7), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(appString(Res.string.ui_locating_link), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(progressText, color = colors.brownPrimary, fontSize = 14.sp)
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth(),
@@ -199,7 +199,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(appString(Res.string.auto_df7d1c40ba), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(appString(Res.string.ui_positioning_failed), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(localizedAppMessage(current.message), color = colors.brownPrimary, fontSize = 14.sp)
                             Text(
                                 text = url,
@@ -216,7 +216,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             ) {
                                 current.fallbackTarget?.takeIf { it.canOpenInApp() }?.let { target ->
                                     TextButton(onClick = { navigator.navigateInAppLinkTarget(target, replaceCurrent = true) }) {
-                                        Text(appString(Res.string.auto_b5ab5458e0), color = colors.brownPrimary)
+                                        Text(appString(Res.string.ui_open_alternative_page), color = colors.brownPrimary)
                                     }
                                 }
                                 TextButton(onClick = { navigator.navigate(IPlatformWebView(url)) }) {
@@ -226,7 +226,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                                     onClick = { attempt++ },
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
                                 ) {
-                                    Text(appString(Res.string.auto_3d2b6505a6))
+                                    Text(appString(Res.string.ui_try_again))
                                 }
                             }
                         }

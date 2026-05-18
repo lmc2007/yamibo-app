@@ -63,9 +63,9 @@ fun ForumStatsBar(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            forum.todayCount?.let { count -> StatChip(label = appString(Res.string.auto_296304f1e5), value = "$count") }
-            forum.themeCount?.let { count -> StatChip(label = appString(Res.string.auto_3200853f66), value = "$count") }
-            forum.rank?.let { rank -> StatChip(label = appString(Res.string.auto_a4dc00d83a), value = "$rank") }
+            forum.todayCount?.let { count -> StatChip(label = appString(Res.string.ui_today), value = "$count") }
+            forum.themeCount?.let { count -> StatChip(label = appString(Res.string.ui_theme), value = "$count") }
+            forum.rank?.let { rank -> StatChip(label = appString(Res.string.ui_ranking), value = "$rank") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showOrder) {
@@ -121,7 +121,7 @@ fun SubForumRow(subForums: List<ForumSummary>, onClick: (ForumId, String) -> Uni
     val colors = YamiboTheme.colors
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
         Text(
-            text = appString(Res.string.auto_d346f121de),
+            text = appString(Res.string.ui_subreddit_area),
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             color = colors.brownPrimary,
@@ -186,7 +186,7 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -
     ) {
         Surface(shape = RoundedCornerShape(6.dp), color = colors.orangeAccent) {
             Text(
-                text = appString(Res.string.auto_fa86f1a57d),
+                text = appString(Res.string.ui_announcement),
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -220,7 +220,7 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
     ) {
         Surface(shape = RoundedCornerShape(6.dp), color = colors.brownPrimary) {
             Text(
-                text = appString(Res.string.auto_fe5823398e),
+                text = appString(Res.string.ui_pin_top),
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,

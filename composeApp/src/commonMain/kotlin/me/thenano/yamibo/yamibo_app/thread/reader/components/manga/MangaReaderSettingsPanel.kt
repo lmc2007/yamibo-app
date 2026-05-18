@@ -71,7 +71,7 @@ fun MangaReaderSettingsPanel(
                     .verticalScroll(rememberScrollState())
             ) {
                 // Reading mode
-                SectionTitle(appString(Res.string.auto_a38439eabc))
+                SectionTitle(appString(Res.string.ui_reading_mode))
                 ChipGroup(
                     options = ReadingMode.entries.toList(),
                     selectedOption = currentReadingMode,
@@ -82,7 +82,7 @@ fun MangaReaderSettingsPanel(
                 Spacer(Modifier.height(20.dp))
 
                 // Touch zone layout
-                SectionTitle(appString(Res.string.auto_36a2244b01))
+                SectionTitle(appString(Res.string.ui_touch_area))
                 ChipGroup(
                     options = TouchZoneLayout.entries.toList(),
                     selectedOption = currentTouchZoneLayout,

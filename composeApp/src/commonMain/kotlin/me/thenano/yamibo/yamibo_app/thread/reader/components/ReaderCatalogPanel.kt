@@ -63,7 +63,7 @@ internal fun ReaderCatalogPanel(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = appString(Res.string.auto_fc417c00b0),
+                text = appString(Res.string.ui_table_contents_2),
                 color = colors.creamBackground,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold

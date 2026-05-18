@@ -14,23 +14,23 @@ internal fun isCloudflareChallengeHtml(html: String): Boolean {
 }
 
 internal fun isSignPageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.auto_367ee07acc)) ||
-        html.contains(appString(Res.string.auto_ceb6b09947)) ||
+    return html.contains(appString(Res.string.ui_click_check_in)) ||
+        html.contains(appString(Res.string.ui_check_in_announcement)) ||
         html.contains("repairday") ||
-        html.contains(appString(Res.string.auto_4f1054038b))
+        html.contains(appString(Res.string.ui_my_check_in_status))
 }
 
 internal fun isSignResultPageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.auto_99c74120cc)) && (
-        html.contains(appString(Res.string.auto_252f8bcda3)) ||
-            html.contains(appString(Res.string.auto_866c9ea11b)) ||
-            html.contains(appString(Res.string.auto_cadfe91096)) ||
-            html.contains(appString(Res.string.auto_226ba80c13))
+    return html.contains(appString(Res.string.ui_prompt_message)) && (
+        html.contains(appString(Res.string.ui_check_in_successfully)) ||
+            html.contains(appString(Res.string.ui_already_checked_in)) ||
+            html.contains(appString(Res.string.ui_re_signing_2)) ||
+            html.contains(appString(Res.string.ui_return_signature_details))
         )
 }
 
 internal fun isMaintenancePageHtml(html: String): Boolean {
-    return html.contains(appString(Res.string.auto_48dd943e55)) ||
-        html.contains("""<img class="pic" src="/images/backup01.jpg" alt=appString(Res.string.auto_78838741ff)>""")
+    return html.contains(appString(Res.string.ui_title_yamibo_daily_maintenance_title)) ||
+        html.contains("""<img class="pic" src="/images/backup01.jpg" alt=appString(Res.string.ui_daily_maintenance)>""")
 }
 

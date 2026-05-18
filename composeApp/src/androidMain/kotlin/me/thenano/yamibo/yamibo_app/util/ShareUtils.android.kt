@@ -15,7 +15,7 @@ actual fun shareText(context: PlatformContext, text: String, title: String?) {
             putExtra(Intent.EXTRA_SUBJECT, title)
         }
     }
-    val chooser = Intent.createChooser(intent, title ?: appString(Res.string.auto_c31f48f84e)).apply {
+    val chooser = Intent.createChooser(intent, title ?: appString(Res.string.ui_share)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)

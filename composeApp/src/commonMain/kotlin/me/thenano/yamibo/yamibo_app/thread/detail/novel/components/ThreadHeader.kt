@@ -171,7 +171,7 @@ internal fun ThreadHeader(
                         onCopy = {
                             clipboardManager.setText(AnnotatedString(convertedThreadTitle))
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onCopy(appString(Res.string.auto_c45d9a03b1))
+                            onCopy(appString(Res.string.ui_title_copied))
                         }
                     )
                     Spacer(Modifier.height(6.dp))
@@ -196,7 +196,7 @@ internal fun ThreadHeader(
                                 onCopy = {
                                     clipboardManager.setText(AnnotatedString(firstPost.author.name))
                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onCopy(appString(Res.string.auto_a2105f5bc0))
+                                    onCopy(appString(Res.string.ui_author_name_copied))
                                 }
                             )
                         }
@@ -293,7 +293,7 @@ internal fun ThreadHeader(
                     Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = YamiboIcons.Share,
-                            contentDescription = appString(Res.string.auto_c31f48f84e),
+                            contentDescription = appString(Res.string.ui_share),
                             modifier = Modifier.size(22.dp),
                             tint = colors.brownDeep
                         )
@@ -313,7 +313,7 @@ internal fun ThreadHeader(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = if (readingProgressText != null) appString(Res.string.auto_98c70f280f) else appString(Res.string.auto_5d9fd81879),
+                            text = if (readingProgressText != null) appString(Res.string.ui_continue_reading) else appString(Res.string.ui_start_reading),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold
@@ -340,7 +340,7 @@ internal fun ThreadHeader(
             }
 
             Text(
-                text = appString(Res.string.auto_db62dc5b52),
+                text = appString(Res.string.ui_the_star_button_can_directly_collected_long_press_can_used),
                 modifier = Modifier.padding(top = 8.dp),
                 fontSize = 10.sp,
                 color = colors.brownPrimary.copy(alpha = 0.45f)

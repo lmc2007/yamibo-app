@@ -22,9 +22,9 @@ import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 
 /** Describes the action area for a touch zone region */
 enum class TouchAction(val label: String) {
-    PREV(appString(Res.string.auto_0b5d407fec)),
-    NEXT(appString(Res.string.auto_2ca9eb6d51)),
-    MENU(appString(Res.string.auto_5ce7fc8ea7))
+    PREV(appString(Res.string.ui_previous_page)),
+    NEXT(appString(Res.string.ui_next_page)),
+    MENU(appString(Res.string.ui_menu))
 }
 
 /**

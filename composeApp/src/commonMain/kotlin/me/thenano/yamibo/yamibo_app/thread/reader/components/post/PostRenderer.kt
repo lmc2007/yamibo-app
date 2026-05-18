@@ -290,25 +290,25 @@ fun PostRenderer(
                     ) {
                         if (onRate != null) {
                             TextButton(onClick = { showRateDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Heart, contentDescription = appString(Res.string.auto_7a79f13ede), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Heart, contentDescription = appString(Res.string.ui_score), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.auto_7a79f13ede), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.ui_score), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onComment != null) {
                             TextButton(onClick = { showCommentDialog = true }) {
-                                Icon(imageVector = YamiboIcons.Comment, contentDescription = appString(Res.string.auto_211919f5fb), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Comment, contentDescription = appString(Res.string.ui_comment_remark), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.auto_211919f5fb), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.ui_comment_remark), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(modifier = Modifier.width(8.dp))
                         }
                         if (onReply != null) {
                             TextButton(onClick = { onReply() }) {
-                                Icon(imageVector = YamiboIcons.Reply, contentDescription = appString(Res.string.auto_859cca82ef), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
+                                Icon(imageVector = YamiboIcons.Reply, contentDescription = appString(Res.string.ui_reply), modifier = Modifier.size(18.dp), tint = YamiboTheme.colors.brownPrimary)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(appString(Res.string.auto_859cca82ef), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
+                                Text(appString(Res.string.ui_reply), fontSize = 13.sp, color = YamiboTheme.colors.brownPrimary, fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -324,13 +324,13 @@ fun PostRenderer(
             onDismissRequest = {
                 showRateDialog = false
             },
-            title = { Text(appString(Res.string.auto_1c6159a445), fontWeight = FontWeight.Bold, fontSize = 20.sp) },
+            title = { Text(appString(Res.string.ui_rate_post), fontWeight = FontWeight.Bold, fontSize = 20.sp) },
             text = {
                 Column {
                     OutlinedTextField(
                         value = scoreInput,
                         onValueChange = { scoreInput = it },
-                        label = { Text(appString(Res.string.auto_51abfbc639), fontSize = 12.sp) },
+                        label = { Text(appString(Res.string.ui_fraction), fontSize = 12.sp) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
                         singleLine = true,
@@ -339,7 +339,7 @@ fun PostRenderer(
                     OutlinedTextField(
                         value = reasonInput,
                         onValueChange = { reasonInput = it },
-                        label = { Text(appString(Res.string.auto_3c613c5698), fontSize = 12.sp) },
+                        label = { Text(appString(Res.string.ui_reason_for_rating), fontSize = 12.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = YamiboTheme.colors.brownPrimary, focusedLabelColor = YamiboTheme.colors.brownPrimary)
@@ -354,7 +354,7 @@ fun PostRenderer(
                         showRateDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = YamiboTheme.colors.brownPrimary)
-                ) { Text(appString(Res.string.auto_939d5345ad), color = YamiboTheme.colors.creamBackground) }
+                ) { Text(appString(Res.string.ui_submit), color = YamiboTheme.colors.creamBackground) }
             },
             dismissButton = {
                 TextButton(onClick = { showRateDialog = false }) { Text(appString(Res.string.common_cancel), color = YamiboTheme.colors.brownPrimary) }
@@ -378,7 +378,7 @@ fun PostRenderer(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = appString(Res.string.auto_211919f5fb),
+                        text = appString(Res.string.ui_comment_remark),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = YamiboTheme.colors.brownPrimary,
@@ -407,7 +407,7 @@ fun PostRenderer(
                         )
                         if (commentInput.isEmpty()) {
                             Text(
-                                appString(Res.string.auto_6bbeff1a67),
+                                appString(Res.string.ui_enter_content),
                                 color = YamiboTheme.colors.textDark.copy(alpha = 0.4f),
                                 fontSize = 16.sp,
                                 modifier = Modifier.align(Alignment.TopStart)
@@ -430,7 +430,7 @@ fun PostRenderer(
                         ),
                         enabled = commentInput.isNotBlank()
                     ) {
-                        Text(appString(Res.string.auto_79495d6803), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        Text(appString(Res.string.ui_release), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

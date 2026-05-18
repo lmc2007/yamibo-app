@@ -29,7 +29,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
  * Use this whenever a page is backed by `PageNav`. If `PageNav` contains
  * `currentPage` and `totalPages`, the existing full page selector is used. If a
  * Discuz page only exposes previous/next links, this falls back to compact
- * appString(Res.string.auto_0559b66613) buttons using `prevPageIndex` / `nextPageIndex` when
+ * appString(Res.string.ui_previous_page_next_page) buttons using `prevPageIndex` / `nextPageIndex` when
  * available.
  *
  * This is intended for ForumPage, UserSpace subpages, BlogReader comments, and
@@ -62,11 +62,11 @@ fun YamiboPageNavigation(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        YamiboNavButton(appString(Res.string.auto_0b5d407fec), enabled = prevPage != null) {
+        YamiboNavButton(appString(Res.string.ui_previous_page), enabled = prevPage != null) {
             prevPage?.let(onPageChange)
         }
         Spacer(Modifier.width(14.dp))
-        YamiboNavButton(appString(Res.string.auto_2ca9eb6d51), enabled = nextPage != null) {
+        YamiboNavButton(appString(Res.string.ui_next_page), enabled = nextPage != null) {
             nextPage?.let(onPageChange)
         }
     }

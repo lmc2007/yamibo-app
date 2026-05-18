@@ -50,7 +50,7 @@ fun CommentRenderer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = appString(Res.string.auto_fe07990a09),
+                    text = appString(Res.string.ui_comment_remark_with_icon),
                     color = colors.brownPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp

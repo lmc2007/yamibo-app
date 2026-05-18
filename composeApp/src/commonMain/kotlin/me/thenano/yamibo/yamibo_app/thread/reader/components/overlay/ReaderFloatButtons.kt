@@ -55,7 +55,7 @@ fun ReaderFloatButtons(
                         .size(56.dp)
                         .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
                 ) {
-                    Icon(imageVector = YamiboIcons.Reload, contentDescription = appString(Res.string.auto_68ca893a48), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                    Icon(imageVector = YamiboIcons.Reload, contentDescription = appString(Res.string.ui_refresh), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
                 }
                 IconButton(
                     onClick = onSettings,
@@ -76,7 +76,7 @@ fun ReaderFloatButtons(
                     .size(56.dp)
                     .background(colors.brownPrimary.copy(alpha = 0.2f), CircleShape)
             ) {
-                Icon(imageVector = YamiboIcons.Book, contentDescription = appString(Res.string.auto_70a72e1083), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
+                Icon(imageVector = YamiboIcons.Book, contentDescription = appString(Res.string.ui_comic_reading_mode), tint = colors.brownPrimary, modifier = Modifier.size(24.dp))
             }
         }
     }

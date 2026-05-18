@@ -128,14 +128,14 @@ fun WebViewTopBar(
                                 onDismissRequest = { showMenu = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { Text(appString(Res.string.auto_68ca893a48), fontWeight = FontWeight.Bold) },
+                                    text = { Text(appString(Res.string.ui_refresh), fontWeight = FontWeight.Bold) },
                                     onClick = {
                                         onRefreshClick()
                                         showMenu = false
                                     }
                                 )
                                 DropdownMenuItem(
-                                    text = { Text(appString(Res.string.auto_151e57d907)) },
+                                    text = { Text(appString(Res.string.ui_open_in_browser)) },
                                     onClick = {
                                         onOpenBrowserClick()
                                         showMenu = false

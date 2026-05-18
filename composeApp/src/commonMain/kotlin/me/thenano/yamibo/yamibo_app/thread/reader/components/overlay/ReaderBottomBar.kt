@@ -74,7 +74,7 @@ fun ReaderBottomBar(
                         contentAlignment = Alignment.CenterStart,
                         modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)
                     ) {
-                        Text(appString(Res.string.auto_3f929c8d8d), color = colors.textDark.copy(alpha = 0.72f), fontSize = 15.sp)
+                        Text(appString(Res.string.ui_send_reply), color = colors.textDark.copy(alpha = 0.72f), fontSize = 15.sp)
                     }
                 }
 
@@ -93,7 +93,7 @@ fun ReaderBottomBar(
                 ) {
                     Icon(
                         imageVector = YamiboIcons.Share,
-                        contentDescription = appString(Res.string.auto_c31f48f84e),
+                        contentDescription = appString(Res.string.ui_share),
                         tint = Color.White,
                         modifier = Modifier.size(28.dp)
                     )

@@ -89,7 +89,7 @@ fun ProfileStatisticsModule() {
             .fillMaxSize()
             .background(colors.creamBackground),
     ) {
-        YamiboTopBar(title = appString(Res.string.auto_77865166b9), onBack = navigator::pop)
+        YamiboTopBar(title = appString(Res.string.ui_reading_statistics), onBack = navigator::pop)
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -97,27 +97,27 @@ fun ProfileStatisticsModule() {
                 .padding(vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ProfileSectionCard(title = appString(Res.string.auto_e5be7836d7)) {
+            ProfileSectionCard(title = appString(Res.string.ui_works_chapters)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileMetricTile(appString(Res.string.auto_3bd24a6e03), "${state.shelfCount}", appString(Res.string.auto_69724359e2), Modifier.weight(1f))
-                    ProfileMetricTile(appString(Res.string.auto_60fe7a69e6), "${state.finishedWorkCount}", appString(Res.string.auto_69724359e2), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.ui_bookcase), "${state.shelfCount}", appString(Res.string.ui_work), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.ui_finished_reading), "${state.finishedWorkCount}", appString(Res.string.ui_work), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
-                ProfileMetricTile(appString(Res.string.auto_8002f25dee), "${state.readChapterCount}/${state.chapterCount}", appString(Res.string.auto_e90df5aed5))
+                ProfileMetricTile(appString(Res.string.ui_chapter), "${state.readChapterCount}/${state.chapterCount}", appString(Res.string.ui_read_total))
             }
 
-            ProfileSectionCard(title = appString(Res.string.auto_8e0acdd260)) {
+            ProfileSectionCard(title = appString(Res.string.ui_reading_hours)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileMetricTile(appString(Res.string.auto_d41bf52769), formatDuration(state.allReadingMillis), appString(Res.string.common_all), Modifier.weight(1f))
-                    ProfileMetricTile(appString(Res.string.auto_8ff1b62144), formatDuration(state.weekReadingMillis), appString(Res.string.auto_fdef8c231f), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.ui_total_hours), formatDuration(state.allReadingMillis), appString(Res.string.common_all), Modifier.weight(1f))
+                    ProfileMetricTile(appString(Res.string.ui_hours_week), formatDuration(state.weekReadingMillis), appString(Res.string.ui_7_days), Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(8.dp))
-                ProfileMetricTile(appString(Res.string.auto_9702c843ac), formatDuration(state.monthReadingMillis), appString(Res.string.auto_0ec94a3708))
+                ProfileMetricTile(appString(Res.string.ui_hours_month), formatDuration(state.monthReadingMillis), appString(Res.string.ui_this_month))
             }
 
-            ProfileSectionCard(title = appString(Res.string.auto_ee07116616)) {
+            ProfileSectionCard(title = appString(Res.string.ui_reading_charts)) {
                 ProfileControlRow(
-                    title = appString(Res.string.auto_5157eb1dc3),
+                    title = appString(Res.string.ui_interval),
                     options = ProfileStatsRange.entries,
                     selected = chartRange,
                     label = { it.label },
@@ -125,7 +125,7 @@ fun ProfileStatisticsModule() {
                 )
                 Spacer(Modifier.height(8.dp))
                 ProfileControlRow(
-                    title = appString(Res.string.auto_753dac846c),
+                    title = appString(Res.string.ui_chart),
                     options = ProfileChartType.entries,
                     selected = chartType,
                     label = { it.label },
@@ -141,7 +141,7 @@ fun ProfileStatisticsModule() {
                 )
             }
 
-            ProfileSectionCard(title = appString(Res.string.auto_d170867b57)) {
+            ProfileSectionCard(title = appString(Res.string.ui_favorite_module_ratio)) {
                 FavoriteRatioList(
                     ratios = state.favoriteRatios,
                     fallbackTypeRatios = state.favoriteTypeRatios,
@@ -260,7 +260,7 @@ private fun ProfileReadingChart(
         contentAlignment = Alignment.Center,
     ) {
         if (points.isEmpty() || maxValue <= 0f) {
-            Text(text = appString(Res.string.auto_9f04d73ead), color = colors.brownLight, fontSize = 13.sp)
+            Text(text = appString(Res.string.ui_no_reading_hours_data_yet), color = colors.brownLight, fontSize = 13.sp)
             return@Box
         }
         Canvas(modifier = Modifier.matchParentSize().padding(horizontal = 12.dp, vertical = 16.dp)) {
@@ -343,7 +343,7 @@ private fun FavoriteRatioList(
     val colors = YamiboTheme.colors
     val displayRatios = ratios.ifEmpty { fallbackTypeRatios }
     if (displayRatios.isEmpty()) {
-        Text(text = appString(Res.string.auto_ef70bf02c3), color = colors.brownLight, fontSize = 13.sp)
+        Text(text = appString(Res.string.ui_no_favorites_yet), color = colors.brownLight, fontSize = 13.sp)
         return
     }
     val total = displayRatios.sumOf { it.count }.coerceAtLeast(1)
@@ -476,24 +476,24 @@ private fun formatDuration(durationMillis: Long): String {
 
 private val FavoriteTargetType.label: String
     get() = when (this) {
-        FavoriteTargetType.ThreadNormal -> appString(Res.string.auto_75be26f8c5)
-        FavoriteTargetType.ThreadNovel -> appString(Res.string.auto_f880f1d7b2)
-        FavoriteTargetType.TagManga -> appString(Res.string.auto_2c0b6c9dda)
+        FavoriteTargetType.ThreadNormal -> appString(Res.string.ui_post)
+        FavoriteTargetType.ThreadNovel -> appString(Res.string.ui_novel)
+        FavoriteTargetType.TagManga -> appString(Res.string.ui_tag_comics)
     }
 
 private enum class ProfileStatsRange(val label: String, val days: Int?) {
-    Week(appString(Res.string.auto_3d1e410407), 7),
-    Month(appString(Res.string.auto_923a9a444c), 30),
-    Season(appString(Res.string.auto_670ac73311), 90),
-    Year(appString(Res.string.auto_5c83b1cd6a), 365),
+    Week(appString(Res.string.ui_7_days_week), 7),
+    Month(appString(Res.string.ui_30_days), 30),
+    Season(appString(Res.string.ui_90_days), 90),
+    Year(appString(Res.string.ui_one_year), 365),
     All(appString(Res.string.common_all), null),
 }
 
 private enum class ProfileChartType(val label: String) {
-    Bar(appString(Res.string.auto_1de453c334)),
-    Histogram(appString(Res.string.auto_1a8662cb90)),
-    Pie(appString(Res.string.auto_91912abc86)),
-    Line(appString(Res.string.auto_4cea014176)),
+    Bar(appString(Res.string.ui_bar_chart)),
+    Histogram(appString(Res.string.ui_histogram)),
+    Pie(appString(Res.string.ui_pie_chart)),
+    Line(appString(Res.string.ui_line_chart)),
 }
 
 private data class ProfileStatisticsState(

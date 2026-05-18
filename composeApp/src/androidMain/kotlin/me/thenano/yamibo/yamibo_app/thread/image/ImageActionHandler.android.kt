@@ -69,11 +69,11 @@ private suspend fun downloadImage(context: Context, url: String, cookie: String,
                     return@withContext file
                 }
             }
-            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_b957c32311), Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.ui_failed_download_image), Toast.LENGTH_SHORT).show() }
             null
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_b957c32311), Toast.LENGTH_SHORT).show() }
+            withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.ui_failed_download_image), Toast.LENGTH_SHORT).show() }
             null
         }
     }
@@ -85,7 +85,7 @@ actual suspend fun copyImageToClipboard(context: PlatformContext, url: String, c
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newUri(context.contentResolver, "Image", uri)
     clipboard.setPrimaryClip(clip)
-    withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.auto_77feb8bc3d), Toast.LENGTH_SHORT).show() }
+    withContext(Dispatchers.Main) { Toast.makeText(context, appString(Res.string.ui_image_copied), Toast.LENGTH_SHORT).show() }
 }
 
 actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie: String, referer: String) {
@@ -98,7 +98,7 @@ actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
     // Context from Compose might not be an Activity context, so add FLAG_ACTIVITY_NEW_TASK
-    val chooser = Intent.createChooser(intent, appString(Res.string.auto_c3277e4b35)).apply {
+    val chooser = Intent.createChooser(intent, appString(Res.string.ui_share_pictures)).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
     context.startActivity(chooser)
@@ -153,28 +153,28 @@ actual suspend fun saveImageToGallery(context: PlatformContext, url: String, coo
                         
                         if (handled) {
                             withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, appString(Res.string.auto_58ddff1506), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, appString(Res.string.ui_saved_picture_album), Toast.LENGTH_SHORT).show()
                             }
                         } else {
                             withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, appString(Res.string.auto_24510f9f72), Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, appString(Res.string.ui_save_failed), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
                 } else {
                     withContext(Dispatchers.Main) { 
-                        Toast.makeText(context, appString(Res.string.auto_24510f9f72), Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, appString(Res.string.ui_save_failed), Toast.LENGTH_SHORT).show()
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) { 
-                    Toast.makeText(context, appString(Res.string.auto_68eaa7830f), Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, appString(Res.string.ui_download_failed), Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) { 
-                Toast.makeText(context, appString(Res.string.auto_68eaa7830f), Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, appString(Res.string.ui_download_failed), Toast.LENGTH_SHORT).show()
             }
         }
     }

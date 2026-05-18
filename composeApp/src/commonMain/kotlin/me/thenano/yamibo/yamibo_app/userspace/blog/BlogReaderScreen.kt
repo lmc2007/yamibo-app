@@ -130,7 +130,7 @@ fun BlogReaderScreen(
         snackbarHost = { YamiboSnackbarHost(hostState = snackbarHostState) },
         topBar = {
             BlogReaderTopBar(
-                title = appString(Res.string.auto_456d29ef8b),
+                title = appString(Res.string.ui_blog),
                 onBack = { navigator.pop() },
             )
         },
@@ -171,7 +171,7 @@ fun BlogReaderScreen(
                                     comment = comment,
                                     onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                                     onReplyClick = { url ->
-                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = appString(Res.string.auto_a9aa7555b4)))
+                                        navigator.navigate(IPlatformWebView(YamiboRoute.Domain.toFullLink(url), title = appString(Res.string.ui_reply_verb)))
                                     },
                                 )
                             }
@@ -195,10 +195,10 @@ fun BlogReaderScreen(
                                     val message = commentText.trim()
                                     when {
                                         formHash == null -> scope.launch {
-                                            snackbarHostState.showSnackbar(appString(Res.string.auto_f8fa9d4f1d), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_log_in_first_commenting), duration = SnackbarDuration.Short)
                                         }
                                         message.isBlank() -> scope.launch {
-                                            snackbarHostState.showSnackbar(appString(Res.string.auto_30e7728122), duration = SnackbarDuration.Short)
+                                            snackbarHostState.showSnackbar(appString(Res.string.ui_please_enter_comment_content), duration = SnackbarDuration.Short)
                                         }
                                         else -> scope.launch {
                                             submitting = true
@@ -240,7 +240,7 @@ private fun RootBlogCard(
     val root = page.rootBlog
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
         Text(
-            text = page.blogInfo.title.ifBlank { titleHint ?: appString(Res.string.auto_456d29ef8b) },
+            text = page.blogInfo.title.ifBlank { titleHint ?: appString(Res.string.ui_blog) },
             color = colors.brownDeep,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
@@ -269,9 +269,9 @@ private fun RootBlogCard(
 @Composable
 private fun BlogActionRow(page: BlogPage, onUrlClick: (String, String) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        page.blogInfo.collectUrl?.let { BlogSmallButton(appString(Res.string.main_favorite)) { onUrlClick(appString(Res.string.auto_b4dd3166a3), it) } }
-        page.blogInfo.shareUrl?.let { BlogSmallButton(appString(Res.string.auto_c31f48f84e)) { onUrlClick(appString(Res.string.auto_47b6632a33), it) } }
-        page.blogInfo.inviteUrl?.let { BlogSmallButton(appString(Res.string.auto_89c7338fb6)) { onUrlClick(appString(Res.string.auto_a7aac35ef5), it) } }
+        page.blogInfo.collectUrl?.let { BlogSmallButton(appString(Res.string.main_favorite)) { onUrlClick(appString(Res.string.ui_favorite_log), it) } }
+        page.blogInfo.shareUrl?.let { BlogSmallButton(appString(Res.string.ui_share)) { onUrlClick(appString(Res.string.ui_share_log), it) } }
+        page.blogInfo.inviteUrl?.let { BlogSmallButton(appString(Res.string.ui_invite)) { onUrlClick(appString(Res.string.ui_invitation_read), it) } }
     }
 }
 
@@ -281,7 +281,7 @@ private fun BlogCommentSectionTitle(count: Int) {
     Column(Modifier.fillMaxWidth()) {
         HorizontalDivider(color = colors.brownLight.copy(alpha = 0.45f))
         Text(
-            text = if (count > 0) appString(Res.string.auto_8780f40c63) else appString(Res.string.auto_8780f40c63),
+            text = if (count > 0) appString(Res.string.ui_log_comments) else appString(Res.string.ui_log_comments),
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
             color = colors.brownDeep,
             fontSize = 16.sp,
@@ -314,7 +314,7 @@ private fun BlogCommentCard(
             }
             comment.replyUrl?.let { url ->
                 Text(
-                    text = appString(Res.string.auto_a9aa7555b4),
+                    text = appString(Res.string.ui_reply_verb),
                     modifier = Modifier.clickable { onReplyClick(url) }.padding(6.dp),
                     color = colors.orangeAccent,
                     fontSize = 13.sp,
@@ -343,12 +343,12 @@ private fun BlogCommentEditor(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth().height(142.dp),
             enabled = enabled,
-            placeholder = { Text(if (enabled) appString(Res.string.auto_78108f5f4c) else appString(Res.string.auto_f8fa9d4f1d)) },
+            placeholder = { Text(if (enabled) appString(Res.string.ui_content_area) else appString(Res.string.ui_please_log_in_first_commenting)) },
         )
         Spacer(Modifier.height(12.dp))
         YamiboPrimaryButton(
-            text = appString(Res.string.auto_f7f0ddf81c),
-            busyText = appString(Res.string.auto_631c707367),
+            text = appString(Res.string.ui_comment),
+            busyText = appString(Res.string.ui_commenting),
             enabled = enabled,
             busy = submitting,
             onClick = onSubmit,
@@ -375,7 +375,7 @@ private fun BlogPageNavigation(nav: PageNav, currentPage: Int, onPageChange: (In
 
 @Composable
 private fun BlogEmptyComments() {
-    YamiboEmptyContent(message = appString(Res.string.auto_6063404215), modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp))
+    YamiboEmptyContent(message = appString(Res.string.ui_no_comments_found), modifier = Modifier.padding(horizontal = 24.dp, vertical = 48.dp))
 }
 
 @Composable

@@ -139,7 +139,7 @@ private fun PostTitleRow(
     onLongPress: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    val displayTitle = rememberConvertedText(post.title.ifBlank { appString(Res.string.auto_72a54b7f13) })
+    val displayTitle = rememberConvertedText(post.title.ifBlank { appString(Res.string.ui_untitled) })
 
     Surface(
         modifier = Modifier

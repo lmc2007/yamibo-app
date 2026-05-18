@@ -59,7 +59,7 @@ internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
                 }
             }
         }
-        SmallActionButton(appString(Res.string.auto_dd4e0b5788), onAction)
+        SmallActionButton(appString(Res.string.ui_shield), onAction)
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
 }

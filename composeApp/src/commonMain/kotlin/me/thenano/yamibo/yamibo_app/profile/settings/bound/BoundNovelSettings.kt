@@ -37,7 +37,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
 
 private val PREVIEW_TEXT: String
-    get() = appString(Res.string.auto_256be2c31b)
+    get() = appString(Res.string.ui_i_am_thenano_author_yamibo_app_which_open_source_app)
 
 @Composable
 fun NovelReaderPreviewSetting() {
@@ -76,7 +76,7 @@ fun NovelFontSizeSetting() {
     val fontSize = novelSettingsRepo.fontSize.state()
 
     SettingsSlider(
-        label = appString(Res.string.auto_93ab99d761),
+        label = appString(Res.string.ui_text_size),
         value = fontSize.toFloat(),
         valueRange = 10f..40f,
         steps = 29,
@@ -91,7 +91,7 @@ fun NovelLineSpacingSetting() {
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
 
     SettingsSlider(
-        label = appString(Res.string.auto_681797f13b),
+        label = appString(Res.string.ui_line_spacing_ratio),
         value = lineSpacing,
         valueRange = 1.0f..3.0f,
         steps = 39,
@@ -106,7 +106,7 @@ fun NovelContentWidthSetting() {
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
 
     SettingsSlider(
-        label = appString(Res.string.auto_748fd8d8ee),
+        label = appString(Res.string.ui_content_width),
         value = contentWidthFraction,
         valueRange = 0.6f..1.0f,
         steps = 39,
@@ -133,13 +133,13 @@ fun NovelSystemBarsBackgroundSetting() {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = appString(Res.string.auto_f217342710),
+                text = appString(Res.string.ui_keep_system_column_background),
                 fontSize = 16.sp,
                 color = colors.textDark,
             )
             Spacer(Modifier.height(2.dp))
             Text(
-                text = appString(Res.string.auto_465974851c),
+                text = appString(Res.string.ui_use_reading_background_behind_status_bar_bottom_navigation_bar),
                 fontSize = 13.sp,
                 color = colors.textDark.copy(alpha = 0.6f),
             )

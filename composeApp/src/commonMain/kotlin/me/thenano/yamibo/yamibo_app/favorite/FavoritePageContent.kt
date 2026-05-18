@@ -139,7 +139,7 @@ internal fun FavoritePageContent(
             when (currentMode) {
                 FavoritePageMode.Normal -> {
                     FavoriteHeaderMenuRow(
-                        title = appString(Res.string.auto_975ff67ee1),
+                        title = appString(Res.string.ui_my_favorites),
                         onSearch = onEnterSearch,
                         onCreateCategory = onCreateCategory,
                         onManageCategory = onManageCategory,
@@ -158,14 +158,14 @@ internal fun FavoritePageContent(
                     HeaderRow(appString(Res.string.selected_items, selectedCount), buildList {
                         add(appString(Res.string.common_select_all) to onSelectAll)
                         if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
-                            add(appString(Res.string.auto_2cd3598e1e) to onOpenMoveDialog)
-                            add(appString(Res.string.auto_fff8441870) to onOpenMergeDialog)
+                            add(appString(Res.string.ui_move) to onOpenMoveDialog)
+                            add(appString(Res.string.ui_synthetic_collection) to onOpenMergeDialog)
                             add(appString(Res.string.common_delete) to onDeleteSelectedItems)
                         }
-                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(appString(Res.string.auto_aa3a615d69) to onEditSelectedCollection)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(appString(Res.string.auto_9e37997c32) to onDissolveSelectedCollections)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(appString(Res.string.auto_288f0c404c) to onClearSelection)
-                        add(appString(Res.string.auto_5f411223ca) to onCancelSelection)
+                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(appString(Res.string.ui_edit) to onEditSelectedCollection)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(appString(Res.string.ui_disband) to onDissolveSelectedCollections)
+                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(appString(Res.string.ui_clear) to onClearSelection)
+                        add(appString(Res.string.ui_return) to onCancelSelection)
                     })
                 }
             }
@@ -247,7 +247,7 @@ internal fun FavoritePageContent(
             Box(Modifier.fillMaxSize()) {
                 if (gridEntries.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(appString(Res.string.auto_6c5e1b3be1), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                        Text(appString(Res.string.ui_this_collection_has_no_content_yet), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                     }
                 } else {
                     FavoriteGridLayout(
@@ -294,7 +294,7 @@ internal fun FavoritePageContent(
                 Box(Modifier.fillMaxSize()) {
                     if (gridEntries.isEmpty()) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(appString(Res.string.auto_8d25063e63), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
+                            Text(appString(Res.string.ui_there_no_favorites_yet), color = colors.textDark.copy(alpha = 0.52f), fontSize = 16.sp)
                         }
                     } else {
                         FavoriteGridLayout(

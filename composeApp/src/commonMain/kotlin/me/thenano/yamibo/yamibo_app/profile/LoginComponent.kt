@@ -78,7 +78,7 @@ fun LoginScreen() {
 
     PlatformWebViewScreen(
         initialUrl = YamiboRoute.Login.build(),
-        initialTitle = appString(Res.string.auto_b09206acc4),
+        initialTitle = appString(Res.string.ui_login_page),
         showNavigation = false,
         useBackIcon = true,
         onPageFinished = { authRepo.syncCookieFromWebView() },
@@ -176,7 +176,7 @@ private fun LoginContent() {
     val navigator = LocalNavigator.current
     Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         AnimatedYamiboButton(
-            text = appString(Res.string.auto_6e00cae3e2),
+            text = appString(Res.string.ui_log_in),
             onClick = { navigator.navigate(ILoginScreen()) },
             modifier = Modifier.fillMaxWidth(0.6f)
         )
@@ -210,14 +210,14 @@ private fun UserInfoContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AnimatedYamiboChip(
-                label = appString(Res.string.auto_694fc5efa9),
+                label = appString(Res.string.ui_refresh_2),
                 onClick = { onRefresh() },
                 containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
                 contentColor = YamiboTheme.colors.brownDeep
             )
             Spacer(Modifier.width(12.dp))
             AnimatedYamiboChip(
-                label = appString(Res.string.auto_75c856b174),
+                label = appString(Res.string.ui_sign_out),
                 onClick = { onLogout() },
                 containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.8f),
                 contentColor = MaterialTheme.colorScheme.onErrorContainer

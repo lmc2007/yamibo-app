@@ -57,8 +57,8 @@ class FavoriteSyncForegroundService : Service() {
         val notificationId = notificationIdFor(runId)
         val initialModel = SystemNotificationRepository.ProgressNotificationModel(
             notificationId = notificationId,
-            title = appString(Res.string.auto_232479ab38),
-            text = appString(Res.string.auto_945847ea7e),
+            title = appString(Res.string.ui_synchronous_yamibo_favorite),
+            text = appString(Res.string.ui_prepare_synchronization_tasks),
             progress = 3,
             indeterminate = false,
             ongoing = true,
@@ -70,7 +70,7 @@ class FavoriteSyncForegroundService : Service() {
         } catch (throwable: Throwable) {
             Log.e(TAG, "Failed to enter foreground for favorite sync runId=$runId", throwable)
             scope.launch {
-                favoriteSyncRepository.markRunInterrupted(runId, appString(Res.string.auto_b5cad698ee))
+                favoriteSyncRepository.markRunInterrupted(runId, appString(Res.string.ui_the_system_does_not_allow_background_synchronization_initiated_try))
             }
             stopSelf()
             return
@@ -83,15 +83,15 @@ class FavoriteSyncForegroundService : Service() {
                 notificationRepository.showProgress(snapshot.toNotificationModel(state))
                 when (state) {
                     is FavoriteSyncRepository.FavoriteSyncState.Completed -> {
-                        notificationRepository.showCompleted(notificationId, appString(Res.string.auto_02f667de32), appString(Res.string.auto_87ddd21769))
+                        notificationRepository.showCompleted(notificationId, appString(Res.string.ui_synchronization_completed), appString(Res.string.ui_yamibo_favorite_has_synchronized_local))
                         finishRun(runId, keepNotification = true)
                     }
                     is FavoriteSyncRepository.FavoriteSyncState.Failed -> {
-                        notificationRepository.showFailed(notificationId, appString(Res.string.auto_c599384c8a), snapshot.errorMessage ?: appString(Res.string.auto_2ea220989d))
+                        notificationRepository.showFailed(notificationId, appString(Res.string.ui_sync_failed), snapshot.errorMessage ?: appString(Res.string.ui_an_error_occurred_during_synchronization))
                         finishRun(runId, keepNotification = true)
                     }
                     is FavoriteSyncRepository.FavoriteSyncState.Interrupted -> {
-                        notificationRepository.showFailed(notificationId, appString(Res.string.auto_416d31ec7e), snapshot.errorMessage ?: appString(Res.string.auto_0bcf367875))
+                        notificationRepository.showFailed(notificationId, appString(Res.string.ui_sync_interrupted), snapshot.errorMessage ?: appString(Res.string.ui_sync_canceled))
                         finishRun(runId, keepNotification = true)
                     }
                     else -> Unit

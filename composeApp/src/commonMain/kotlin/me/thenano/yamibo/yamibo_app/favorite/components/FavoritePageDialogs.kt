@@ -47,7 +47,7 @@ internal fun FavoriteSortDialog(selected: FavoriteSortMode, descending: Boolean,
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_c360e994db), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_sort), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 FavoriteSortMode.entries.forEach { mode ->
@@ -61,8 +61,8 @@ internal fun FavoriteSortDialog(selected: FavoriteSortMode, descending: Boolean,
                 }
             }
         },
-        confirmButton = { ActionChip(appString(Res.string.auto_ba0fcf6954), onConfirm) },
-        dismissButton = { ActionChip(appString(Res.string.auto_5f411223ca), onDismiss) },
+        confirmButton = { ActionChip(appString(Res.string.ui_sure), onConfirm) },
+        dismissButton = { ActionChip(appString(Res.string.ui_return), onDismiss) },
         containerColor = colors.creamSurface,
     )
 }
@@ -72,7 +72,7 @@ internal fun FavoriteGridModeDialog(selected: FavoriteGridMode, onDismiss: () ->
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(appString(Res.string.auto_5e3406cb54), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(appString(Res.string.ui_arrangement), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 FavoriteGridMode.entries.forEach { mode ->
@@ -80,13 +80,13 @@ internal fun FavoriteGridModeDialog(selected: FavoriteGridMode, onDismiss: () ->
                     Surface(onClick = { onSelect(mode) }, shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp), color = if (isSelected) colors.brownPrimary.copy(alpha = 0.12f) else Color.Transparent) {
                         Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(mode.localizedLabel(), color = colors.textDark, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            if (isSelected) Text(appString(Res.string.auto_1d20dbc3b3), color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            if (isSelected) Text(appString(Res.string.ui_selected), color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
         },
-        confirmButton = { ActionChip(appString(Res.string.auto_5f411223ca), onDismiss) },
+        confirmButton = { ActionChip(appString(Res.string.ui_return), onDismiss) },
         dismissButton = {},
         containerColor = colors.creamSurface,
     )
@@ -104,8 +104,8 @@ internal fun CollectionEditorDialog(draft: FavoriteCollectionDraft, onDismiss: (
         title = { Text(draft.title, color = colors.brownDeep, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(appString(Res.string.auto_d61a30911c)) })
-                Text(appString(Res.string.auto_e47c7d0de2), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(appString(Res.string.ui_name)) })
+                Text(appString(Res.string.ui_color), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     palette.forEach { paletteKey ->
                         Box(Modifier.size(26.dp).clip(CircleShape).background(collectionColor(paletteKey)).pointerInput(paletteKey) { detectTapGestures(onTap = { colorKey = paletteKey }) }.border(if (paletteKey == colorKey) 2.dp else 0.dp, colors.brownDeep, CircleShape))
@@ -115,13 +115,13 @@ internal fun CollectionEditorDialog(draft: FavoriteCollectionDraft, onDismiss: (
                     Row(Modifier.fillMaxWidth().pointerInput(removeOriginal) { detectTapGestures(onTap = { removeOriginal = !removeOriginal }) }, verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = removeOriginal, onCheckedChange = { removeOriginal = it })
                         Spacer(Modifier.width(6.dp))
-                        Text(appString(Res.string.auto_388072d19c), color = colors.textDark, fontSize = 13.sp)
+                        Text(appString(Res.string.ui_remove_original_entry), color = colors.textDark, fontSize = 13.sp)
                     }
                 }
             }
         },
-        confirmButton = { ActionChip(appString(Res.string.auto_ba0fcf6954)) { if (name.isNotBlank()) onConfirm(name.trim(), colorKey, removeOriginal) } },
-        dismissButton = { ActionChip(appString(Res.string.auto_5f411223ca), onDismiss) },
+        confirmButton = { ActionChip(appString(Res.string.ui_sure)) { if (name.isNotBlank()) onConfirm(name.trim(), colorKey, removeOriginal) } },
+        dismissButton = { ActionChip(appString(Res.string.ui_return), onDismiss) },
         containerColor = colors.creamSurface,
     )
 }

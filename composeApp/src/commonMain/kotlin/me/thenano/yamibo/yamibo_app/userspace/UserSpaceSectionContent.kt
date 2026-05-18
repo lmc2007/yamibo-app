@@ -101,15 +101,15 @@ private fun UserSpaceEmptyListMessage(message: String) {
 
 private fun emptyMessage(tab: UserSpaceSubPage, isSelf: Boolean): String = when (tab) {
     UserSpaceSubPage.Profile -> ""
-    UserSpaceSubPage.Threads -> if (isSelf) appString(Res.string.auto_c4cf0734d5) else appString(Res.string.auto_dcf657b269)
-    UserSpaceSubPage.Replies -> if (isSelf) appString(Res.string.auto_c4f415a3e0) else appString(Res.string.auto_a2d1cf26ce)
-    UserSpaceSubPage.MyBlogs -> if (isSelf) appString(Res.string.auto_d1a20b1d07) else appString(Res.string.auto_98810a2754)
-    UserSpaceSubPage.FriendBlogs -> appString(Res.string.auto_9f9529d11a)
-    UserSpaceSubPage.ViewAllBlogs -> appString(Res.string.auto_d1a20b1d07)
-    UserSpaceSubPage.Friends -> appString(Res.string.auto_3409bf400f)
-    UserSpaceSubPage.Online -> appString(Res.string.auto_abac6fc9bc)
-    UserSpaceSubPage.Visitors -> appString(Res.string.auto_50597076cd)
-    UserSpaceSubPage.Traces -> appString(Res.string.auto_adab468428)
+    UserSpaceSubPage.Threads -> if (isSelf) appString(Res.string.ui_topic_not_found) else appString(Res.string.ui_his_topic_was_not_found)
+    UserSpaceSubPage.Replies -> if (isSelf) appString(Res.string.ui_no_reply_found) else appString(Res.string.ui_no_reply_found_from_ta)
+    UserSpaceSubPage.MyBlogs -> if (isSelf) appString(Res.string.ui_no_log_found) else appString(Res.string.ui_his_log_was_not_found)
+    UserSpaceSubPage.FriendBlogs -> appString(Res.string.ui_no_friend_s_log_found)
+    UserSpaceSubPage.ViewAllBlogs -> appString(Res.string.ui_no_log_found)
+    UserSpaceSubPage.Friends -> appString(Res.string.ui_no_friends_found)
+    UserSpaceSubPage.Online -> appString(Res.string.ui_no_online_members_found)
+    UserSpaceSubPage.Visitors -> appString(Res.string.ui_no_visitor_found)
+    UserSpaceSubPage.Traces -> appString(Res.string.ui_no_footprints_found)
 }
 
 @Composable

@@ -104,10 +104,10 @@ internal fun CommentReaderScreen(
         val replyPageUrl = YamiboRoute.PostReply(tid, pid).build()
         navigator.navigate(
             IActionWebView(
-                title = appString(Res.string.auto_2d4f3ed6af),
+                title = appString(Res.string.ui_leave_reply),
                 initialUrl = replyPageUrl,
                 successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
-                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_a0aa30544c)) } },
+                onSuccess = { scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) } },
             )
         )
     }
@@ -269,7 +269,7 @@ internal fun CommentReaderScreen(
             listState.animateScrollToItem(index)
             targetCommentHandled = true
         } else if (isCommentComplete) {
-            snackbarHostState.showSnackbar(appString(Res.string.auto_4dab9c65c9))
+            snackbarHostState.showSnackbar(appString(Res.string.ui_unable_pinpoint_comment))
             targetCommentHandled = true
         }
     }
@@ -325,7 +325,7 @@ internal fun CommentReaderScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = appString(Res.string.auto_178f97fe3d),
+                                text = appString(Res.string.ui_no_comments),
                                 color = colors.textDark.copy(alpha = 0.5f),
                                 fontSize = 14.sp
                             )
@@ -347,12 +347,12 @@ internal fun CommentReaderScreen(
                                     onRate = { score, reason ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_09c8fb7426)) }
+                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
                                             return@PostRenderer
                                         }
                                         scope.launch {
                                             when (val res = threadRepository.ratePost(tid, post.pid, score, reason, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.auto_9da3d2ab35))
+                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_rating_successful_update_rating_review_status_refreshing))
                                                 else -> snackbarHostState.showSnackbar(appString(Res.string.thread_rate_failed, res.localizedMessage()))
                                             }
                                         }
@@ -360,12 +360,12 @@ internal fun CommentReaderScreen(
                                     onComment = { message ->
                                         val formHash = getFormHash()
                                         if (formHash == null) {
-                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_09c8fb7426)) }
+                                            scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_failed_obtain_login_information_log_in_again)) }
                                             return@PostRenderer
                                         }
                                         scope.launch {
                                             when (val res = threadRepository.commentPost(tid, post.pid, message, formHash)) {
-                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.auto_ce43852c31))
+                                                is YamiboResult.Success -> snackbarHostState.showSnackbar(appString(Res.string.ui_the_review_successful_rating_review_status_updated_refreshing))
                                                 else -> snackbarHostState.showSnackbar(appString(Res.string.thread_comment_failed, res.localizedMessage()))
                                             }
                                         }
@@ -398,7 +398,7 @@ internal fun CommentReaderScreen(
                                         }
                                     } else {
                                         CommentBanner(
-                                            text = appString(Res.string.auto_65edd6db1e),
+                                            text = appString(Res.string.ui_loading_more_comments),
                                             icon = "📖",
                                             onClick = {
                                                 scope.launch {
@@ -454,7 +454,7 @@ internal fun CommentReaderScreen(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = appString(Res.string.auto_001e44cad8),
+                                            text = appString(Res.string.ui_end_comment_section),
                                             color = colors.textDark.copy(alpha = 0.5f),
                                             fontSize = 12.sp
                                         )
@@ -488,7 +488,7 @@ internal fun CommentReaderScreen(
                 },
                 onSettings = {
                     scope.launch {
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_e68d3b3bb1))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_setting_function_under_development))
                     }
                 },
                 modifier = Modifier
@@ -504,18 +504,18 @@ internal fun CommentReaderScreen(
                     val replyUrl = YamiboRoute.ThreadReply(tid, currentFullPage).build()
                     navigator.navigate(
                         IActionWebView(
-                            title = appString(Res.string.auto_2d4f3ed6af),
+                            title = appString(Res.string.ui_leave_reply),
                             initialUrl = replyUrl,
                             successCondition = { url -> url.contains("mod=viewthread") && url.contains("tid=") },
                             onSuccess = {
-                                scope.launch { snackbarHostState.showSnackbar(appString(Res.string.auto_a0aa30544c)) }
+                                scope.launch { snackbarHostState.showSnackbar(appString(Res.string.ui_reply_successful)) }
                             },
                         )
                     )
                 },
                 onFavorite = {
                     scope.launch {
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_9703d319aa))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_favorite_function_under_development))
                     }
                 },
                 onShare = {

@@ -159,7 +159,7 @@ fun ImagesReaderScreen(
                     activeTid = currentThreads.first().tid
                 }
             } else {
-                snackbarHostState.showSnackbar(appString(Res.string.auto_e98055d239))
+                snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_reading_directory))
             }
         }
     }
@@ -176,7 +176,7 @@ fun ImagesReaderScreen(
                 prevThreadTitle = currentThreads.getOrNull(currentThreadIndex() - 1)?.title
             } else if (currentTagPage > 1) {
                 hasPrevChapter = true
-                prevThreadTitle = if (isLoadingImages) appString(Res.string.auto_13ed2d64e1) else appString(Res.string.auto_0d1c6abd83)
+                prevThreadTitle = if (isLoadingImages) appString(Res.string.ui_loading_previous_tab) else appString(Res.string.ui_previous_page_2)
             } else {
                 hasPrevChapter = false
                 prevThreadTitle = null
@@ -187,7 +187,7 @@ fun ImagesReaderScreen(
                 nextThreadTitle = currentThreads.getOrNull(currentThreadIndex() + 1)?.title
             } else if (currentTagPage < (tagTotalPages ?: 1)) {
                 hasNextChapter = true
-                nextThreadTitle = if (isLoadingImages) appString(Res.string.auto_6344c52428) else appString(Res.string.auto_4b2f47414a)
+                nextThreadTitle = if (isLoadingImages) appString(Res.string.ui_loading_next_page) else appString(Res.string.ui_next_page_2)
             } else {
                 hasNextChapter = false
                 nextThreadTitle = null
@@ -424,7 +424,7 @@ fun ImagesReaderScreen(
                         actualImageList = emptyList()
                         actualPostId = null
                     } else {
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_836c5c49e3))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_next_page))
                     }
                 }
                 delay(600.milliseconds)
@@ -459,7 +459,7 @@ fun ImagesReaderScreen(
                         actualPostId = null
                         startFromLastPage = true
                     } else {
-                        snackbarHostState.showSnackbar(appString(Res.string.auto_c4a4595f92))
+                        snackbarHostState.showSnackbar(appString(Res.string.ui_unable_load_previous_page))
                     }
                 }
                 delay(600.milliseconds)
@@ -807,13 +807,13 @@ fun ImagesReaderScreen(
                                             modifier = Modifier.size(48.dp)
                                         )
                                         Spacer(Modifier.height(16.dp))
-                                        Text(text = appString(Res.string.auto_e612433660), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                        Text(text = appString(Res.string.ui_no_picture_found), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                         Spacer(Modifier.height(16.dp))
                                         OutlinedButton(
                                             onClick = { retryTrigger++ },
                                             colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                         ) {
-                                            Text(appString(Res.string.auto_d358e48704))
+                                            Text(appString(Res.string.ui_reload))
                                         }
                                     }
                                 }
@@ -914,13 +914,13 @@ fun ImagesReaderScreen(
                                                 modifier = Modifier.size(48.dp)
                                             )
                                             Spacer(Modifier.height(16.dp))
-                                            Text(text = appString(Res.string.auto_e612433660), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                            Text(text = appString(Res.string.ui_no_picture_found), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
                                             Spacer(Modifier.height(16.dp))
                                             OutlinedButton(
                                                 onClick = { retryTrigger++ },
                                                 colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
                                             ) {
-                                                Text(appString(Res.string.auto_d358e48704))
+                                                Text(appString(Res.string.ui_reload))
                                             }
                                         }
                                     }
