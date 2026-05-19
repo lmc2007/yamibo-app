@@ -2,9 +2,12 @@ package me.thenano.yamibo.yamibo_app.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKeyAt
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
@@ -21,7 +24,6 @@ fun ReadingTimeTracker(active: Boolean = true) {
     if (!active) return
 
     val readHistoryRepository = LocalReadHistoryRepository.current
-    val coroutineScope = rememberCoroutineScope()
 
     DisposableEffect(readHistoryRepository) {
         val startedAt = currentTimeMillis()
@@ -29,10 +31,22 @@ fun ReadingTimeTracker(active: Boolean = true) {
         onDispose {
             val durationMillis = currentTimeMillis() - startedAt
             if (durationMillis >= MIN_READING_SESSION_MILLIS) {
-                coroutineScope.launch {
-                    readHistoryRepository.recordReadingDuration(dateKey, durationMillis)
-                }
+                ReadingTimeWriteDispatcher.record(readHistoryRepository, dateKey, durationMillis)
             }
+        }
+    }
+}
+
+private object ReadingTimeWriteDispatcher {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    fun record(
+        readHistoryRepository: ReadHistoryRepository,
+        dateKey: String,
+        durationMillis: Long,
+    ) {
+        scope.launch {
+            readHistoryRepository.recordReadingDuration(dateKey, durationMillis)
         }
     }
 }

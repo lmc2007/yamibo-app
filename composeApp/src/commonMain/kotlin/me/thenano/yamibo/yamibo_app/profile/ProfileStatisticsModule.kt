@@ -43,8 +43,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -253,13 +258,15 @@ private fun ProfileReadingChart(
     modifier: Modifier = Modifier,
 ) {
     val colors = YamiboTheme.colors
-    val values = points.map { it.durationMillis.toFloat() }
-    val maxValue = values.maxOrNull() ?: 0f
+    val textMeasurer = rememberTextMeasurer()
+    val maxDurationMillis = points.maxOfOrNull { it.durationMillis } ?: 0L
+    val yAxisMaxMillis = niceDurationAxisMax(maxDurationMillis)
+    val values = points.map { it.durationMillis }
     Box(
         modifier = modifier.background(colors.creamBackground.copy(alpha = 0.54f), RoundedCornerShape(12.dp)),
         contentAlignment = Alignment.Center,
     ) {
-        if (points.isEmpty() || maxValue <= 0f) {
+        if (points.isEmpty() || maxDurationMillis <= 0L) {
             Text(text = appString(Res.string.ui_no_reading_hours_data_yet), color = colors.brownLight, fontSize = 13.sp)
             return@Box
         }
@@ -270,15 +277,33 @@ private fun ProfileReadingChart(
                 colors.redAccent,
                 colors.brownLight,
             )
+            val labelStyle = TextStyle(
+                color = colors.brownLight.copy(alpha = 0.88f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+            )
+            val gridColor = colors.brownLight.copy(alpha = 0.24f)
+            val axisColor = colors.brownLight.copy(alpha = 0.48f)
             when (chartType) {
                 ProfileChartType.Bar -> {
-                    val slot = size.width / values.size
+                    val plot = chartPlotArea()
+                    drawChartAxes(
+                        points = points,
+                        plot = plot,
+                        yAxisMaxMillis = yAxisMaxMillis,
+                        textMeasurer = textMeasurer,
+                        labelStyle = labelStyle,
+                        axisColor = axisColor,
+                        gridColor = gridColor,
+                        lineMode = false,
+                    )
+                    val slot = plot.width / values.size
                     val barWidth = max(5f, slot * 0.48f)
                     values.forEachIndexed { index, value ->
-                        val barHeight = (value / maxValue) * size.height
+                        val barHeight = value.toFloat() / yAxisMaxMillis.toFloat() * plot.height
                         drawRoundRect(
                             color = colors.brownPrimary,
-                            topLeft = Offset(index * slot + (slot - barWidth) / 2f, size.height - barHeight),
+                            topLeft = Offset(plot.left + index * slot + (slot - barWidth) / 2f, plot.bottom - barHeight),
                             size = Size(barWidth, barHeight),
                             cornerRadius = CornerRadius(8f, 8f),
                         )
@@ -286,22 +311,47 @@ private fun ProfileReadingChart(
                 }
 
                 ProfileChartType.Histogram -> {
-                    val slot = size.width / values.size
+                    val plot = chartPlotArea()
+                    drawChartAxes(
+                        points = points,
+                        plot = plot,
+                        yAxisMaxMillis = yAxisMaxMillis,
+                        textMeasurer = textMeasurer,
+                        labelStyle = labelStyle,
+                        axisColor = axisColor,
+                        gridColor = gridColor,
+                        lineMode = false,
+                    )
+                    val slot = plot.width / values.size
                     values.forEachIndexed { index, value ->
-                        val barHeight = (value / maxValue) * size.height
+                        val barHeight = value.toFloat() / yAxisMaxMillis.toFloat() * plot.height
                         drawRect(
                             color = colors.brownPrimary.copy(alpha = 0.78f),
-                            topLeft = Offset(index * slot + 1f, size.height - barHeight),
+                            topLeft = Offset(plot.left + index * slot + 1f, plot.bottom - barHeight),
                             size = Size(max(1f, slot - 2f), barHeight),
                         )
                     }
                 }
 
                 ProfileChartType.Line -> {
-                    val step = if (values.size <= 1) size.width else size.width / values.lastIndex
+                    val plot = chartPlotArea()
+                    drawChartAxes(
+                        points = points,
+                        plot = plot,
+                        yAxisMaxMillis = yAxisMaxMillis,
+                        textMeasurer = textMeasurer,
+                        labelStyle = labelStyle,
+                        axisColor = axisColor,
+                        gridColor = gridColor,
+                        lineMode = true,
+                    )
+                    val step = if (values.size <= 1) plot.width else plot.width / values.lastIndex
                     val path = Path()
                     values.forEachIndexed { index, value ->
-                        val point = Offset(index * step, size.height - (value / maxValue) * size.height)
+                        val point = Offset(
+                            x = plot.left + index * step,
+                            y = plot.bottom - value.toFloat() / yAxisMaxMillis.toFloat() * plot.height,
+                        )
                         if (index == 0) path.moveTo(point.x, point.y) else path.lineTo(point.x, point.y)
                         drawCircle(color = colors.orangeAccent, radius = 4.5f, center = point)
                     }
@@ -313,12 +363,12 @@ private fun ProfileReadingChart(
                 }
 
                 ProfileChartType.Pie -> {
-                    val total = values.sum().coerceAtLeast(1f)
+                    val total = values.sum().toFloat().coerceAtLeast(1f)
                     var startAngle = -90f
                     val side = minOf(size.width, size.height)
                     val topLeft = Offset((size.width - side) / 2f, (size.height - side) / 2f)
                     values.forEachIndexed { index, value ->
-                        val sweep = value / total * 360f
+                        val sweep = value.toFloat() / total * 360f
                         drawArc(
                             color = palette[index % palette.size],
                             startAngle = startAngle,
@@ -464,14 +514,153 @@ private fun currentMonthStartDateKey(): String {
 }
 
 private fun formatDuration(durationMillis: Long): String {
+    val seconds = durationMillis / 1_000L
     val minutes = durationMillis / 60_000L
     val hours = minutes / 60L
     val remainingMinutes = minutes % 60L
     return when {
         hours > 0L -> "${hours}h ${remainingMinutes}m"
         minutes > 0L -> "${minutes}m"
+        seconds > 0L -> "${seconds}s"
         else -> "0m"
     }
+}
+
+private fun DrawScope.chartPlotArea(): ChartPlotArea {
+    val left = 42.dp.toPx()
+    val top = 8.dp.toPx()
+    val right = size.width - 6.dp.toPx()
+    val bottom = size.height - 24.dp.toPx()
+    return ChartPlotArea(
+        left = left,
+        top = top,
+        right = right.coerceAtLeast(left + 1f),
+        bottom = bottom.coerceAtLeast(top + 1f),
+    )
+}
+
+private fun DrawScope.drawChartAxes(
+    points: List<ReadingDayPoint>,
+    plot: ChartPlotArea,
+    yAxisMaxMillis: Long,
+    textMeasurer: TextMeasurer,
+    labelStyle: TextStyle,
+    axisColor: androidx.compose.ui.graphics.Color,
+    gridColor: androidx.compose.ui.graphics.Color,
+    lineMode: Boolean,
+) {
+    drawLine(axisColor, Offset(plot.left, plot.top), Offset(plot.left, plot.bottom), strokeWidth = 1.4f)
+    drawLine(axisColor, Offset(plot.left, plot.bottom), Offset(plot.right, plot.bottom), strokeWidth = 1.4f)
+
+    val yTicks = listOf(0L, yAxisMaxMillis / 2L, yAxisMaxMillis)
+    yTicks.distinct().forEach { tick ->
+        val y = plot.bottom - tick.toFloat() / yAxisMaxMillis.toFloat() * plot.height
+        drawLine(gridColor, Offset(plot.left, y), Offset(plot.right, y), strokeWidth = 1f)
+        val label = formatAxisDuration(tick)
+        val measured = textMeasurer.measure(label, labelStyle)
+        drawText(
+            textMeasurer = textMeasurer,
+            text = label,
+            topLeft = Offset(
+                x = (plot.left - measured.size.width - 6.dp.toPx()).coerceAtLeast(0f),
+                y = (y - measured.size.height / 2f).coerceIn(0f, size.height - measured.size.height),
+            ),
+            style = labelStyle,
+        )
+    }
+
+    val xTicks = buildTimeAxisTicks(points)
+    xTicks.forEach { tick ->
+        val x = if (lineMode && points.size > 1) {
+            plot.left + tick.index.toFloat() / points.lastIndex.toFloat() * plot.width
+        } else {
+            val slot = plot.width / points.size.toFloat()
+            plot.left + tick.index * slot + slot / 2f
+        }
+        drawLine(gridColor, Offset(x, plot.top), Offset(x, plot.bottom), strokeWidth = 1f)
+        val measured = textMeasurer.measure(tick.label, labelStyle)
+        drawText(
+            textMeasurer = textMeasurer,
+            text = tick.label,
+            topLeft = Offset(
+                x = (x - measured.size.width / 2f).coerceIn(plot.left - measured.size.width / 2f, plot.right - measured.size.width / 2f),
+                y = plot.bottom + 5.dp.toPx(),
+            ),
+            style = labelStyle,
+        )
+    }
+}
+
+private fun niceDurationAxisMax(durationMillis: Long): Long {
+    if (durationMillis <= 0L) return 1_000L
+    val steps = listOf(
+        5_000L,
+        10_000L,
+        15_000L,
+        30_000L,
+        60_000L,
+        2 * 60_000L,
+        5 * 60_000L,
+        10 * 60_000L,
+        15 * 60_000L,
+        30 * 60_000L,
+        60 * 60_000L,
+        2 * 60 * 60_000L,
+        4 * 60 * 60_000L,
+        6 * 60 * 60_000L,
+        12 * 60 * 60_000L,
+        24 * 60 * 60_000L,
+    )
+    return steps.firstOrNull { it >= durationMillis } ?: run {
+        val dayMillis = 24 * 60 * 60_000L
+        ceil(durationMillis.toDouble() / dayMillis.toDouble()).toLong() * dayMillis
+    }
+}
+
+private fun formatAxisDuration(durationMillis: Long): String {
+    if (durationMillis <= 0L) return "0"
+    val seconds = durationMillis / 1_000L
+    val minutes = seconds / 60L
+    val hours = minutes / 60L
+    val remainingMinutes = minutes % 60L
+    val remainingSeconds = seconds % 60L
+    return when {
+        hours > 0L && remainingMinutes > 0L -> "${hours}h${remainingMinutes}m"
+        hours > 0L -> "${hours}h"
+        minutes > 0L && remainingSeconds > 0L -> "${minutes}m${remainingSeconds}s"
+        minutes > 0L -> "${minutes}m"
+        else -> "${seconds}s"
+    }
+}
+
+private fun buildTimeAxisTicks(points: List<ReadingDayPoint>): List<ChartAxisTick> {
+    if (points.isEmpty()) return emptyList()
+    val includeYear = points.first().dateKey.take(4) != points.last().dateKey.take(4) || points.size > 365
+    val indices = when {
+        points.size <= 7 -> points.indices.toList()
+        points.size <= 31 -> evenlySpacedIndices(points.lastIndex, 5)
+        points.size <= 100 -> evenlySpacedIndices(points.lastIndex, 4)
+        else -> evenlySpacedIndices(points.lastIndex, 5)
+    }
+    return indices.map { index ->
+        ChartAxisTick(index = index, label = formatAxisDate(points[index].dateKey, includeYear))
+    }
+}
+
+private fun evenlySpacedIndices(lastIndex: Int, count: Int): List<Int> {
+    if (lastIndex <= 0) return listOf(0)
+    return (0 until count)
+        .map { tick -> (tick.toFloat() / (count - 1).toFloat() * lastIndex).toInt() }
+        .distinct()
+}
+
+private fun formatAxisDate(dateKey: String, includeYear: Boolean): String {
+    val parts = dateKey.split("-")
+    if (parts.size != 3) return dateKey
+    val year = parts[0].takeLast(2)
+    val month = parts[1].trimStart('0').ifEmpty { "0" }
+    val day = parts[2].trimStart('0').ifEmpty { "0" }
+    return if (includeYear) "$year/$month/$day" else "$month/$day"
 }
 
 private val FavoriteTargetType.label: String
@@ -539,6 +728,21 @@ private data class ReadingDayPoint(
     val durationMillis: Long,
 )
 
+private data class ChartAxisTick(
+    val index: Int,
+    val label: String,
+)
+
+private data class ChartPlotArea(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+) {
+    val width: Float get() = right - left
+    val height: Float get() = bottom - top
+}
+
 private data class RatioItem(
     val label: String,
     val count: Int,
@@ -546,4 +750,3 @@ private data class RatioItem(
 
 private const val DAY_MILLIS = 86_400_000L
 private const val ALL_START_DATE_KEY = "0000-01-01"
-

@@ -12,14 +12,24 @@ import org.jetbrains.compose.resources.getString
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.*
 
+private const val AppStringCacheMaxSize = 1024
+
+private data class AppStringCacheKey(
+    val languageTag: String,
+    val resourceKey: String,
+    val args: List<String>,
+)
+
+private var currentAppLanguageTag: String = AppLanguage.TRADITIONAL_CHINESE.languageTag
+private var appStringCache: Map<AppStringCacheKey, String> = emptyMap()
+
 @Composable
 fun AppLocaleProvider(
     language: AppLanguage,
     content: @Composable () -> Unit,
 ) {
     val localeKey = remember(language) {
-        applyAppLocale(language)
-        language.languageTag
+        applyAppLanguage(language)
     }
 
     key(localeKey) {
@@ -29,10 +39,29 @@ fun AppLocaleProvider(
 
 expect fun applyAppLocale(language: AppLanguage)
 
+private fun applyAppLanguage(language: AppLanguage): String {
+    if (currentAppLanguageTag != language.languageTag) {
+        currentAppLanguageTag = language.languageTag
+        appStringCache = emptyMap()
+    }
+    applyAppLocale(language)
+    return language.languageTag
+}
+
 fun appString(resource: StringResource, vararg formatArgs: Any): String {
-    return runBlocking {
+    val args = formatArgs.map { it.toString() }
+    val key = AppStringCacheKey(currentAppLanguageTag, resource.key, args)
+    appStringCache[key]?.let { return it }
+
+    val value = runBlocking {
         getString(resource, *formatArgs)
     }
+    appStringCache = if (appStringCache.size >= AppStringCacheMaxSize) {
+        mapOf(key to value)
+    } else {
+        appStringCache + (key to value)
+    }
+    return value
 }
 
 fun localizedAppMessage(value: String?): String {

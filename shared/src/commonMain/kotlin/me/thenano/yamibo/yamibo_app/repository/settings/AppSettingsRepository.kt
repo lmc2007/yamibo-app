@@ -159,7 +159,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
 
     val favoriteUpdateInterval by enumSetting(
         name = "favorite_update_interval",
-        default = FavoriteUpdateInterval.HOURS_12,
+        default = FavoriteUpdateInterval.MANUAL,
     )
 
     val favoriteUpdateHiddenRunId by stringSetting(
