@@ -11,6 +11,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import coil3.compose.SubcomposeAsyncImage
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -34,7 +35,9 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.ForumSummary
 import io.github.littlesurvival.dto.page.ForumCategory
 import io.github.littlesurvival.dto.page.HomePage
+import io.github.littlesurvival.dto.page.SwiperImages
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
@@ -42,8 +45,11 @@ import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
+import me.thenano.yamibo.yamibo_app.util.state
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.logo_homepage
@@ -161,14 +167,138 @@ fun HomePageScreen(
 /** Success Content */
 @Composable
 private fun HomeContent(homePage: HomePage, onSearch: () -> Unit) {
+    val appSettingsRepo = LocalAppSettingsRepository.current
+    val showSwiperImages = appSettingsRepo.showHomeSwiperImages.state()
+
     LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         /** header banner */
         item { HomeHeader(onSearch = onSearch) }
+
+        if (showSwiperImages && homePage.swiperImages.isNotEmpty()) {
+            item(key = "home_swiper") {
+                HomeSwiper(images = homePage.swiperImages)
+            }
+        }
 
         /** categories */
         homePage.categories.forEachIndexed { index, category ->
             item(key = "cat_${category.title}") {
                 CategorySection(category = category, initialExpanded = index < 3)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalAnimationApi::class)
+@Composable
+private fun HomeSwiper(images: List<SwiperImages>) {
+    val colors = YamiboTheme.colors
+    val navigator = LocalNavigator.current
+    var page by remember(images) { mutableStateOf(0) }
+    val current = images.getOrNull(page.coerceIn(0, images.lastIndex)) ?: return
+
+    LaunchedEffect(images) {
+        if (images.size <= 1) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(5_000)
+            page = (page + 1) % images.size
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp)
+            .padding(top = 10.dp, bottom = 6.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2.63f)
+                .clip(RoundedCornerShape(8.dp))
+                .background(colors.creamSurface)
+                .clickable(
+                    enabled = current.tId != null,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    current.tId?.let { tid ->
+                        navigator.navigate(IThreadReaderScreen(tid = tid, title = i18n("首頁輪播圖")))
+                    }
+                },
+        ) {
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    (slideInHorizontally(
+                        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                        initialOffsetX = { fullWidth -> fullWidth },
+                    ) + fadeIn(animationSpec = tween(180)))
+                        .togetherWith(
+                            slideOutHorizontally(
+                                animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+                                targetOffsetX = { fullWidth -> -fullWidth },
+                            ) + fadeOut(animationSpec = tween(180))
+                        )
+                },
+                label = "home_swiper_transition",
+                modifier = Modifier.fillMaxSize(),
+            ) { targetPage ->
+                val target = images.getOrNull(targetPage.coerceIn(0, images.lastIndex)) ?: current
+                key(target.imageUrl) {
+                    SubcomposeAsyncImage(
+                        model = rememberImageRequest(target.imageUrl),
+                        contentDescription = i18n("首頁輪播圖"),
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                        loading = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .shimmer(0f, colors.brownLight),
+                            )
+                        },
+                        error = {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(colors.brownLight.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = i18n("圖片載入失敗"),
+                                    color = colors.textDark.copy(alpha = 0.62f),
+                                    fontSize = 13.sp,
+                                )
+                            }
+                        },
+                    )
+                }
+            }
+
+            if (images.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    images.forEachIndexed { index, _ ->
+                        Box(
+                            modifier = Modifier
+                                .size(width = if (index == page) 18.dp else 6.dp, height = 6.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(
+                                    if (index == page) Color.White else Color.White.copy(alpha = 0.55f)
+                                )
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                ) { page = index },
+                        )
+                    }
+                }
             }
         }
     }
@@ -499,4 +629,3 @@ private fun ErrorContent(message: String, onRetry: () -> Unit) {
         }
     }
 }
-

@@ -125,12 +125,22 @@ private fun AppearanceContent() {
     val appSettingsRepo = LocalAppSettingsRepository.current
     val themeMode = appSettingsRepo.themeMode.state()
     val themeScheme = appSettingsRepo.themeScheme.state()
+    val showHomeSwiperImages = appSettingsRepo.showHomeSwiperImages.state()
 
     ThemeSelectorContent(
         currentMode = themeMode,
         currentScheme = themeScheme,
         onModeChange = { appSettingsRepo.themeMode.setValue(it) },
         onSchemeChange = { appSettingsRepo.themeScheme.setValue(it) },
+    )
+
+    Spacer(Modifier.height(24.dp))
+    SectionLabel(i18n("首頁"))
+    SettingsToggleRow(
+        title = i18n("顯示首頁輪播圖"),
+        subtitle = i18n("在首頁版塊列表上方顯示百合會活動與推薦橫幅。"),
+        checked = showHomeSwiperImages,
+        onCheckedChange = { appSettingsRepo.showHomeSwiperImages.setValue(it) },
     )
 }
 

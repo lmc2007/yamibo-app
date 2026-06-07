@@ -331,6 +331,11 @@ App 系統設定,App system settings,App 系統設定,App 系統設定
 更新日誌,Update log,更新日誌,更新日志
 新版本 {} 正在準備中,Version {} is being prepared,新版本 {} 正在準備中,新版本 {} 正在准备中
 更新檔案尚未發布完成，請稍後再試。來源：{},Update files are not ready yet. Please try again later. Source: {},更新檔案尚未發布完成，請稍後再試。來源：{},更新文件尚未发布完成，请稍后再试。来源：{}
+顯示首頁輪播圖,Show home carousel images,顯示首頁輪播圖,显示首页轮播图
+在首頁版塊列表上方顯示百合會活動與推薦橫幅。,Show Yamibo event and recommendation banners above the home forum list.,在首頁版塊列表上方顯示百合會活動與推薦橫幅。,在首页版块列表上方显示百合会活动与推荐横幅。
+首頁輪播圖,Home carousel image,首頁輪播圖,首页轮播图
+圖片載入失敗,Image failed to load,圖片載入失敗,图片加载失败
+app dev by thenano,app dev by thenano,app dev by thenano,app dev by thenano
 檢查中...,Checking...,檢查中...,检查中...
 正在檢查收藏更新,Checking for favorites updates,正在檢查收藏更新,正在檢查收藏更新
 正在簽到...,Checking in...,正在簽到...,正在簽到...

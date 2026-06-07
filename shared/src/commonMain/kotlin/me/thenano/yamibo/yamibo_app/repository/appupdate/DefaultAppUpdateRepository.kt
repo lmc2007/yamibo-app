@@ -82,6 +82,7 @@ class DefaultAppUpdateRepository(
             if (!manifest.isReady) {
                 if (manifest.versionCode > platform.currentVersionCode && preparing == null) {
                     preparing = AppUpdateCheckResult.Preparing(
+                        channel = manifest.channel,
                         versionName = manifest.versionName,
                         versionCode = manifest.versionCode,
                         sourceName = source.name,
@@ -171,6 +172,7 @@ private fun AppUpdateManifestDto.toRelease(
 
     return AppUpdateRelease(
         source = source,
+        channel = channel,
         versionName = versionName,
         versionCode = versionCode,
         minVersionCode = minVersionCode,

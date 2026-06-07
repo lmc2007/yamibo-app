@@ -52,8 +52,8 @@ internal fun AboutScreen() {
                 painter = painterResource(Res.drawable.logo_about),
                 contentDescription = null,
                 modifier = Modifier
-                    .width(214.dp)
-                    .height(56.dp),
+                    .width(270.dp)
+                    .height(76.dp),
                 contentScale = ContentScale.Fit,
             )
             Spacer(Modifier.height(18.dp))
@@ -62,6 +62,12 @@ internal fun AboutScreen() {
                 color = colors.textDark.copy(alpha = 0.58f),
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 4.dp),
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = i18n("app dev by thenano"),
+                color = colors.textDark.copy(alpha = 0.58f),
+                fontSize = 13.sp,
             )
             Spacer(Modifier.height(22.dp))
 

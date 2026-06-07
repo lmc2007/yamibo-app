@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
@@ -165,10 +166,10 @@ private fun AppUpdateStatusCard(
                 text = when {
                     checking -> i18n("正在檢查更新")
                     result == null -> i18n("尚未檢查更新")
-                    result is AppUpdateCheckResult.UpdateAvailable -> i18n("發現新版本 {}", result.release.versionName)
-                    result is AppUpdateCheckResult.Ignored -> i18n("已忽略版本 {}", result.release.versionName)
-                    result is AppUpdateCheckResult.Preparing -> i18n("新版本 {} 正在準備中", result.versionName)
-                    result is AppUpdateCheckResult.UpToDate -> i18n("目前已是最新版本：{}", result.currentVersionName)
+                    result is AppUpdateCheckResult.UpdateAvailable -> i18n("發現新版本 {}", result.release.displayVersionLabel())
+                    result is AppUpdateCheckResult.Ignored -> i18n("已忽略版本 {}", result.release.displayVersionLabel())
+                    result is AppUpdateCheckResult.Preparing -> i18n("新版本 {} 正在準備中", result.displayVersionLabel())
+                    result is AppUpdateCheckResult.UpToDate -> i18n("目前已是最新版本：{}", AppVersion.displayName)
                     result is AppUpdateCheckResult.Failed -> i18n("檢查更新失敗")
                     else -> i18n("尚未檢查更新")
                 },
@@ -340,3 +341,7 @@ private fun appUpdateLaunchThresholdLabel(option: AppUpdateLaunchCheckThreshold)
     AppUpdateLaunchCheckThreshold.DAYS_3 -> i18n("3 天")
     AppUpdateLaunchCheckThreshold.DAYS_7 -> i18n("7 天")
 }
+
+private fun AppUpdateRelease.displayVersionLabel(): String = "$channel-v$versionName"
+
+private fun AppUpdateCheckResult.Preparing.displayVersionLabel(): String = "$channel-v$versionName"

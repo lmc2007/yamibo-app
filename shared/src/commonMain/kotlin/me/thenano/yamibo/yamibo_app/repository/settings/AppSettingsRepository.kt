@@ -121,6 +121,11 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = false,
     )
 
+    val showHomeSwiperImages by boolSetting(
+        name = "show_home_swiper_images",
+        default = true,
+    )
+
     val skipFavoriteRemovalConfirm by boolSetting(
         name = "skip_favorite_removal_confirm",
         default = false,

@@ -255,6 +255,16 @@ fun ProfilePage() {
                 onClick = { navigator.navigate(IAboutScreen()) }
             )
 
+            Spacer(Modifier.height(16.dp))
+            Text(
+                text = i18n("app dev by thenano"),
+                color = colors.textDark.copy(alpha = 0.58f),
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Spacer(Modifier.height(24.dp))
         }
 

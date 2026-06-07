@@ -14,6 +14,7 @@ data class AppUpdateAsset(
 
 data class AppUpdateRelease(
     val source: AppUpdateSource,
+    val channel: String,
     val versionName: String,
     val versionCode: Long,
     val minVersionCode: Long?,
@@ -26,7 +27,7 @@ sealed interface AppUpdateCheckResult {
     data class UpdateAvailable(val release: AppUpdateRelease) : AppUpdateCheckResult
     data class UpToDate(val currentVersionName: String) : AppUpdateCheckResult
     data class Ignored(val release: AppUpdateRelease) : AppUpdateCheckResult
-    data class Preparing(val versionName: String, val versionCode: Long, val sourceName: String) : AppUpdateCheckResult
+    data class Preparing(val channel: String, val versionName: String, val versionCode: Long, val sourceName: String) : AppUpdateCheckResult
     data class Failed(val message: String) : AppUpdateCheckResult
 }
 
