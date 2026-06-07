@@ -57,6 +57,9 @@ import me.thenano.yamibo.yamibo_app.thread.reader.components.CommentBanner
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderCatalogPanel
 import me.thenano.yamibo.yamibo_app.thread.reader.components.ReaderOverlayMenu
 import me.thenano.yamibo.yamibo_app.thread.reader.components.novel.NovelReaderSettingsPanel
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgress
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgressHint
+import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgressSlideBar
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderScrollJumpButton
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.PostRenderer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlBlock
@@ -179,6 +182,7 @@ internal fun ThreadReaderScreen(
     val scrollButtonDisplayMode = novelSettingsRepository.scrollButtonDisplayMode.state()
     val scrollButtonDirectionThreshold = novelSettingsRepository.scrollButtonDirectionThreshold.state()
     val scrollButtonJumpTarget = novelSettingsRepository.scrollButtonJumpTarget.state()
+    val showPageProgressHint = novelSettingsRepository.showPageProgressHint.state()
 
     var state by remember { mutableStateOf<ReaderState>(ReaderState.Loading) }
     var posts by remember { mutableStateOf<List<Post>>(emptyList()) }
@@ -803,7 +807,7 @@ internal fun ThreadReaderScreen(
         if (visibleItems.isEmpty()) return null
 
         val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
-        return visibleItems
+        val anchorIndex = visibleItems
             .mapNotNull { item ->
                 readerEntries.getOrNull(item.index)
                     ?.takeIf { it.isScrollAnchor }
@@ -817,6 +821,48 @@ internal fun ThreadReaderScreen(
                 }
             }
             ?.first
+        if (anchorIndex != null) return anchorIndex
+
+        return visibleItems
+            .mapNotNull { item ->
+                readerEntries.getOrNull(item.index)?.let { item.index to item }
+            }
+            .minByOrNull { (_, item) ->
+                when {
+                    viewportCenter < item.offset -> item.offset - viewportCenter
+                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                    else -> 0
+                }
+            }
+            ?.first
+    }
+
+    fun currentReaderPageProgress(): ReaderPageProgress? {
+        val currentIndex = visibleAnchorEntryIndex() ?: return null
+        val currentEntry = readerEntries.getOrNull(currentIndex) ?: return null
+        val postPage = pageByPid[currentEntry.post.pid.value.toLong()] ?: initialPage
+        val postBounds = pageIndexBounds[postPage] ?: return ReaderPageProgress(
+            page = postPage,
+            totalPages = totalPages,
+            fraction = 0f,
+        )
+        val pagePostCount = (postBounds.last - postBounds.first + 1).coerceAtLeast(1)
+        val relativePostIndex = (currentEntry.postIndex - postBounds.first)
+            .coerceIn(0, pagePostCount - 1)
+
+        val layoutInfo = listState.layoutInfo
+        val visibleItem = layoutInfo.visibleItemsInfo.firstOrNull { it.index == currentIndex }
+        val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+        val itemRatio = visibleItem?.let { item ->
+            ((viewportCenter - item.offset).toFloat() / item.size.coerceAtLeast(1).toFloat())
+                .coerceIn(0f, 1f)
+        } ?: 0f
+
+        return ReaderPageProgress(
+            page = postPage,
+            totalPages = totalPages,
+            fraction = ((relativePostIndex + itemRatio) / pagePostCount.toFloat()).coerceIn(0f, 1f),
+        )
     }
 
     fun anchorIndexForPost(postId: Long, last: Boolean): Int? {
@@ -869,6 +915,10 @@ internal fun ThreadReaderScreen(
             ReaderScrollButtonJumpTarget.PAGE_EDGE -> pageEdgeAnchorIndex(currentEntry, scrollJumpButtonPointsDown)
             ReaderScrollButtonJumpTarget.POST_EDGE -> postEdgeAnchorIndex(currentIndex, currentEntry, scrollJumpButtonPointsDown)
         }
+    }
+
+    val readerPageProgress by remember(readerEntries, pageByPid, pageIndexBounds, totalPages, initialPage) {
+        derivedStateOf { currentReaderPageProgress() }
     }
 
     fun saveCurrentHistoryBlocking() {
@@ -1655,9 +1705,47 @@ internal fun ThreadReaderScreen(
                     )
                 }
 
-                val showScrollJumpButton =
+                val showReaderProgressOverlay =
                     !showSettingsPanel &&
                         state == ReaderState.Success &&
+                        readerPageProgress != null
+                val progressOverlayTopPadding = if (keepSystemBarsBackground) {
+                    WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+                } else {
+                    0.dp
+                }
+                val progressOverlayBottomPadding = if (keepSystemBarsBackground) {
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding() + 48.dp
+                } else {
+                    48.dp
+                }
+                val progressHintBottomPadding = if (keepSystemBarsBackground) {
+                    WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                } else {
+                    0.dp
+                }
+                if (showReaderProgressOverlay) {
+                    ReaderPageProgressSlideBar(
+                        progress = readerPageProgress,
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(
+                                top = progressOverlayTopPadding,
+                                bottom = progressOverlayBottomPadding,
+                                end = 0.dp,
+                            ),
+                    )
+                    ReaderPageProgressHint(
+                        progress = readerPageProgress,
+                        visible = showPageProgressHint,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 0.dp, bottom = progressHintBottomPadding),
+                    )
+                }
+
+                val showScrollJumpButton =
+                    state == ReaderState.Success &&
                         readerEntries.isNotEmpty() &&
                         scrollButtonDisplayMode != ReaderScrollButtonDisplayMode.NEVER &&
                         (
@@ -1669,23 +1757,25 @@ internal fun ThreadReaderScreen(
                 } else {
                     96.dp
                 }
-                ReaderScrollJumpButton(
-                    visible = showScrollJumpButton,
-                    pointsDown = scrollJumpButtonPointsDown,
-                    onClick = {
-                        scope.launch {
-                            val targetIndex = scrollJumpTargetIndex()
-                            if (targetIndex != null) {
-                                listState.animateScrollToItem(targetIndex)
-                            } else {
-                                snackbarHostState.showSnackbar(i18n("目前無法定位跳轉位置"))
+                if (!showSettingsPanel) {
+                    ReaderScrollJumpButton(
+                        visible = showScrollJumpButton,
+                        pointsDown = scrollJumpButtonPointsDown,
+                        onClick = {
+                            scope.launch {
+                                val targetIndex = scrollJumpTargetIndex()
+                                if (targetIndex != null) {
+                                    listState.animateScrollToItem(targetIndex)
+                                } else {
+                                    snackbarHostState.showSnackbar(i18n("目前無法定位跳轉位置"))
+                                }
                             }
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = scrollJumpBottomPadding),
-                )
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 12.dp, bottom = scrollJumpBottomPadding),
+                    )
+                }
 
                 // Overlay menu
                 ReaderOverlayMenu(

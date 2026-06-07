@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -47,7 +48,7 @@ fun ReaderScrollJumpButton(
             modifier = Modifier
                 .size(40.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(colors.creamSurface.copy(alpha = 0.72f))
+                .background(Color(0xFFFFE6B7).copy(alpha = 0.92f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,

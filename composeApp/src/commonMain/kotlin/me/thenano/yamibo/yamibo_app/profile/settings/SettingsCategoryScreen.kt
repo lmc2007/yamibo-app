@@ -200,6 +200,10 @@ private fun NovelReaderContent() {
     NovelScrollButtonJumpTargetSetting()
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("閱讀進度"))
+    NovelPageProgressHintSetting()
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel(i18n("簡繁轉換"))
     NovelChineseConversionSetting()
 }

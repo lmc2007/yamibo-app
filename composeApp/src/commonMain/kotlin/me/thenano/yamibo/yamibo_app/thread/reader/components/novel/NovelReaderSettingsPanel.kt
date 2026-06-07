@@ -25,6 +25,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorCon
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelChineseConversionSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelFontSizeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelLineSpacingSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelPageProgressHintSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonDisplayModeSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonJumpTargetSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonThresholdSetting
@@ -91,6 +92,11 @@ fun NovelReaderSettingsPanel(
 
                     Spacer(Modifier.height(16.dp))
                     NovelScrollButtonJumpTargetSetting()
+
+                    Spacer(Modifier.height(24.dp))
+
+                    SectionTitle(i18n("閱讀進度"), color = colors.textDark)
+                    NovelPageProgressHintSetting()
 
                     Spacer(Modifier.height(24.dp))
 

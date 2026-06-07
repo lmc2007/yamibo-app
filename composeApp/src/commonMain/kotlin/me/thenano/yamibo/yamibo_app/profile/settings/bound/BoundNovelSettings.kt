@@ -212,6 +212,48 @@ fun NovelScrollButtonJumpTargetSetting() {
     )
 }
 
+@Composable
+fun NovelPageProgressHintSetting() {
+    val colors = YamiboTheme.colors
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val enabled = novelSettingsRepo.showPageProgressHint.state()
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) { novelSettingsRepo.showPageProgressHint.setValue(!enabled) }
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = i18n("顯示閱讀進度提示"),
+                fontSize = 16.sp,
+                color = colors.textDark,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = i18n("在右下角以小字顯示目前頁內閱讀進度。"),
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.6f),
+            )
+        }
+        Switch(
+            checked = enabled,
+            onCheckedChange = { novelSettingsRepo.showPageProgressHint.setValue(it) },
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = colors.brownDeep,
+                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.5f),
+                uncheckedThumbColor = colors.textDark.copy(alpha = 0.5f),
+                uncheckedTrackColor = colors.brownLight.copy(alpha = 0.3f),
+            ),
+        )
+    }
+}
+
 private fun ReaderScrollButtonDisplayMode.localizedLabel(): String = when (this) {
     ReaderScrollButtonDisplayMode.ALWAYS -> i18n("總是顯示")
     ReaderScrollButtonDisplayMode.WHEN_USER_SLIDE -> i18n("滑動時顯示")

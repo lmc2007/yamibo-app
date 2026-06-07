@@ -4,7 +4,7 @@
 
 ## 概述
 
-Yamibo App 是一個百合會論壇客戶端，支援首頁版塊、論壇列表、帖子閱讀、漫畫/小說閱讀、收藏、閱讀紀錄、消息、UserSpace、日志、私訊、簽到與 app 更新等功能。
+Yamibo App 是一個百合會論壇第三方客戶端，支援首頁版塊、論壇列表、帖子閱讀、漫畫/小說閱讀、收藏、閱讀紀錄、消息、UserSpace、日志、私訊、簽到與 app 更新等功能。
 
 專案主要分成兩層：
 
@@ -40,7 +40,7 @@ Yamibo App 是一個百合會論壇客戶端，支援首頁版塊、論壇列表
 - Gradle Wrapper `8.14.3`
 - Compose Multiplatform `1.10.3`
 - Android compile/target SDK `36`, min SDK `24`
-- `yamibo-api` `1.1.10`
+- [yamibo-api](https://github.com/LittleSurvival/yamibo-api) `1.1.10`
 - Ktor `3.4.2`
 - Coil 3 `3.4.0`
 - SQLDelight `2.2.1`

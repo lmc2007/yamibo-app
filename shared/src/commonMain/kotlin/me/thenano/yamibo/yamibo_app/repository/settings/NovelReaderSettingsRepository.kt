@@ -82,6 +82,12 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         default = ReaderScrollButtonJumpTarget.PAGE_EDGE,
     )
 
+    val showPageProgressHint by boolSetting(
+        name = "show_page_progress_hint",
+        description = "novel_reader_show_page_progress_hint",
+        default = true,
+    )
+
     companion object {
         val chineseConversionOptions = ReaderChineseConversionOption.entries.map { it to it.label }
     }
