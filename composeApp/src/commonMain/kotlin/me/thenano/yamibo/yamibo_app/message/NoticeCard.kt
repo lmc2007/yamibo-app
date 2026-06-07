@@ -22,14 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.NoticeItem
+import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.userspace.components.SmallActionButton
 
 @Composable
-internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
+internal fun NoticeCard(
+    item: NoticeItem,
+    onUserClick: (UserId) -> Unit,
+    onAction: () -> Unit,
+) {
     val colors = YamiboTheme.colors
+    val noticeUserId = remember(item.avatarUrl, item.contentHtml) {
+        item.avatarUrl?.toYamiboAvatarUserId() ?: item.contentHtml.toYamiboLinkedUserId()
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -41,7 +49,20 @@ internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.Top,
     ) {
-        UserAvatar(item.avatarUrl, size = 42)
+        UserAvatar(
+            item.avatarUrl,
+            size = 42,
+            modifier = if (noticeUserId != null) {
+                Modifier.clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onUserClick(noticeUserId) },
+                )
+            } else {
+                Modifier
+            },
+            contentDescription = "Avatar",
+        )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.timeInfo.text, color = colors.brownLight, fontSize = 12.sp)
@@ -61,4 +82,21 @@ internal fun NoticeCard(item: NoticeItem, onAction: () -> Unit) {
     }
     HorizontalDivider(color = colors.brownLight.copy(alpha = 0.35f))
 }
+
+private fun String.toYamiboAvatarUserId(): UserId? {
+    val normalized = replace('\\', '/')
+    val match = YAMIBO_AVATAR_UID_REGEX.find(normalized) ?: return null
+    val rawUid = match.groupValues.drop(1).joinToString("")
+    return rawUid.toIntOrNull()?.takeIf { it > 0 }?.let(::UserId)
+}
+
+private fun String.toYamiboLinkedUserId(): UserId? {
+    val rawUid = YAMIBO_SPACE_UID_QUERY_REGEX.find(this)?.groupValues?.getOrNull(1)
+        ?: YAMIBO_SPACE_UID_PATH_REGEX.find(this)?.groupValues?.getOrNull(1)
+    return rawUid?.toIntOrNull()?.takeIf { it > 0 }?.let(::UserId)
+}
+
+private val YAMIBO_AVATAR_UID_REGEX = Regex("""/avatar/(\d{3})/(\d{2})/(\d{2})/(\d{2})_avatar""")
+private val YAMIBO_SPACE_UID_QUERY_REGEX = Regex("""[?&;]uid=(\d+)""")
+private val YAMIBO_SPACE_UID_PATH_REGEX = Regex("""space-uid-(\d+)""")
 

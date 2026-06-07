@@ -119,7 +119,7 @@ source repo 內必須保持：
 
 ## Support This Project
 
-如果這個 app 對你有幫助，可以考慮支持開發與維護。
+如果這個 app 對你有幫助，可以考慮支持開發與維護，或以以下管道支持。
 
 <a href="https://ko-fi.com/thenano">
     <img height="36" style="border:0px;height:36px;" src="https://storage.ko-fi.com/cdn/kofi2.png?v=3" border="0" alt="Buy Me a Coffee at ko-fi.com" />

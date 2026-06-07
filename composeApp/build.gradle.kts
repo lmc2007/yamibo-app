@@ -155,9 +155,10 @@ tasks.named("check") {
 val scriptPath = rootProject.rootDir.absolutePath + "/unlock_build.ps1"
 
 val autoUnlockTask = tasks.register<Exec>("autoUnlockResources") {
-    description = ""
-    commandLine("powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile", "-File", scriptPath)
-    isIgnoreExitValue = true
+    //Currently unused now, it delayed task a lot.
+//    description = ""
+//    commandLine("powershell.exe", "-ExecutionPolicy", "Bypass", "-NoProfile", "-File", scriptPath)
+//    isIgnoreExitValue = true
 }
 
 tasks.whenTaskAdded {

@@ -274,6 +274,7 @@ fun MessageCenterScreen(
                                 }
                             },
                             onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
+                            onNoticeUserClick = { userId -> navigator.navigate(IUserSpaceScreen(userId)) },
                             onOpenPrivateMessage = { user -> navigator.navigate(IPrivateMessageScreen(user.uid, user.name)) },
                             onMessageAction = {
                                 scope.launch {
@@ -521,4 +522,3 @@ private fun isMessageListUrl(url: String): Boolean {
         url.contains("do=pm") &&
         !url.contains("spacecp")
 }
-

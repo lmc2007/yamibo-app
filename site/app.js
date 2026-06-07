@@ -153,7 +153,7 @@ const i18n = {
         title: "我的資料",
         lead: "我的頁集中顯示登入狀態、簽到狀態、設定入口與閱讀統計。",
         bullets: ["顯示目前登入帳號與積分資訊。", "每日簽到狀態直接可見。", "設定與閱讀統計以大按鈕呈現。"],
-        shots: [["profile", "我的：thenano 是本人帳號，可保留。"]],
+        shots: [["profile", "我的：帳號、簽到與設定入口。"]],
       },
       history: {
         eyebrow: "接續閱讀",
@@ -306,7 +306,7 @@ i18n.en.pages = {
     title: "Profile",
     lead: "Profile shows account status, sign-in status, settings, and reading statistics.",
     bullets: ["Shows current account and points.", "Daily sign-in status is visible.", "Settings and reading statistics are large shortcuts."],
-    shots: [["profile", "Profile: thenano is the owner account and is kept visible."]],
+    shots: [["profile", "Profile: account, sign-in, and settings."]],
   },
   history: {
     eyebrow: "Resume reading",

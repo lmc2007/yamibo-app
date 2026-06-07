@@ -211,6 +211,7 @@ private fun ProfileInfoTable(profile: ProfilePage, onOpenHomepage: (String) -> U
         ProfileInfoRow(i18n("生日"), profile.birthday ?: "-"),
         profile.birthplace?.let { ProfileInfoRow(i18n("出生地"), it) },
         profile.education?.let { ProfileInfoRow(i18n("學歷"), it) },
+        
         profile.customTitle?.let { ProfileInfoRow(i18n("自定義頭銜"), it) },
         profile.homepage?.let { ProfileInfoRow(i18n("個人主頁"), it, it) },
         ProfileInfoRow(i18n("在線時間"), i18n("{} 小時", profile.onlineHours.toString())),

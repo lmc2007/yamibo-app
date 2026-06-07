@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
 import io.github.littlesurvival.dto.model.PageNav
 import io.github.littlesurvival.dto.model.User
+import io.github.littlesurvival.dto.value.UserId
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboMultiSelectDialog
@@ -69,6 +70,7 @@ internal fun MessageCenterMainContent(
     onHideFavoriteUpdateStatus: (String) -> Unit,
     onToggleFavoriteUpdateFid: (Int, Boolean) -> Unit,
     onUserClick: (User) -> Unit,
+    onNoticeUserClick: (UserId) -> Unit,
     onOpenPrivateMessage: (User) -> Unit,
     onMessageAction: () -> Unit,
 ) {
@@ -112,7 +114,11 @@ internal fun MessageCenterMainContent(
             is MessageCenterContent.Notices -> {
                 if (content.page.notices.isEmpty()) item { MessageCenterEmptyListMessage(emptyMessage(selectedTab)) }
                 items(content.page.notices, key = { it.noticeId.value }) { notice ->
-                    NoticeCard(notice, onAction = onMessageAction)
+                    NoticeCard(
+                        notice,
+                        onUserClick = onNoticeUserClick,
+                        onAction = onMessageAction,
+                    )
                 }
                 content.page.pageNav?.let { nav -> item { MessageCenterPageNavigation(nav, currentPage, onPageChange) } }
             }

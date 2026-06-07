@@ -209,8 +209,6 @@ fun SearchScreen(fid: ForumId?) {
         onDispose { navigator.backHandlers.remove(handler) }
     }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
