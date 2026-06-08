@@ -2,6 +2,7 @@ document.documentElement.classList.add("js");
 
 const basePath = document.body.dataset.base || "../";
 const pageId = document.body.dataset.page || "home";
+const releaseUrl = "https://github.com/LittleSurvival/yamibo-app/releases";
 const pageAliases = {
   post: "threadDetail",
   text: "threadReader",
@@ -77,8 +78,8 @@ const i18n = {
     download: "下載",
     app: "App",
     developmentGroup: "開發",
-    ready: "準備中",
-    readyText: "下載連結整理中，目前先介紹 App 的主要功能。",
+    ready: "GitHub Releases",
+    readyText: "前往發布頁下載最新 APK 與查看版本資訊。",
     homeTitle: "Yamibo App",
     homeEyebrow: "產品說明",
     homeLead: "Yamibo App 讓論壇閱讀更接近行動閱讀器：快速找版塊、接續閱讀、整理收藏、追蹤消息，也能處理每日簽到。",
@@ -223,8 +224,8 @@ const i18n = {
     download: "下载",
     app: "App",
     developmentGroup: "开发",
-    ready: "准备中",
-    readyText: "下载链接整理中，目前先介绍 App 的主要功能。",
+    ready: "GitHub Releases",
+    readyText: "前往发布页下载最新 APK 与查看版本信息。",
     homeTitle: "Yamibo App",
     homeEyebrow: "产品说明",
     homeLead: "Yamibo App 让论坛阅读更接近移动阅读器：快速找版块、接续阅读、整理收藏、追踪消息，也能处理每日签到。",
@@ -243,8 +244,8 @@ const i18n = {
     download: "Download",
     app: "App",
     developmentGroup: "Development",
-    ready: "Coming soon",
-    readyText: "Download links are not published yet. The feature guide is available first.",
+    ready: "GitHub Releases",
+    readyText: "Download the latest APK and view release notes from the releases page.",
     homeTitle: "Yamibo App",
     homeEyebrow: "Product guide",
     homeLead: "Yamibo App turns forum browsing into a mobile reading experience: find boards, resume reading, organize favorites, follow updates, and handle daily sign-in.",
@@ -411,7 +412,7 @@ function renderSidebar(text) {
     <nav>
       <div class="side-group">
         <div class="side-title">${text.download}</div>
-        <a href="${pageHref("home")}#download">${text.ready}</a>
+        <a href="${releaseUrl}">${text.ready}</a>
       </div>
       <div class="side-group">
         <div class="side-title">${text.app}</div>
@@ -456,7 +457,11 @@ function renderHome(text) {
       </section>
       <section class="home-section" id="download">
         <div class="section-head"><h2>${text.download}</h2></div>
-        <div class="empty-box"><strong>${text.ready}</strong><p>${text.readyText}</p></div>
+        <div class="empty-box">
+          <strong>${text.ready}</strong>
+          <p>${text.readyText}</p>
+          <a class="release-link" href="${releaseUrl}">${releaseUrl}</a>
+        </div>
       </section>
       <section class="home-section">
         <div class="section-head"><h2>${text.app}</h2><p>${text.appIntro}</p></div>

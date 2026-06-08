@@ -180,6 +180,30 @@ figcaption {
 
 .empty-box { color: var(--muted); }
 
+.empty-box strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--brown);
+}
+
+.release-link {
+  display: inline-flex;
+  max-width: 100%;
+  margin-top: 4px;
+  padding: 10px 14px;
+  border: 1px solid rgba(84, 39, 25, .18);
+  border-radius: 8px;
+  color: var(--brown);
+  background: var(--cream);
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.release-link:hover {
+  border-color: rgba(84, 39, 25, .34);
+  background: #ffe8b6;
+}
+
 .overview-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
