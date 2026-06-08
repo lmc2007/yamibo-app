@@ -11,11 +11,18 @@ Yamibo App 以行動閱讀體驗為核心，將百合會論壇常用流程整理
 - [App 說明首頁](https://littlesurvival.github.io/yamibo-app/)
 - [下載最新版本](https://github.com/LittleSurvival/yamibo-app/releases)
 
+## 社群
+
+- [Discord 社群](https://discord.gg/3nhKpxM7Hc)
+- [GitHub 專案](https://github.com/LittleSurvival/yamibo-app)
+
 ## -- 協助開法指南 --
 
 ## 概述
 
 Yamibo App 是一個百合會論壇第三方客戶端，支援首頁版塊、論壇列表、帖子閱讀、漫畫/小說閱讀、收藏、閱讀紀錄、消息、UserSpace、日志、私訊、簽到與 app 更新等功能。
+
+目前希望能有一位熟悉 iOS / Compose Multiplatform iOS 端整合的合作者，一起協助 iOS 版本的驗證、平台功能補齊與發佈流程。若有興趣參與，請加入 [Discord 社群](https://discord.gg/3nhKpxM7Hc) 聯絡。
 
 專案主要分成兩層：
 

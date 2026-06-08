@@ -2,6 +2,8 @@ document.documentElement.classList.add("js");
 
 const basePath = document.body.dataset.base || "../";
 const pageId = document.body.dataset.page || "home";
+const githubUrl = "https://github.com/LittleSurvival/yamibo-app";
+const discordUrl = "https://discord.gg/3nhKpxM7Hc";
 const releaseUrl = "https://github.com/LittleSurvival/yamibo-app/releases";
 const pageAliases = {
   post: "threadDetail",
@@ -77,6 +79,7 @@ const i18n = {
     menu: "目錄",
     download: "下載",
     app: "App",
+    community: "社群",
     developmentGroup: "開發",
     ready: "GitHub Releases",
     readyText: "前往發布頁下載最新 APK 與查看版本資訊。",
@@ -85,6 +88,11 @@ const i18n = {
     homeLead: "Yamibo App 讓論壇閱讀更接近行動閱讀器：快速找版塊、接續閱讀、整理收藏、追蹤消息，也能處理每日簽到。",
     homeCaption: "首頁可以快速進入常用版塊與搜尋。",
     appIntro: "這些功能讓手機閱讀、追蹤與整理內容更順手。",
+    communityIntro: "加入社群或查看原始碼，回報問題、追蹤進度與參與討論。",
+    communityLinks: {
+      discord: "Discord 社群",
+      github: "GitHub 專案",
+    },
     devIntro: "給協助開發的人查看專案組成、使用技術與常用命令。",
     nav: {
       home: "總覽",
@@ -223,6 +231,7 @@ const i18n = {
     menu: "目录",
     download: "下载",
     app: "App",
+    community: "社群",
     developmentGroup: "开发",
     ready: "GitHub Releases",
     readyText: "前往发布页下载最新 APK 与查看版本信息。",
@@ -231,6 +240,11 @@ const i18n = {
     homeLead: "Yamibo App 让论坛阅读更接近移动阅读器：快速找版块、接续阅读、整理收藏、追踪消息，也能处理每日签到。",
     homeCaption: "首页可以快速进入常用版块与搜索。",
     appIntro: "这些功能让手机阅读、追踪与整理内容更顺手。",
+    communityIntro: "加入社群或查看源码，回报问题、追踪进度与参与讨论。",
+    communityLinks: {
+      discord: "Discord 社群",
+      github: "GitHub 项目",
+    },
     devIntro: "给协助开发的人查看项目组成、使用技术与常用命令。",
     nav: {
       home: "总览", main: "主画面", forum: "版块", threadDetail: "帖子详情页", threadReader: "阅读器", search: "搜索", profile: "我的资料", history: "阅读历史", favorites: "收藏页", tagManga: "标签漫画模式", comicReader: "漫画阅读器", sign: "签到", settings: "设置", development: "项目开发",
@@ -243,6 +257,7 @@ const i18n = {
     menu: "Menu",
     download: "Download",
     app: "App",
+    community: "Community",
     developmentGroup: "Development",
     ready: "GitHub Releases",
     readyText: "Download the latest APK and view release notes from the releases page.",
@@ -251,6 +266,11 @@ const i18n = {
     homeLead: "Yamibo App turns forum browsing into a mobile reading experience: find boards, resume reading, organize favorites, follow updates, and handle daily sign-in.",
     homeCaption: "Home opens common boards and search quickly.",
     appIntro: "These features make reading, tracking, and organizing content easier on mobile.",
+    communityIntro: "Join the community or view the source code to report issues, follow progress, and discuss the app.",
+    communityLinks: {
+      discord: "Discord community",
+      github: "GitHub repository",
+    },
     devIntro: "For contributors who need the project structure, technology stack, and common commands.",
     nav: {
       home: "Overview", main: "Main screen", forum: "Boards", threadDetail: "Post details", threadReader: "Text reader", search: "Search", profile: "Profile", history: "Reading history", favorites: "Favorites", tagManga: "Tagged comics", comicReader: "Comic reader", sign: "Sign-in", settings: "Settings", development: "Development",
@@ -415,6 +435,11 @@ function renderSidebar(text) {
         <a href="${releaseUrl}">${text.ready}</a>
       </div>
       <div class="side-group">
+        <div class="side-title">${text.community}</div>
+        <a href="${discordUrl}">Discord</a>
+        <a href="${githubUrl}">GitHub</a>
+      </div>
+      <div class="side-group">
         <div class="side-title">${text.app}</div>
         ${appKeys.map((key) => `<a class="${pageKey === key ? "is-active" : ""}" href="${pageHref(key)}">${text.nav[key]}</a>`).join("")}
       </div>
@@ -474,6 +499,19 @@ function renderHome(text) {
               <p>${page.lead}</p>
             </a>`;
           }).join("")}
+        </div>
+      </section>
+      <section class="home-section" id="community">
+        <div class="section-head"><h2>${text.community}</h2><p>${text.communityIntro}</p></div>
+        <div class="community-grid">
+          <a class="community-card" href="${discordUrl}">
+            <strong>${text.communityLinks.discord}</strong>
+            <span>${discordUrl}</span>
+          </a>
+          <a class="community-card" href="${githubUrl}">
+            <strong>${text.communityLinks.github}</strong>
+            <span>${githubUrl}</span>
+          </a>
         </div>
       </section>
       <section class="home-section">
