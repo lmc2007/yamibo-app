@@ -269,6 +269,7 @@ jobs:
             release_json="$(curl -sS -X POST "${api}/releases" \
               -d "access_token=${GITEE_TOKEN}" \
               -d "tag_name=${tag}" \
+              -d "target_commitish=main" \
               --data-urlencode "name=${title}" \
               --data-urlencode "body=${body}")"
             release_id="$(python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("id",""))' <<< "$release_json")"
