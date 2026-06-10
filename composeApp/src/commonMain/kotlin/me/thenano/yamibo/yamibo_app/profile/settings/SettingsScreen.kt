@@ -134,7 +134,7 @@ internal fun SettingsScreen() {
             SettingsItem(
                 icon = YamiboIcons.Reload,
                 title = i18n("App 更新"),
-                subtitle = i18n("檢查版本、下載 APK 與打開安裝流程"),
+                subtitle = i18n("檢查版本、下載安裝檔與打開安裝流程"),
                 onClick = { navigator.navigate(IAppUpdateScreen()) },
             )
             SettingsDivider()

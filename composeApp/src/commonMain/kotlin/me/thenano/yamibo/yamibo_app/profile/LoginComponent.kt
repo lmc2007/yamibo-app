@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -195,10 +194,7 @@ private fun UserInfoContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) {
+            .profilePressScaleClickable(pressedScale = 0.985f) {
                 navigator.navigate(IUserSpaceScreen(user.uid, user.username))
             }
             .padding(18.dp)
@@ -414,11 +410,7 @@ private fun AnimatedYamiboButton(text: String, onClick: () -> Unit, modifier: Mo
     Surface(
         onClick = onClick,
         modifier =
-            modifier.scale(scale).graphicsLayer {
-                shadowElevation = if (isHovered) 8.dp.toPx() else 4.dp.toPx()
-                shape = RoundedCornerShape(50)
-                clip = true
-            },
+            modifier.scale(scale),
         shape = RoundedCornerShape(50),
         color = backgroundColor,
         contentColor = contentColor,

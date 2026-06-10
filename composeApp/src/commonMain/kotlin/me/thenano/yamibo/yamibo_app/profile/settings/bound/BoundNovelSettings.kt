@@ -26,28 +26,25 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
-import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonDisplayMode
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonJumpTarget
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl.HtmlRenderer
 import me.thenano.yamibo.yamibo_app.util.state
 
 import kotlin.math.roundToInt
 
 private val PREVIEW_TEXT: String
-    get() = i18n("我是YamiboApp的作者TheNano，這是一個第三方個人獨立開發的開源App")
+    get() = i18n("我是YamiboApp的作者TheNano，這是一個個人獨立開發的第三方開源App<br>")
 
 @Composable
 fun NovelReaderPreviewSetting() {
     val colors = YamiboTheme.colors
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
-    val fontSize = novelSettingsRepo.fontSize.state()
-    val lineSpacing = novelSettingsRepo.lineSpacing.state()
     val contentWidthFraction = novelSettingsRepo.contentWidthFraction.state()
-    val previewText = rememberConvertedText(PREVIEW_TEXT)
 
     Box(
         modifier = Modifier
@@ -61,12 +58,7 @@ fun NovelReaderPreviewSetting() {
             modifier = Modifier
                 .fillMaxWidth(contentWidthFraction)
         ) {
-            Text(
-                text = previewText,
-                fontSize = fontSize.sp,
-                lineHeight = (fontSize * lineSpacing).sp,
-                color = colors.textDark
-            )
+            HtmlRenderer(html = PREVIEW_TEXT)
         }
     }
 }

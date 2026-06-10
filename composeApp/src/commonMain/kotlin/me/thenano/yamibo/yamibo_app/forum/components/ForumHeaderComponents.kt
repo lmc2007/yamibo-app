@@ -2,8 +2,12 @@ package me.thenano.yamibo.yamibo_app.forum.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -11,9 +15,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -172,13 +179,25 @@ fun PinnedSection(items: List<PinnedItem>, onItemClick: (PinnedItem) -> Unit) {
 @Composable
 private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = tween(150),
+        label = "announcement_row_press_scale",
+    )
     Row(
         modifier =
             Modifier.fillMaxWidth()
                 .padding(vertical = 3.dp)
+                .scale(scale)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.announceBg)
-                .clickable { onClick() }
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -206,13 +225,25 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -
 @Composable
 private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = tween(150),
+        label = "pinned_thread_row_press_scale",
+    )
     Row(
         modifier =
             Modifier.fillMaxWidth()
                 .padding(vertical = 3.dp)
+                .scale(scale)
                 .clip(RoundedCornerShape(10.dp))
                 .background(colors.pinnedBg)
-                .clickable { onClick() }
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick,
+                )
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -236,4 +267,3 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
         )
     }
 }
-

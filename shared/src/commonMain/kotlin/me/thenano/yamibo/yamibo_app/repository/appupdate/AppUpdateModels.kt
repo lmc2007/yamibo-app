@@ -21,7 +21,12 @@ data class AppUpdateRelease(
     val releaseNotes: String,
     val releaseUrl: String,
     val asset: AppUpdateAsset?,
+    val changelogText: String = "",
 )
+
+fun AppUpdateRelease.fullVersionName(): String = "$channel-v$versionName"
+
+fun AppUpdateRelease.changelogContent(): String = changelogText.ifBlank { releaseNotes }
 
 sealed interface AppUpdateCheckResult {
     data class UpdateAvailable(val release: AppUpdateRelease) : AppUpdateCheckResult

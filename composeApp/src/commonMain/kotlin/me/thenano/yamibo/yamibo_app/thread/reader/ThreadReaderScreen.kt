@@ -11,6 +11,7 @@ import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
@@ -115,6 +116,16 @@ private data class ReaderListEntry(
         get() = kind == ReaderEntryKind.WholePost || kind == ReaderEntryKind.SegmentedBody
 }
 
+private data class VisiblePostRange(
+    val firstIndex: Int?,
+    val lastIndex: Int?,
+)
+
+private data class ReaderCatalogCurrentPosition(
+    val page: Int,
+    val pid: PostId?,
+)
+
 private fun buildReaderBodySegments(post: Post, contentHtml: String): List<ReaderBodySegment>? {
     if (post.images.size < 6) return null
 
@@ -210,7 +221,6 @@ internal fun ThreadReaderScreen(
     var showSettingsPanel by remember { mutableStateOf(false) }
     var scrollJumpButtonPointsDown by remember { mutableStateOf(false) }
     var showScrollJumpButtonAfterSlide by remember { mutableStateOf(false) }
-    var scrollJumpButtonVisibilityToken by remember { mutableIntStateOf(0) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
     val authRepo = LocalAuthRepository.current
@@ -865,6 +875,12 @@ internal fun ThreadReaderScreen(
         )
     }
 
+    fun currentVisiblePageForAction(): Int {
+        val currentIndex = visibleAnchorEntryIndex() ?: listState.firstVisibleItemIndex
+        val currentEntry = readerEntries.getOrNull(currentIndex) ?: return initialPage
+        return pageByPid[currentEntry.post.pid.value.toLong()] ?: initialPage
+    }
+
     fun anchorIndexForPost(postId: Long, last: Boolean): Int? {
         var foundIndex: Int? = null
         readerEntries.forEachIndexed { index, entry ->
@@ -915,10 +931,6 @@ internal fun ThreadReaderScreen(
             ReaderScrollButtonJumpTarget.PAGE_EDGE -> pageEdgeAnchorIndex(currentEntry, scrollJumpButtonPointsDown)
             ReaderScrollButtonJumpTarget.POST_EDGE -> postEdgeAnchorIndex(currentIndex, currentEntry, scrollJumpButtonPointsDown)
         }
-    }
-
-    val readerPageProgress by remember(readerEntries, pageByPid, pageIndexBounds, totalPages, initialPage) {
-        derivedStateOf { currentReaderPageProgress() }
     }
 
     fun saveCurrentHistoryBlocking() {
@@ -1189,6 +1201,7 @@ internal fun ThreadReaderScreen(
         }
 
         var anchorY: Long? = null
+        var visibilityToken = 0
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .distinctUntilChanged()
             .collect { (index, offset) ->
@@ -1210,12 +1223,14 @@ internal fun ThreadReaderScreen(
                 }
 
                 if (scrollButtonDisplayMode == ReaderScrollButtonDisplayMode.WHEN_USER_SLIDE) {
-                    showScrollJumpButtonAfterSlide = true
-                    scrollJumpButtonVisibilityToken += 1
-                    val token = scrollJumpButtonVisibilityToken
+                    if (!showScrollJumpButtonAfterSlide) {
+                        showScrollJumpButtonAfterSlide = true
+                    }
+                    visibilityToken += 1
+                    val token = visibilityToken
                     launch {
                         delay(1800.milliseconds)
-                        if (scrollJumpButtonVisibilityToken == token) {
+                        if (visibilityToken == token) {
                             showScrollJumpButtonAfterSlide = false
                         }
                     }
@@ -1223,62 +1238,50 @@ internal fun ThreadReaderScreen(
             }
     }
 
-    LaunchedEffect(listState, state, posts, readerEntries, tid) {
+    LaunchedEffect(listState, state, posts, readerEntries, tid, isLoadingNextPage, loadedPages, totalPages) {
         if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
 
         val imageLoader = SingletonImageLoader.get(platformContext)
         val cookie = authRepo.cookieStore.load().orEmpty()
         val preloadBehindCount = 2
         val preloadAheadCount = 2
+        val pagePreloadThreshold = 5
 
         snapshotFlow {
             val visiblePostIndices = listState.layoutInfo.visibleItemsInfo
                 .mapNotNull { item -> readerEntries.getOrNull(item.index)?.postIndex }
                 .distinct()
-            visiblePostIndices.minOrNull() to visiblePostIndices.maxOrNull()
+            VisiblePostRange(
+                firstIndex = visiblePostIndices.minOrNull(),
+                lastIndex = visiblePostIndices.maxOrNull(),
+            )
         }
             .distinctUntilChanged()
-            .collect { (firstIndexOrNull, lastIndexOrNull) ->
-                val firstVisibleItemIndex = firstIndexOrNull ?: return@collect
-                val lastVisibleItemIndex = lastIndexOrNull ?: return@collect
+            .collect { range ->
+                val firstVisibleItemIndex = range.firstIndex ?: return@collect
+                val lastVisibleItemIndex = range.lastIndex ?: return@collect
                 val startIndex = (firstVisibleItemIndex - preloadBehindCount).coerceAtLeast(0)
                 val endIndex = (lastVisibleItemIndex + preloadAheadCount).coerceAtMost(posts.lastIndex)
 
-                if (startIndex > endIndex) return@collect
-
-                for (index in startIndex..endIndex) {
-                    val post = posts[index]
-                    expectedImageUrlsByPost[post.pid.value.toLong()].orEmpty().forEach { imageUrl ->
-                        if (imageUrl in failedImageMessages) return@forEach
-                        if (!prefetchedImageUrls.add(imageUrl)) return@forEach
-                        imageLoader.enqueue(
-                            buildImageRequest(
-                                context = platformContext,
-                                url = imageUrl,
-                                cookie = cookie,
-                                enableCrossfade = false,
+                if (startIndex <= endIndex) {
+                    for (index in startIndex..endIndex) {
+                        val post = posts[index]
+                        expectedImageUrlsByPost[post.pid.value.toLong()].orEmpty().forEach { imageUrl ->
+                            if (imageUrl in failedImageMessages) return@forEach
+                            if (!prefetchedImageUrls.add(imageUrl)) return@forEach
+                            imageLoader.enqueue(
+                                buildImageRequest(
+                                    context = platformContext,
+                                    url = imageUrl,
+                                    cookie = cookie,
+                                    enableCrossfade = false,
+                                )
                             )
-                        )
+                        }
                     }
                 }
-            }
-    }
 
-    // Infinite scroll detection
-    LaunchedEffect(listState, state, isLoadingNextPage, readerEntries) {
-        val pagePreloadThreshold = 5
-        snapshotFlow {
-            val visiblePostIndices = listState.layoutInfo.visibleItemsInfo
-                .mapNotNull { item -> readerEntries.getOrNull(item.index)?.postIndex }
-                .distinct()
-            visiblePostIndices.minOrNull() to visiblePostIndices.maxOrNull()
-        }
-            .distinctUntilChanged()
-            .collect { (firstIndexOrNull, lastIndexOrNull) ->
-                if (state != ReaderState.Success || isLoadingNextPage) return@collect
-
-                val firstVisibleItemIndex = firstIndexOrNull ?: return@collect
-                val lastVisibleItemIndex = lastIndexOrNull ?: return@collect
+                if (isLoadingNextPage) return@collect
 
                 // Detect if we are close to the beginning of the CURRENT loaded page block
                 val firstPost = posts.getOrNull(firstVisibleItemIndex)
@@ -1329,10 +1332,6 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    val currentVisibleItemIndex by remember { derivedStateOf { listState.firstVisibleItemIndex } }
-    val currentVisiblePost = readerEntries.getOrNull(currentVisibleItemIndex)?.post
-    val currentPage = currentVisiblePost?.let { pageByPid[it.pid.value.toLong()] } ?: initialPage
-    val currentPid = currentVisiblePost?.pid
     val nextFailedAutoLoadPage = remember(loadedPages, failedAutoLoadPages, totalPages) {
         val candidate = loadedPages.maxOrNull()?.plus(1) ?: return@remember null
         if (candidate <= totalPages && candidate in failedAutoLoadPages) candidate else null
@@ -1347,11 +1346,13 @@ internal fun ThreadReaderScreen(
                     drawerContainerColor = colors.creamBackground,
                     modifier = Modifier.fillMaxWidth(0.7f)
                 ) {
-                    ReaderCatalogPanel(
+                    ReaderCatalogPanelWithPosition(
+                        listState = listState,
+                        readerEntries = readerEntries,
+                        pageByPid = pageByPid,
+                        initialPage = initialPage,
                         totalPages = totalPages,
                         loadedPostsByPage = loadedPostsByPage,
-                        currentPage = currentPage,
-                        currentPid = currentPid,
                         bookmarkedPostIds = postBookMarkEntries.values
                             .filter { it.bookmarked }
                             .mapTo(mutableSetOf()) { it.targetId },
@@ -1705,10 +1706,6 @@ internal fun ThreadReaderScreen(
                     )
                 }
 
-                val showReaderProgressOverlay =
-                    !showSettingsPanel &&
-                        state == ReaderState.Success &&
-                        readerPageProgress != null
                 val progressOverlayTopPadding = if (keepSystemBarsBackground) {
                     WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
                 } else {
@@ -1724,25 +1721,26 @@ internal fun ThreadReaderScreen(
                 } else {
                     0.dp
                 }
-                if (showReaderProgressOverlay) {
-                    ReaderPageProgressSlideBar(
-                        progress = readerPageProgress,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .padding(
-                                top = progressOverlayTopPadding,
-                                bottom = progressOverlayBottomPadding,
-                                end = 0.dp,
-                            ),
-                    )
-                    ReaderPageProgressHint(
-                        progress = readerPageProgress,
-                        visible = showPageProgressHint,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 0.dp, bottom = progressHintBottomPadding),
-                    )
-                }
+                ThreadReaderProgressOverlay(
+                    visible = !showSettingsPanel && state == ReaderState.Success,
+                    showHint = showPageProgressHint,
+                    listState = listState,
+                    readerEntries = readerEntries,
+                    pageByPid = pageByPid,
+                    pageIndexBounds = pageIndexBounds,
+                    totalPages = totalPages,
+                    initialPage = initialPage,
+                    slideBarModifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(
+                            top = progressOverlayTopPadding,
+                            bottom = progressOverlayBottomPadding,
+                            end = 0.dp,
+                        ),
+                    hintModifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 0.dp, bottom = progressHintBottomPadding),
+                )
 
                 val showScrollJumpButton =
                     state == ReaderState.Success &&
@@ -1817,7 +1815,7 @@ internal fun ThreadReaderScreen(
                     onRefresh = {
                         scope.launch {
                             state = ReaderState.Loading
-                            loadPage(currentPage, forceRefresh = true)
+                            loadPage(currentVisiblePageForAction(), forceRefresh = true)
                         }
                     },
                     onSettings = {
@@ -2044,6 +2042,137 @@ internal fun ThreadReaderScreen(
             },
         )
     }
+}
+
+@Composable
+private fun ReaderCatalogPanelWithPosition(
+    listState: LazyListState,
+    readerEntries: List<ReaderListEntry>,
+    pageByPid: Map<Long, Int>,
+    initialPage: Int,
+    totalPages: Int,
+    loadedPostsByPage: Map<Int, List<Post>>,
+    bookmarkedPostIds: Set<Long>,
+    readPostIds: Set<Long>,
+    onPageOrPostClick: (Int, Post?) -> Unit,
+    onPostLongPress: (Post) -> Unit,
+) {
+    val currentPosition by remember(listState, readerEntries, pageByPid, initialPage) {
+        derivedStateOf {
+            val currentEntry = readerEntries.getOrNull(listState.firstVisibleItemIndex)
+            ReaderCatalogCurrentPosition(
+                page = currentEntry?.let { pageByPid[it.post.pid.value.toLong()] } ?: initialPage,
+                pid = currentEntry?.post?.pid,
+            )
+        }
+    }
+
+    ReaderCatalogPanel(
+        totalPages = totalPages,
+        loadedPostsByPage = loadedPostsByPage,
+        currentPage = currentPosition.page,
+        currentPid = currentPosition.pid,
+        bookmarkedPostIds = bookmarkedPostIds,
+        readPostIds = readPostIds,
+        onPageOrPostClick = onPageOrPostClick,
+        onPostLongPress = onPostLongPress,
+    )
+}
+
+@Composable
+private fun ThreadReaderProgressOverlay(
+    visible: Boolean,
+    showHint: Boolean,
+    listState: LazyListState,
+    readerEntries: List<ReaderListEntry>,
+    pageByPid: Map<Long, Int>,
+    pageIndexBounds: Map<Int, IntRange>,
+    totalPages: Int,
+    initialPage: Int,
+    slideBarModifier: Modifier,
+    hintModifier: Modifier,
+) {
+    val progress by remember(listState, readerEntries, pageByPid, pageIndexBounds, totalPages, initialPage) {
+        derivedStateOf {
+            calculateReaderPageProgress(
+                listState = listState,
+                readerEntries = readerEntries,
+                pageByPid = pageByPid,
+                pageIndexBounds = pageIndexBounds,
+                totalPages = totalPages,
+                initialPage = initialPage,
+            )
+        }
+    }
+    val currentProgress = progress
+    if (!visible || currentProgress == null) return
+
+    ReaderPageProgressSlideBar(
+        progress = currentProgress,
+        modifier = slideBarModifier,
+    )
+    ReaderPageProgressHint(
+        progress = currentProgress,
+        visible = showHint,
+        modifier = hintModifier,
+    )
+}
+
+private fun calculateReaderPageProgress(
+    listState: LazyListState,
+    readerEntries: List<ReaderListEntry>,
+    pageByPid: Map<Long, Int>,
+    pageIndexBounds: Map<Int, IntRange>,
+    totalPages: Int,
+    initialPage: Int,
+): ReaderPageProgress? {
+    val layoutInfo = listState.layoutInfo
+    val visibleItems = layoutInfo.visibleItemsInfo
+    if (readerEntries.isEmpty() || visibleItems.isEmpty()) return null
+
+    val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+    val centeredItem = visibleItems
+        .mapNotNull { item ->
+            readerEntries.getOrNull(item.index)
+                ?.takeIf { it.isScrollAnchor }
+                ?.let { item to it }
+        }
+        .minByOrNull { (item, _) ->
+            when {
+                viewportCenter < item.offset -> item.offset - viewportCenter
+                viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                else -> 0
+            }
+        }
+        ?: visibleItems
+            .mapNotNull { item -> readerEntries.getOrNull(item.index)?.let { item to it } }
+            .minByOrNull { (item, _) ->
+                when {
+                    viewportCenter < item.offset -> item.offset - viewportCenter
+                    viewportCenter > item.offset + item.size -> viewportCenter - (item.offset + item.size)
+                    else -> 0
+                }
+            }
+        ?: return null
+
+    val item = centeredItem.first
+    val entry = centeredItem.second
+    val postPage = pageByPid[entry.post.pid.value.toLong()] ?: initialPage
+    val postBounds = pageIndexBounds[postPage] ?: return ReaderPageProgress(
+        page = postPage,
+        totalPages = totalPages,
+        fraction = 0f,
+    )
+    val pagePostCount = (postBounds.last - postBounds.first + 1).coerceAtLeast(1)
+    val relativePostIndex = (entry.postIndex - postBounds.first).coerceIn(0, pagePostCount - 1)
+    val itemRatio = ((viewportCenter - item.offset).toFloat() / item.size.coerceAtLeast(1).toFloat())
+        .coerceIn(0f, 1f)
+
+    return ReaderPageProgress(
+        page = postPage,
+        totalPages = totalPages,
+        fraction = ((relativePostIndex + itemRatio) / pagePostCount.toFloat()).coerceIn(0f, 1f),
+    )
 }
 
 @Composable

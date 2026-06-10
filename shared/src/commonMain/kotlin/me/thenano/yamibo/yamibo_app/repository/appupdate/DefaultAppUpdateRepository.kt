@@ -186,5 +186,6 @@ private fun AppUpdateManifestDto.toRelease(
                 size = it.size,
             )
         },
+        changelogText = releaseNotes.orEmpty(),
     )
 }

@@ -1,7 +1,5 @@
 ﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -25,20 +23,25 @@ import androidx.compose.ui.input.pointer.changedToDown
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.*
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.em
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
-import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.IInAppLinkResolvingScreen
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.looksLikeSupportedYamiboInAppLink
@@ -51,7 +54,8 @@ import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
 
 internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
-    return rawBlocks.filterIndexed { index, block ->
+    val maxMergedTextLength = 320
+    val filteredBlocks = rawBlocks.filterIndexed { index, block ->
         if (block is HtmlBlock.Text) {
             val content = block.annotatedString.text.trim()
             if (content.isEmpty()) {
@@ -65,6 +69,89 @@ internal fun normalizeHtmlBlocks(rawBlocks: List<HtmlBlock>): List<HtmlBlock> {
         }
         true
     }
+
+    val mergedBlocks = mutableListOf<HtmlBlock>()
+    var pendingTextBuilder: AnnotatedString.Builder? = null
+    var pendingTextAlign: TextAlign? = null
+    var pendingTextAnchorId: String? = null
+    val pendingRubies = mutableListOf<HtmlBlock.RubyText>()
+
+    fun flushPendingText() {
+        val builder = pendingTextBuilder ?: return
+        val text = builder.toAnnotatedString()
+        if (text.isNotEmpty()) {
+            mergedBlocks += HtmlBlock.Text(
+                annotatedString = text,
+                textAlign = pendingTextAlign ?: TextAlign.Start,
+                rubies = pendingRubies.toList(),
+                anchorId = pendingTextAnchorId.orEmpty(),
+            )
+        }
+        pendingTextBuilder = null
+        pendingTextAlign = null
+        pendingTextAnchorId = null
+        pendingRubies.clear()
+    }
+
+    fun appendTextBlock(block: HtmlBlock.Text) {
+        val builder = pendingTextBuilder
+        val pendingLength = builder?.length ?: 0
+        val shouldSplitLongText = builder != null &&
+            pendingLength > 0 &&
+            pendingLength + block.annotatedString.length > maxMergedTextLength
+        if (builder == null || pendingTextAlign != block.textAlign || shouldSplitLongText) {
+            flushPendingText()
+            pendingTextBuilder = AnnotatedString.Builder()
+            pendingTextAlign = block.textAlign
+            pendingTextAnchorId = block.anchorId
+        } else {
+            val currentText = builder.toAnnotatedString().text
+            val nextText = block.annotatedString.text
+            if (currentText.isNotEmpty() && currentText.last() != '\n' && nextText.firstOrNull() != '\n') {
+                builder.append("\n")
+            }
+        }
+        pendingTextBuilder?.append(block.annotatedString)
+        pendingRubies += block.rubies
+    }
+
+    fun splitLongTextBlock(block: HtmlBlock.Text): List<HtmlBlock.Text> {
+        if (block.annotatedString.length <= maxMergedTextLength) return listOf(block)
+
+        val chunks = mutableListOf<HtmlBlock.Text>()
+        val text = block.annotatedString.text
+        var start = 0
+        while (start < text.length) {
+            val preferredEnd = (start + maxMergedTextLength).coerceAtMost(text.length)
+            val end = if (preferredEnd < text.length) {
+                val newline = text.lastIndexOf('\n', preferredEnd)
+                if (newline > start + maxMergedTextLength / 3) newline + 1 else preferredEnd
+            } else {
+                preferredEnd
+            }
+            val chunk = block.annotatedString.subSequence(start, end)
+            if (chunk.isNotEmpty()) {
+                chunks += block.copy(
+                    annotatedString = chunk,
+                    anchorId = if (start == 0) block.anchorId else "${block.anchorId}-$start",
+                )
+            }
+            start = end
+        }
+        return chunks
+    }
+
+    filteredBlocks.forEach { block ->
+        if (block is HtmlBlock.Text) {
+            splitLongTextBlock(block).forEach(::appendTextBlock)
+        } else {
+            flushPendingText()
+            mergedBlocks += block
+        }
+    }
+    flushPendingText()
+
+    return mergedBlocks
 }
 
 private data class LinkMenuState(
@@ -101,6 +188,7 @@ private fun htmlTextLineHeightSp(
     baseFontSizeSp: Float,
     lineSpacing: Float,
     text: AnnotatedString,
+    hasRuby: Boolean = false,
 ): Float {
     val largestSpanFontSizeSp = text.spanStyles
         .mapNotNull { it.item.fontSize.toAbsoluteSpOrNull(baseFontSizeSp) }
@@ -109,7 +197,8 @@ private fun htmlTextLineHeightSp(
     val largestFontSizeSp = maxOf(baseFontSizeSp, largestSpanFontSizeSp)
     val configuredLineHeightSp = baseFontSizeSp * lineSpacing
     val requiredLineHeightSp = largestFontSizeSp * maxOf(lineSpacing, 1.2f)
-    return maxOf(configuredLineHeightSp, requiredLineHeightSp)
+    val rubyLineHeightSp = if (hasRuby) largestFontSizeSp * maxOf(lineSpacing, 2.15f) else 0f
+    return maxOf(configuredLineHeightSp, requiredLineHeightSp, rubyLineHeightSp)
 }
 
 private fun TextUnit.toAbsoluteSpOrNull(baseFontSizeSp: Float): Float? {
@@ -118,6 +207,10 @@ private fun TextUnit.toAbsoluteSpOrNull(baseFontSizeSp: Float): Float? {
         TextUnitType.Em -> value * baseFontSizeSp
         else -> null
     }
+}
+
+private fun String.isHtmlBlankText(): Boolean {
+    return all { it.isWhitespace() || it == '\u3000' }
 }
 
 @Composable
@@ -205,6 +298,243 @@ fun HtmlBlocksRenderer(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RubyTextBlock(
+    text: AnnotatedString,
+    rubies: List<HtmlBlock.RubyText>,
+    textAlign: TextAlign,
+    fontSizeSp: Float,
+    lineHeightSp: Float,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val segments = remember(text, rubies) {
+        buildRubySegments(text, rubies)
+    }
+    val lines = remember(segments) {
+        buildRubyLines(segments)
+    }
+    val horizontalArrangement = when (textAlign) {
+        TextAlign.Center -> Arrangement.Center
+        TextAlign.Right, TextAlign.End -> Arrangement.End
+        else -> Arrangement.Start
+    }
+
+    Column(modifier = modifier) {
+        lines.forEach { line ->
+            if (line.hasRuby) {
+                RubyFlowLine(
+                    segments = line.segments,
+                    horizontalArrangement = horizontalArrangement,
+                    fontSizeSp = fontSizeSp,
+                    lineHeightSp = lineHeightSp,
+                    textColor = textColor,
+                )
+            } else {
+                line.segments.filterIsInstance<RubySegment.Text>().forEach { segment ->
+                    Text(
+                        text = segment.text,
+                        color = textColor,
+                        fontFamily = HtmlDefaultFontFamily,
+                        fontSize = fontSizeSp.sp,
+                        lineHeight = lineHeightSp.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RubyFlowLine(
+    segments: List<RubySegment>,
+    horizontalArrangement: Arrangement.Horizontal,
+    fontSizeSp: Float,
+    lineHeightSp: Float,
+    textColor: Color,
+) {
+    FlowRow(
+        horizontalArrangement = horizontalArrangement,
+        verticalArrangement = Arrangement.spacedBy(0.dp),
+    ) {
+        segments.forEach { segment ->
+            when (segment) {
+                is RubySegment.Text -> {
+                    if (segment.text.isNotEmpty()) {
+                        RubyPlainTextSegment(
+                            text = segment.text,
+                            fontSizeSp = fontSizeSp,
+                            lineHeightSp = lineHeightSp,
+                            textColor = textColor,
+                        )
+                    }
+                }
+
+                is RubySegment.Ruby -> {
+                    RubySegmentView(
+                        ruby = segment.ruby,
+                        fontSizeSp = fontSizeSp,
+                        lineHeightSp = lineHeightSp,
+                        textColor = textColor,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RubyPlainTextSegment(
+    text: AnnotatedString,
+    fontSizeSp: Float,
+    lineHeightSp: Float,
+    textColor: Color,
+) {
+    val density = LocalDensity.current
+    val baseTop = with(density) { (fontSizeSp * 0.82f).sp.toDp() }
+    val segmentHeight = with(density) { lineHeightSp.sp.toDp() }
+    Box(modifier = Modifier.height(segmentHeight)) {
+        Text(
+            text = text,
+            color = textColor,
+            fontFamily = HtmlDefaultFontFamily,
+            fontSize = fontSizeSp.sp,
+            lineHeight = fontSizeSp.sp,
+            modifier = Modifier.offset(y = baseTop),
+        )
+    }
+}
+
+@Composable
+private fun RubySegmentView(
+    ruby: HtmlBlock.RubyText,
+    fontSizeSp: Float,
+    lineHeightSp: Float,
+    textColor: Color,
+) {
+    val rubyFontSizeSp = fontSizeSp * 0.72f
+    val density = LocalDensity.current
+    val baseTop = with(density) { (fontSizeSp * 0.82f).sp.toDp() }
+    val segmentHeight = with(density) { lineHeightSp.sp.toDp() }
+    Box(
+        modifier = Modifier
+            .height(segmentHeight)
+            .padding(horizontal = 1.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Text(
+            text = ruby.rubyText,
+            color = textColor,
+            fontFamily = HtmlDefaultFontFamily,
+            fontSize = rubyFontSizeSp.sp,
+            lineHeight = rubyFontSizeSp.sp,
+            maxLines = 1,
+            modifier = Modifier.align(Alignment.TopCenter),
+        )
+        Text(
+            text = ruby.baseText,
+            color = textColor,
+            fontFamily = HtmlDefaultFontFamily,
+            fontSize = fontSizeSp.sp,
+            lineHeight = fontSizeSp.sp,
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = baseTop),
+        )
+    }
+}
+
+private sealed class RubySegment {
+    data class Text(val text: AnnotatedString) : RubySegment()
+    data class Ruby(val ruby: HtmlBlock.RubyText) : RubySegment()
+}
+
+private data class RubyLine(
+    val segments: List<RubySegment>,
+    val hasRuby: Boolean,
+)
+
+private fun buildRubyLines(segments: List<RubySegment>): List<RubyLine> {
+    val lines = mutableListOf<RubyLine>()
+    var current = mutableListOf<RubySegment>()
+
+    fun flush() {
+        lines += RubyLine(current.toList(), current.any { it is RubySegment.Ruby })
+        current = mutableListOf()
+    }
+
+    segments.forEach { segment ->
+        when (segment) {
+            is RubySegment.Ruby -> current += segment
+            is RubySegment.Text -> {
+                var start = 0
+                val source = segment.text.text
+                source.forEachIndexed { index, char ->
+                    if (char == '\n') {
+                        if (start < index) {
+                            current += RubySegment.Text(segment.text.subSequence(start, index))
+                        }
+                        flush()
+                        start = index + 1
+                    }
+                }
+                if (start < source.length) {
+                    current += RubySegment.Text(segment.text.subSequence(start, source.length))
+                }
+            }
+        }
+    }
+    if (current.isNotEmpty() || lines.isEmpty()) {
+        flush()
+    }
+    return lines
+}
+
+private fun buildRubySegments(
+    text: AnnotatedString,
+    rubies: List<HtmlBlock.RubyText>,
+): List<RubySegment> {
+    val segments = mutableListOf<RubySegment>()
+    var cursor = 0
+    val source = text.text
+
+    if (source.any { it == '\uFFFC' }) {
+        var rubyIndex = 0
+        var start = 0
+        source.forEachIndexed { index, char ->
+            if (char == '\uFFFC') {
+                if (start < index) {
+                    segments += RubySegment.Text(text.subSequence(start, index))
+                }
+                rubies.getOrNull(rubyIndex)?.let { segments += RubySegment.Ruby(it) }
+                rubyIndex += 1
+                start = index + 1
+            }
+        }
+        if (start < source.length) {
+            segments += RubySegment.Text(text.subSequence(start, source.length))
+        }
+        return segments
+    }
+
+    rubies.forEach { ruby ->
+        val index = source.indexOf(ruby.baseText, startIndex = cursor)
+        if (index < 0) return@forEach
+        if (cursor < index) {
+            segments += RubySegment.Text(text.subSequence(cursor, index))
+        }
+        segments += RubySegment.Ruby(ruby)
+        cursor = index + ruby.baseText.length
+    }
+    if (cursor < source.length) {
+        segments += RubySegment.Text(text.subSequence(cursor, source.length))
+    }
+    return segments
+}
+
 @Composable
 private fun HtmlBlockRenderer(
     block: HtmlBlock,
@@ -268,45 +598,13 @@ private fun HtmlBlockRenderer(
                     baseFontSizeSp = fontSize.toFloat(),
                     lineSpacing = lineSpacing,
                     text = adjustedAnnotatedString,
+                    hasRuby = block.rubies.isNotEmpty(),
                 )
             }
-            val inlineContent = remember(block.rubies, fontSize, colors.htmlTextDark) {
-                block.rubies.associate { ruby ->
-                    val widthEm = maxOf(
-                        ruby.baseText.length.toFloat(),
-                        ruby.rubyText.length * 0.75f,
-                    ).coerceAtLeast(1f)
-                    ruby.id to InlineTextContent(
-                        placeholder = Placeholder(
-                            width = widthEm.em,
-                            height = 1.75.em,
-                            placeholderVerticalAlign = PlaceholderVerticalAlign.TextTop,
-                        ),
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Text(
-                                text = ruby.rubyText,
-                                color = colors.htmlTextDark,
-                                fontFamily = HtmlDefaultFontFamily,
-                                fontSize = (fontSize * 0.75f).sp,
-                                lineHeight = (fontSize * 0.75f).sp,
-                                maxLines = 1,
-                            )
-                            Text(
-                                text = ruby.baseText,
-                                color = colors.htmlTextDark,
-                                fontFamily = HtmlDefaultFontFamily,
-                                fontSize = fontSize.sp,
-                                lineHeight = fontSize.sp,
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
+            val isBlankText = remember(adjustedAnnotatedString) {
+                adjustedAnnotatedString.text.isHtmlBlankText()
             }
+            val inlineContent = remember { emptyMap<String, InlineTextContent>() }
             val hasLinks = remember(adjustedAnnotatedString) {
                 adjustedAnnotatedString.getStringAnnotations("URL", 0, adjustedAnnotatedString.length).isNotEmpty()
             }
@@ -381,21 +679,40 @@ private fun HtmlBlockRenderer(
                     }
                 )
 
-            Text(
-                text = adjustedAnnotatedString,
-                style = TextStyle(
-                    color = colors.htmlTextDark,
-                    fontFamily = HtmlDefaultFontFamily,
-                    fontSize = fontSize.sp,
-                    lineHeight = lineHeightSp.sp,
-                    textAlign = block.textAlign
-                ),
-                modifier = textModifier,
-                inlineContent = inlineContent,
-                onTextLayout = { layoutResult.value = it }
-            )
+            if (isBlankText) {
+                val density = LocalDensity.current
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(with(density) { lineHeightSp.sp.toDp() })
+                )
+            } else if (block.rubies.isNotEmpty()) {
+                RubyTextBlock(
+                    text = adjustedAnnotatedString,
+                    rubies = block.rubies,
+                    textAlign = block.textAlign,
+                    fontSizeSp = fontSize.toFloat(),
+                    lineHeightSp = lineHeightSp,
+                    textColor = colors.htmlTextDark,
+                    modifier = textModifier,
+                )
+            } else {
+                Text(
+                    text = adjustedAnnotatedString,
+                    style = TextStyle(
+                        color = colors.htmlTextDark,
+                        fontFamily = HtmlDefaultFontFamily,
+                        fontSize = fontSize.sp,
+                        lineHeight = lineHeightSp.sp,
+                        textAlign = block.textAlign
+                    ),
+                    modifier = textModifier,
+                    inlineContent = inlineContent,
+                    onTextLayout = { layoutResult.value = it }
+                )
+            }
 
-            if (showLongPressMenu != null) {
+            if (!isBlankText && showLongPressMenu != null) {
                 DisableSelection {
                     val menu = showLongPressMenu!!
                     val fullUrl = menu.url
@@ -925,4 +1242,3 @@ private fun HtmlBlockRenderer(
         }
     }
 }
-

@@ -3,6 +3,8 @@ package me.thenano.yamibo.yamibo_app.profile.settings.update
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,22 +15,33 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateAsset
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
+import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateSource
+import me.thenano.yamibo.yamibo_app.repository.appupdate.changelogContent
+import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
 import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
+import org.jetbrains.compose.resources.painterResource
+import yamibo_app.composeapp.generated.resources.Res
+import yamibo_app.composeapp.generated.resources.logo_about
+
+private const val ShowUpdatePromptPreviewButton = false
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +57,7 @@ internal fun AppUpdateScreen() {
     var checking by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<AppUpdateCheckResult?>(null) }
     var showThresholdDialog by remember { mutableStateOf(false) }
+    var showUpdatePromptPreview by remember { mutableStateOf(false) }
     val release = (result as? AppUpdateCheckResult.UpdateAvailable)?.release
         ?: (result as? AppUpdateCheckResult.Ignored)?.release
 
@@ -129,6 +143,14 @@ internal fun AppUpdateScreen() {
                         Text(i18n("發布頁"))
                     }
                 }
+                if (ShowUpdatePromptPreviewButton) {
+                    OutlinedButton(
+                        onClick = { showUpdatePromptPreview = true },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                    ) {
+                        Text(i18n("預覽更新彈窗"))
+                    }
+                }
             }
         }
     }
@@ -142,6 +164,123 @@ internal fun AppUpdateScreen() {
             },
             onDismiss = { showThresholdDialog = false },
         )
+    }
+    if (showUpdatePromptPreview) {
+        PreviewUpdatePromptDialog(onDismiss = { showUpdatePromptPreview = false })
+    }
+}
+
+@Composable
+private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
+    val colors = YamiboTheme.colors
+    val release = AppUpdateRelease(
+        source = AppUpdateSource(
+            name = "Preview",
+            manifestUrl = "preview://app-update",
+        ),
+        channel = "stable",
+        versionName = "0.0.2",
+        versionCode = 3,
+        minVersionCode = null,
+        releaseNotes = "",
+        releaseUrl = "https://github.com/LittleSurvival/yamibo-app/releases",
+        asset = AppUpdateAsset(
+            type = "universal-apk",
+            url = "https://github.com/LittleSurvival/yamibo-app/releases/download/2/yamibo-stable-v0.0.1.apk",
+            sha256 = null,
+            size = null,
+        ),
+        changelogText = """
+            # stable-v0.0.2
+
+            - 顯示新版本完整名稱。
+            - changelog 會直接顯示在 app 內，而不是只提供超連結。
+            - 下載完成後沿用 Android 系統安裝流程。
+        """.trimIndent(),
+    )
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.creamSurface)
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = i18n("發現新版本"),
+                    color = colors.brownDeep,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = release.fullVersionName(),
+                    color = colors.textDark.copy(alpha = 0.72f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Image(
+                    painter = painterResource(Res.drawable.logo_about),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .width(270.dp)
+                        .height(76.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    text = release.changelogContent(),
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brownDeep,
+                        contentColor = colors.creamBackground,
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(i18n("立即更新"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = colors.creamBackground,
+                            contentColor = colors.brownDeep,
+                        ),
+                        border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.6f)),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(i18n("手動更新"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = colors.creamBackground,
+                            contentColor = colors.textDark,
+                        ),
+                        border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.45f)),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(i18n("稍後"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -166,8 +305,8 @@ private fun AppUpdateStatusCard(
                 text = when {
                     checking -> i18n("正在檢查更新")
                     result == null -> i18n("尚未檢查更新")
-                    result is AppUpdateCheckResult.UpdateAvailable -> i18n("發現新版本 {}", result.release.displayVersionLabel())
-                    result is AppUpdateCheckResult.Ignored -> i18n("已忽略版本 {}", result.release.displayVersionLabel())
+                    result is AppUpdateCheckResult.UpdateAvailable -> i18n("發現新版本 {}", result.release.fullVersionName())
+                    result is AppUpdateCheckResult.Ignored -> i18n("已忽略版本 {}", result.release.fullVersionName())
                     result is AppUpdateCheckResult.Preparing -> i18n("新版本 {} 正在準備中", result.displayVersionLabel())
                     result is AppUpdateCheckResult.UpToDate -> i18n("目前已是最新版本：{}", AppVersion.displayName)
                     result is AppUpdateCheckResult.Failed -> i18n("檢查更新失敗")
@@ -197,9 +336,10 @@ private fun AppUpdateStatusCard(
                     color = colors.textDark.copy(alpha = 0.62f),
                     fontSize = 12.sp,
                 )
-                if (it.releaseNotes.isNotBlank()) {
+                val changelog = it.changelogContent()
+                if (changelog.isNotBlank()) {
                     Text(
-                        text = it.releaseNotes,
+                        text = changelog,
                         color = colors.textDark.copy(alpha = 0.78f),
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
@@ -341,7 +481,5 @@ private fun appUpdateLaunchThresholdLabel(option: AppUpdateLaunchCheckThreshold)
     AppUpdateLaunchCheckThreshold.DAYS_3 -> i18n("3 天")
     AppUpdateLaunchCheckThreshold.DAYS_7 -> i18n("7 天")
 }
-
-private fun AppUpdateRelease.displayVersionLabel(): String = "$channel-v$versionName"
 
 private fun AppUpdateCheckResult.Preparing.displayVersionLabel(): String = "$channel-v$versionName"

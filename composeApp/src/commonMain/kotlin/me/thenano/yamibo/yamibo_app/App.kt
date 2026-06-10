@@ -5,6 +5,7 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import androidx.compose.animation.*
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -12,16 +13,20 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
@@ -30,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +52,8 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
+import me.thenano.yamibo.yamibo_app.repository.appupdate.changelogContent
+import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -54,7 +62,7 @@ import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.logo_homepage
+import yamibo_app.composeapp.generated.resources.logo_about
 
 @Composable
 fun HomeScreenContent(
@@ -249,34 +257,66 @@ private fun LaunchUpdateAvailableDialog(
     onOpenReleasePage: (AppUpdateRelease) -> Unit,
 ) {
     if (release == null) return
-    val colors = YamiboTheme.colors
     Dialog(onDismissRequest = onDismiss) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        LaunchUpdateAvailableContent(
+            release = release,
+            onDismiss = onDismiss,
+            onDownload = onDownload,
+            onOpenReleasePage = onOpenReleasePage,
+        )
+    }
+}
+
+@Composable
+private fun LaunchUpdateAvailableContent(
+    release: AppUpdateRelease,
+    onDismiss: () -> Unit,
+    onDownload: (AppUpdateRelease) -> Unit,
+    onOpenReleasePage: (AppUpdateRelease) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = YamiboTheme.colors
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(colors.creamSurface)
+                .padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Text(
+                text = i18n("發現新版本"),
+                color = colors.brownDeep,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = release.fullVersionName(),
+                color = colors.textDark.copy(alpha = 0.72f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Image(
+                painter = painterResource(Res.drawable.logo_about),
+                contentDescription = null,
+                modifier = Modifier
+                    .width(270.dp)
+                    .height(76.dp),
+                contentScale = ContentScale.Fit,
+            )
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(colors.creamSurface)
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                    .heightIn(max = 220.dp)
+                    .verticalScroll(rememberScrollState()),
             ) {
                 Text(
-                    text = i18n("發現新版本"),
-                    color = colors.brownDeep,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Image(
-                    painter = painterResource(Res.drawable.logo_homepage),
-                    contentDescription = null,
-                    modifier = Modifier.size(112.dp),
-                )
-                Text(
-                    text = release.releaseNotes.ifBlank {
+                    text = release.changelogContent().ifBlank {
                         i18n("新版已可下載。你可以立即下載更新，或前往發布頁手動更新。")
                     },
                     color = colors.textDark.copy(alpha = 0.78f),
@@ -284,32 +324,62 @@ private fun LaunchUpdateAvailableDialog(
                     lineHeight = 20.sp,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Button(
-                    onClick = {
-                        if (release.asset == null) {
-                            onOpenReleasePage(release)
-                        } else {
-                            onDownload(release)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.brownDeep,
-                        contentColor = colors.creamBackground,
+            }
+            Button(
+                onClick = {
+                    if (release.asset == null) {
+                        onOpenReleasePage(release)
+                    } else {
+                        onDownload(release)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.brownDeep,
+                    contentColor = colors.creamBackground,
+                ),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(
+                    text = i18n("立即更新"),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                OutlinedButton(
+                    onClick = { onOpenReleasePage(release) },
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = colors.creamBackground,
+                        contentColor = colors.brownDeep,
                     ),
+                    border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.6f)),
                     shape = RoundedCornerShape(8.dp),
                 ) {
                     Text(
-                        text = i18n("立即更新"),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        text = i18n("手動更新"),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
-                TextButton(onClick = { onOpenReleasePage(release) }) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = colors.creamBackground,
+                        contentColor = colors.textDark,
+                    ),
+                    border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.45f)),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
                     Text(
-                        text = i18n("手動更新"),
-                        color = colors.textDark.copy(alpha = 0.48f),
-                        fontSize = 12.sp,
+                        text = i18n("稍後"),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
                     )
                 }
             }

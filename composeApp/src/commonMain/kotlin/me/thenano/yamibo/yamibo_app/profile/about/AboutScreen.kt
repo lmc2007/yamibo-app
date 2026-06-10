@@ -5,21 +5,25 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.update.IAppUpdateScreen
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.webview.IPlatformWebView
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
 import yamibo_app.composeapp.generated.resources.ic_discord
@@ -28,12 +32,24 @@ import yamibo_app.composeapp.generated.resources.logo_about
 
 private const val GitHubUrl = "https://github.com/LittleSurvival/yamibo-app"
 private const val DiscordUrl = "https://discord.gg/3nhKpxM7Hc"
-private const val ChangelogUrl = "https://github.com/LittleSurvival/yamibo-app/blob/main/update/changelogs/1.changelog"
+
+private data class CommunityLink(
+    val title: String,
+    val url: String,
+    val icon: DrawableResource,
+)
+
+private val CommunityLinks = listOf(
+    CommunityLink("Discord", DiscordUrl, Res.drawable.ic_discord),
+    CommunityLink("GitHub", GitHubUrl, Res.drawable.ic_github),
+)
 
 @Composable
 internal fun AboutScreen() {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
+    val uriHandler = LocalUriHandler.current
+    var showChangelog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -86,15 +102,7 @@ internal fun AboutScreen() {
                 AboutActionRow(
                     icon = YamiboIcons.Book,
                     title = i18n("更新日誌"),
-                    onClick = {
-                        navigator.navigate(
-                            IPlatformWebView(
-                                ChangelogUrl,
-                                title = i18n("更新日誌"),
-                                useBackIcon = true,
-                            ),
-                        )
-                    },
+                    onClick = { showChangelog = true },
                 )
             }
 
@@ -102,20 +110,20 @@ internal fun AboutScreen() {
 
             AboutSection {
                 AboutHeaderRow(title = i18n("社群"))
-                AboutDivider()
-                AboutResourceActionRow(
-                    icon = painterResource(Res.drawable.ic_discord),
-                    title = "Discord",
-                    onClick = { navigator.navigate(IPlatformWebView(DiscordUrl, title = "Discord", useBackIcon = true)) },
-                )
-                AboutDivider()
-                AboutResourceActionRow(
-                    icon = painterResource(Res.drawable.ic_github),
-                    title = "GitHub",
-                    onClick = { navigator.navigate(IPlatformWebView(GitHubUrl, title = "GitHub", useBackIcon = true)) },
-                )
+                CommunityLinks.forEach { link ->
+                    AboutDivider()
+                    AboutResourceActionRow(
+                        icon = painterResource(link.icon),
+                        title = link.title,
+                        onClick = { uriHandler.openUri(link.url) },
+                    )
+                }
             }
         }
+    }
+
+    if (showChangelog) {
+        ChangelogDialog(onDismiss = { showChangelog = false })
     }
 }
 
@@ -248,4 +256,112 @@ private fun AboutDivider() {
         modifier = Modifier.padding(horizontal = 18.dp),
         color = colors.brownLight.copy(alpha = 0.15f),
     )
+}
+
+@Composable
+private fun ChangelogDialog(onDismiss: () -> Unit) {
+    val colors = YamiboTheme.colors
+    var changelog by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        changelog = loadCurrentChangelog()
+    }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = i18n("更新日誌"),
+                    color = colors.brownDeep,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 420.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val content = changelog
+                    if (content == null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(
+                                color = colors.brownPrimary,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Text(
+                                text = i18n("正在載入更新日誌..."),
+                                color = colors.textDark.copy(alpha = 0.68f),
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(start = 10.dp),
+                            )
+                        }
+                    } else {
+                        ChangelogContent(content)
+                    }
+                }
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = colors.brownDeep,
+                        contentColor = colors.creamBackground,
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(i18n("關閉"), fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChangelogContent(text: String) {
+    val colors = YamiboTheme.colors
+    text.lineSequence()
+        .map { it.trimEnd() }
+        .filter { it.isNotBlank() }
+        .forEach { line ->
+            when {
+                line.startsWith("#") -> Text(
+                    text = line.trimStart('#').trim(),
+                    color = colors.brownDeep,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                line.startsWith("-") -> Text(
+                    text = "• ${line.removePrefix("-").trim()}",
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+                else -> Text(
+                    text = line,
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+            }
+        }
+}
+
+@OptIn(ExperimentalResourceApi::class)
+private suspend fun loadCurrentChangelog(): String {
+    val currentPath = "files/changelogs/${AppVersion.VersionCode}.changelog"
+    val fallbackPath = "files/changelogs/1.changelog"
+    return runCatching { Res.readBytes(currentPath).decodeToString() }
+        .recoverCatching { Res.readBytes(fallbackPath).decodeToString() }
+        .getOrElse { i18n("沒有找到目前版本的更新日誌。") }
 }

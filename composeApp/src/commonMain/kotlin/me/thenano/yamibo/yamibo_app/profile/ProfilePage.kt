@@ -5,7 +5,6 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 import YamiboIcons
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignInfoScreen
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
+import me.thenano.yamibo.yamibo_app.profile.support.ISupportAppDevelopmentScreen
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme.colors
@@ -256,6 +256,14 @@ fun ProfilePage() {
                 onClick = { navigator.navigate(IBackupSettingsScreen()) }
             )
 
+            EntryDivider()
+
+            EntryCard(
+                title = i18n("支持App開發"),
+                icon = YamiboIcons.Heart,
+                onClick = { navigator.navigate(ISupportAppDevelopmentScreen()) }
+            )
+
             EntryCard(
                 title = i18n("關於 ({})", AppVersion.displayName),
                 icon = YamiboIcons.InfoCircle,
@@ -305,7 +313,7 @@ private fun SignEntryCard(
             Row(
                 modifier = Modifier
                     .weight(0.85f)
-                    .clickable(onClick = onSignClick)
+                    .profilePressScaleClickable(pressedScale = 0.98f, onClick = onSignClick)
                     .padding(horizontal = 20.dp, vertical = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -330,7 +338,7 @@ private fun SignEntryCard(
                 modifier = Modifier
                     .weight(0.15f)
                     .fillMaxHeight()
-                    .clickable(onClick = onInfoClick)
+                    .profilePressScaleClickable(pressedScale = 0.92f, onClick = onInfoClick)
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center,
             ) {
@@ -354,6 +362,14 @@ private fun SignEntryCard(
 }
 
 @Composable
+private fun EntryDivider() {
+    HorizontalDivider(
+        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
+        color = colors.brownLight.copy(alpha = 0.22f),
+    )
+}
+
+@Composable
 private fun EntryCard(
     title: String,
     icon: ImageVector,
@@ -363,7 +379,7 @@ private fun EntryCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clickable { onClick() },
+            .profilePressScaleClickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(2.dp),
         colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
