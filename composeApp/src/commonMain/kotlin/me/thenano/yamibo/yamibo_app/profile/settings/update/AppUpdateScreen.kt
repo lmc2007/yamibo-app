@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.update
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.update
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -120,7 +120,7 @@ internal fun AppUpdateScreen() {
                         }
                     },
                     enabled = !checking && downloadState !is AppUpdateDownloadState.Running,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                 ) {
                     Text(if (checking) i18n("檢查中...") else i18n("檢查更新"))
                 }
@@ -132,13 +132,13 @@ internal fun AppUpdateScreen() {
                             }
                         },
                         enabled = downloadState !is AppUpdateDownloadState.Running && available.asset != null,
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                     ) {
                         Text(i18n("下載更新"))
                     }
                     OutlinedButton(
                         onClick = { repository.openReleasePage(available) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                     ) {
                         Text(i18n("發布頁"))
                     }
@@ -146,7 +146,7 @@ internal fun AppUpdateScreen() {
                 if (ShowUpdatePromptPreviewButton) {
                     OutlinedButton(
                         onClick = { showUpdatePromptPreview = true },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                     ) {
                         Text(i18n("預覽更新彈窗"))
                     }
@@ -214,7 +214,7 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
             ) {
                 Text(
                     text = i18n("發現新版本"),
-                    color = colors.brownDeep,
+                    color = colors.textOnSurface,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -244,7 +244,7 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.brownDeep,
-                        contentColor = colors.creamBackground,
+                        contentColor = colors.textOnDeep,
                     ),
                     shape = RoundedCornerShape(8.dp),
                 ) {
@@ -259,7 +259,7 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = colors.creamBackground,
-                            contentColor = colors.brownDeep,
+                            contentColor = colors.textStrong,
                         ),
                         border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.6f)),
                         shape = RoundedCornerShape(8.dp),
@@ -447,7 +447,7 @@ private fun AppUpdateLaunchThresholdCard(
             ) {
                 Text(
                     text = appUpdateLaunchThresholdLabel(selected),
-                    color = colors.brownDeep,
+                    color = colors.textOnBackground,
                     fontSize = 14.sp,
                 )
             }

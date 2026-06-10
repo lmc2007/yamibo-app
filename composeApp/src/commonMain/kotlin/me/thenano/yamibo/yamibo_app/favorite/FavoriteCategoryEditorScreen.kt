@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 
 import YamiboIcons
@@ -437,7 +437,7 @@ private fun FavoriteCollectionEditorCard(
         ) {
             Box(modifier = Modifier.size(12.dp).background(collectionColor(collection.colorKey), CircleShape))
             Spacer(Modifier.size(12.dp))
-            Text("⋮⋮", color = colors.brownDeep.copy(alpha = 0.78f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text("⋮⋮", color = colors.textStrong.copy(alpha = 0.78f), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(collection.name, color = colors.textDark, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
@@ -475,11 +475,11 @@ private fun CollectionDialog(
             FavoriteDialogButton(
                 text = i18n("返回"),
                 background = colors.brownPrimary.copy(alpha = 0.14f),
-                contentColor = colors.brownDeep,
+                contentColor = colors.textStrong,
                 onClick = onDismiss,
             )
         },
-        title = { Text(i18n("集合"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("集合"), color = colors.textStrong, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(

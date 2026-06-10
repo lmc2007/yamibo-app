@@ -84,6 +84,11 @@ fun NovelReaderSettingsPanel(
 
                     Spacer(Modifier.height(24.dp))
 
+                    SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
+                    NovelChineseConversionSetting()
+
+                    Spacer(Modifier.height(24.dp))
+
                     SectionTitle(i18n("浮動跳轉按鈕"), color = colors.textDark)
                     NovelScrollButtonDisplayModeSetting()
 
@@ -97,11 +102,6 @@ fun NovelReaderSettingsPanel(
 
                     SectionTitle(i18n("閱讀進度"), color = colors.textDark)
                     NovelPageProgressHintSetting()
-
-                    Spacer(Modifier.height(24.dp))
-
-                    SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
-                    NovelChineseConversionSetting()
 
                     Spacer(Modifier.height(24.dp))
 

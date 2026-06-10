@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -430,7 +430,7 @@ fun FavoriteCollectionPickerDialog(
                         FavoriteDialogButton(
                             text = i18n("返回"),
                             background = colors.brownPrimary.copy(alpha = 0.12f),
-                            contentColor = colors.brownDeep,
+                            contentColor = colors.textStrong,
                             onClick = { currentCategoryId = null },
                         )
                     }
@@ -438,7 +438,7 @@ fun FavoriteCollectionPickerDialog(
                     FavoriteDialogButton(
                         text = i18n("編輯"),
                         background = colors.brownPrimary.copy(alpha = 0.08f),
-                        contentColor = colors.brownDeep,
+                        contentColor = colors.textStrong,
                         onClick = onEdit,
                     )
 
@@ -446,7 +446,7 @@ fun FavoriteCollectionPickerDialog(
                         FavoriteDialogButton(
                             text = i18n("新增集合"),
                             background = colors.brownPrimary.copy(alpha = 0.08f),
-                            contentColor = colors.brownDeep,
+                            contentColor = colors.textStrong,
                             onClick = { onCreateCollection(currentCategory.categoryId) },
                         )
                     }
@@ -761,7 +761,7 @@ fun FavoriteRemovalConfirmDialog(
     var skipNextTime by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(i18n("確定要取消收藏嗎"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("確定要取消收藏嗎"), color = colors.textStrong, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -802,7 +802,7 @@ fun FavoriteRemovalConfirmDialog(
             FavoriteDialogButton(
                 text = i18n("取消"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = colors.brownDeep,
+                contentColor = colors.textStrong,
                 onClick = onDismiss,
             )
         },
@@ -856,7 +856,7 @@ private fun FavoriteRemoteSyncChoiceDialog(
     var rememberChoice by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(title, color = colors.textStrong, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -897,7 +897,7 @@ private fun FavoriteRemoteSyncChoiceDialog(
             FavoriteDialogButton(
                 text = secondaryText,
                 background = colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = colors.brownDeep,
+                contentColor = colors.textStrong,
                 onClick = { onConfirm(rememberChoice, false) },
             )
         },
@@ -915,7 +915,7 @@ fun FavoriteMultiPathRemoveDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(i18n("取消全部收藏嗎"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(i18n("取消全部收藏嗎"), color = colors.textStrong, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -934,7 +934,7 @@ fun FavoriteMultiPathRemoveDialog(
             FavoriteDialogButton(
                 text = i18n("取消全部收藏"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = colors.brownDeep,
+                contentColor = colors.textStrong,
                 onClick = onRemoveAll,
             )
         },

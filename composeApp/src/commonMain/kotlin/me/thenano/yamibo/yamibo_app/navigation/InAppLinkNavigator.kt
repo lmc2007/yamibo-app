@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.navigation
+﻿package me.thenano.yamibo.yamibo_app.navigation
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -170,7 +170,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(i18n("正在定位連結"), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(i18n("正在定位連結"), color = colors.textStrong, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text(progressText, color = colors.brownPrimary, fontSize = 14.sp)
                             LinearProgressIndicator(
                                 modifier = Modifier.fillMaxWidth(),
@@ -197,7 +197,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             modifier = Modifier.padding(20.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Text(i18n("定位失敗"), color = colors.brownDeep, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(i18n("定位失敗"), color = colors.textStrong, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             Text((current.message).orEmpty(), color = colors.brownPrimary, fontSize = 14.sp)
                             Text(
                                 text = url,
@@ -222,7 +222,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                                 }
                                 OutlinedButton(
                                     onClick = { attempt++ },
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.brownDeep),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                                 ) {
                                     Text(i18n("重試"))
                                 }

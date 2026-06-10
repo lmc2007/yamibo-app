@@ -56,7 +56,7 @@ fun YamiboMainTabTopBar(
                 text = title,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = colors.brownDeep,
+                color = colors.textOnBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),

@@ -7,7 +7,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -52,7 +51,7 @@ fun YamiboPrimaryButton(
             text = if (busy) busyText else text,
             modifier = (if (fillContentWidth) Modifier.fillMaxWidth() else Modifier)
                 .padding(horizontal = 18.dp, vertical = 13.dp),
-            color = Color.White,
+            color = colors.textOnDeepHigh,
             fontWeight = FontWeight.Bold,
             fontSize = 15.sp,
             textAlign = TextAlign.Center,

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 
 import androidx.compose.foundation.background
@@ -598,12 +598,12 @@ fun FavoritePage() {
                 FavoriteDialogButton(
                     text = i18n("取消"),
                     background = colors.brownPrimary.copy(alpha = 0.1f),
-                    contentColor = colors.brownDeep,
+                    contentColor = colors.textStrong,
                     onClick = { showSyncConfirmDialog = false },
                 )
             },
             containerColor = colors.creamSurface,
-            titleContentColor = colors.brownDeep,
+            titleContentColor = colors.textStrong,
             textContentColor = colors.textDark,
         )
     }
@@ -792,7 +792,7 @@ fun FavoritePage() {
                 showDeleteScopeDialog = false
                 deleteRequest = null
             },
-            title = { Text(i18n("是否要刪除所有路徑下的收藏"), color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+            title = { Text(i18n("是否要刪除所有路徑下的收藏"), color = colors.textStrong, fontWeight = FontWeight.Bold) },
             text = { Text(i18n("目前選取的收藏中，至少有一項存在於多個收藏路徑。"), color = colors.textDark, fontSize = 14.sp) },
             dismissButton = {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

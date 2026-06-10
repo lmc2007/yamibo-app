@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -35,7 +35,7 @@ internal fun PrivateMessageCard(item: PrivateMessageItem, onUserClick: () -> Uni
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(item.title, color = colors.brownDeep, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(item.title, color = colors.textStrong, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 item.unreadCount?.let {
                     Spacer(Modifier.width(6.dp))
                     SmallBadge(it.toString())

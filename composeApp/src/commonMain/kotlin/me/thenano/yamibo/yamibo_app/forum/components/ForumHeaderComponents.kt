@@ -111,7 +111,7 @@ private fun ForumFilterChip(text: String, onClick: () -> Unit) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-            color = colors.brownDeep,
+            color = colors.textOnSurface,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
@@ -207,14 +207,14 @@ private fun AnnouncementRow(announcement: PinnedItem.Announcement, onClick: () -
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = colors.textOnAccent
             )
         }
         Spacer(Modifier.width(10.dp))
         Text(
             text = announcement.title,
             fontSize = 14.sp,
-            color = colors.brownDeep,
+            color = colors.textOnTint,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -253,14 +253,14 @@ private fun PinnedThreadRow(thread: PinnedItem.Thread, onClick: () -> Unit) {
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = colors.textOnPrimary
             )
         }
         Spacer(Modifier.width(10.dp))
         Text(
             text = thread.title,
             fontSize = 14.sp,
-            color = colors.brownDeep,
+            color = colors.textOnTint,
             fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

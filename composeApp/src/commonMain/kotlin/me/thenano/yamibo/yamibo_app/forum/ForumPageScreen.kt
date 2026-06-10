@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.forum
+﻿package me.thenano.yamibo.yamibo_app.forum
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -362,7 +362,7 @@ private fun ForumTopBar(
                     modifier = Modifier.background(colors.creamSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text(i18n("發表帖子"), color = colors.brownDeep) },
+                        text = { Text(i18n("發表帖子"), color = colors.textStrong) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.EditOrSign,
@@ -376,7 +376,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(i18n("收藏本版"), color = colors.brownDeep) },
+                        text = { Text(i18n("收藏本版"), color = colors.textStrong) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.StarOutline,
@@ -390,7 +390,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(i18n("跳轉到首頁"), color = colors.brownDeep) },
+                        text = { Text(i18n("跳轉到首頁"), color = colors.textStrong) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Home,
@@ -404,7 +404,7 @@ private fun ForumTopBar(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(i18n("跳轉到收藏"), color = colors.brownDeep) },
+                        text = { Text(i18n("跳轉到收藏"), color = colors.textStrong) },
                         leadingIcon = {
                             Icon(
                                 imageVector = YamiboIcons.Explore,
@@ -626,7 +626,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                     text = i18n("載入失敗"),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = colors.brownDeep
+                    color = colors.textOnSurface
                 )
                 Spacer(Modifier.height(12.dp))
                 Text(
@@ -640,7 +640,7 @@ private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
                     onClick = onRetry,
                     shape = RoundedCornerShape(50),
                     color = colors.brownDeep,
-                    contentColor = Color.White
+                    contentColor = colors.textOnDeepHigh
                 ) {
                     Text(
                         text = i18n("重試"),

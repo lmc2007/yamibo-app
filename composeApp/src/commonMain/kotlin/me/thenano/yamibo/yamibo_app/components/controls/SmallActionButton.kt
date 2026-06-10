@@ -6,7 +6,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -25,6 +24,6 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 fun YamiboSmallActionButton(text: String, onClick: () -> Unit) {
     val colors = YamiboTheme.colors
     Surface(onClick = onClick, shape = RoundedCornerShape(5.dp), color = colors.orangeAccent) {
-        Text(text, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp), color = Color.White, fontSize = 12.sp)
+        Text(text, modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp), color = colors.textOnAccent, fontSize = 12.sp)
     }
 }

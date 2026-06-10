@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.profile.settings.backup
+﻿package me.thenano.yamibo.yamibo_app.profile.settings.backup
 
 import YamiboIcons
 import androidx.compose.foundation.background
@@ -189,7 +189,7 @@ private fun BackupInfoCard(
 ) {
     val colors = YamiboTheme.colors
     BackupCard {
-        Text(i18n("備份資料夾"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.brownDeep)
+        Text(i18n("備份資料夾"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.textStrong)
         Spacer(Modifier.height(6.dp))
         Text(
             text = folderLabel ?: i18n("尚未選擇備份資料夾"),
@@ -286,7 +286,7 @@ private fun BackupActionCard(
 private fun BackupFileListCard(files: List<BackupRepository.BackupFileInfo>) {
     val colors = YamiboTheme.colors
     BackupCard {
-        Text(i18n("備份檔案"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.brownDeep)
+        Text(i18n("備份檔案"), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = colors.textStrong)
         Spacer(Modifier.height(8.dp))
         files.sortedByDescending { it.modifiedAt ?: 0L }.take(8).forEach { file ->
             Row(

@@ -212,7 +212,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
 
     val backupInterval by enumSetting(
         name = "backup_interval",
-        default = BackupInterval.NEVER,
+        default = BackupInterval.HOURS_12,
     )
 
     val backupMaxAutoFiles by intSetting(

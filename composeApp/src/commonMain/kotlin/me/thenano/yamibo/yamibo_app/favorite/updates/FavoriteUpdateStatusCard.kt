@@ -126,7 +126,7 @@ fun FavoriteUpdateStatusCard(
                         text = i18n("中斷"),
                         onClick = { onInterrupt(snapshot.runId) },
                         containerColor = colors.brownPrimary.copy(alpha = 0.18f),
-                        contentColor = colors.brownDeep,
+                        contentColor = colors.textStrong,
                     )
                 }
                 if (state is FavoriteUpdateRepository.RunState.Interrupted && onResume != null) {
@@ -142,7 +142,7 @@ fun FavoriteUpdateStatusCard(
                         text = i18n("隱藏"),
                         onClick = onHide,
                         containerColor = colors.brownPrimary.copy(alpha = 0.18f),
-                        contentColor = colors.brownDeep,
+                        contentColor = colors.textStrong,
                     )
                 }
             }

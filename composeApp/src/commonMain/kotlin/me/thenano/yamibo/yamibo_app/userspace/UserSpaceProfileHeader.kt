@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace
+﻿package me.thenano.yamibo.yamibo_app.userspace
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -188,7 +188,7 @@ private fun ProfileSignatureCard(signatureHtml: String?) {
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(Modifier.padding(16.dp)) {
-            Text(i18n("個人簽名"), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(i18n("個人簽名"), color = colors.textStrong, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(12.dp))
             HtmlRenderer(html = signatureHtml.orEmpty(), modifier = Modifier.fillMaxWidth())
         }
@@ -227,7 +227,7 @@ private fun ProfileInfoTable(profile: ProfilePage, onOpenHomepage: (String) -> U
         elevation = CardDefaults.cardElevation(0.dp),
     ) {
         Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-            Text(i18n("個人資料"), color = colors.brownDeep, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(i18n("個人資料"), color = colors.textStrong, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             Spacer(Modifier.height(8.dp))
             rows.forEach { row ->
                 val url = row.url

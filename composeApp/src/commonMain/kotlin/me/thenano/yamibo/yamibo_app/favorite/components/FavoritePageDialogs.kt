@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.components
+﻿package me.thenano.yamibo.yamibo_app.favorite.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -61,7 +61,7 @@ internal fun CollectionEditorDialog(draft: FavoriteCollectionDraft, onDismiss: (
     val palette = listOf("brown", "rose", "blue", "green", "gold")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(draft.title, color = colors.brownDeep, fontWeight = FontWeight.Bold) },
+        title = { Text(draft.title, color = colors.textStrong, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(i18n("名稱")) })

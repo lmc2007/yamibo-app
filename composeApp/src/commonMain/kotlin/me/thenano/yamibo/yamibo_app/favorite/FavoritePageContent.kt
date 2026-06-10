@@ -162,7 +162,7 @@ internal fun FavoritePageContent(
                             )
                         }
                     },
-                    selectedContentColor = colors.brownDeep,
+                    selectedContentColor = colors.textStrong,
                     unselectedContentColor = colors.textDark.copy(alpha = 0.66f),
                 )
             }
@@ -185,7 +185,7 @@ internal fun FavoritePageContent(
                 ActionChip(YamiboIcons.Back, onBackToTab)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(openedCollection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(openedCollection.collection.name, color = colors.textStrong, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Text(i18n("{} 項", openedCollection.items.size), color = colors.textDark.copy(alpha = 0.5f), fontSize = 12.sp)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

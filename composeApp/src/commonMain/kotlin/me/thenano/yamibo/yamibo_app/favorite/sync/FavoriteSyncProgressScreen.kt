@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite.sync
+﻿package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -304,7 +304,7 @@ fun FavoriteSyncStatusCard(
                         onClick = { coroutineScope.launch { onResume() } },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.brownPrimary.copy(alpha = 0.18f),
-                            contentColor = colors.brownDeep,
+                            contentColor = colors.textStrong,
                         ),
                     ) {
                         Text(if (state is FavoriteSyncState.Completed) i18n("重新同步") else i18n("繼續同步"))

@@ -10,7 +10,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,7 +48,7 @@ fun <T> SettingsChipRow(
             ) {
                 Text(
                     text = label,
-                    color = if (isSelected) Color.White else colors.textDark.copy(alpha = 0.8f),
+                    color = if (isSelected) colors.textOnPrimary else colors.textDark.copy(alpha = 0.8f),
                     fontSize = 13.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                 )

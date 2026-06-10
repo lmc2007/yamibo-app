@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.reader
+﻿package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -2187,7 +2187,7 @@ private fun CatalogBookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(i18n("閱讀標記"), color = colors.brownDeep) },
+        title = { Text(i18n("閱讀標記"), color = colors.textStrong) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 CatalogActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
@@ -2197,7 +2197,7 @@ private fun CatalogBookMarkActionDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.brownDeep) }
+            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.textStrong) }
         },
         containerColor = colors.creamSurface,
     )

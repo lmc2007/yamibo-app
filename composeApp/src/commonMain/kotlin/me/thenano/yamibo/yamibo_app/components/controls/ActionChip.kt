@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,7 +39,7 @@ fun YamiboActionChip(
     val shape = RoundedCornerShape(10.dp)
     Text(
         text,
-        color = if (selected) Color.White else colors.brownDeep,
+        color = if (selected) colors.textOnDeepHigh else colors.textOnTint,
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         modifier = Modifier

@@ -99,7 +99,7 @@ internal fun CollectionCardUi(collection: FavoriteCollectionWithItems, selected:
             PreviewGrid(collection.items, collection.collection.colorKey)
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(collection.collection.name, color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                Text(collection.collection.name, color = colors.textStrong, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 AnimatedVisibility(visible = selected, enter = fadeIn() + scaleIn(), exit = fadeOut() + scaleOut()) { SelectedDot() }
             }
             Spacer(Modifier.height(4.dp))
@@ -208,7 +208,7 @@ internal fun CollectionRowCardUi(collection: FavoriteCollectionWithItems, showPr
                 }
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(collection.collection.name, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(collection.collection.name, color = colors.textStrong, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(i18n("{} 項收藏", collection.items.size), color = colors.textDark.copy(alpha = 0.62f), fontSize = 13.sp)
                 collection.items.firstOrNull()?.forumName?.takeIf { it.isNotBlank() }?.let {
                     Text("#$it", color = colors.textDark.copy(alpha = 0.52f), fontSize = 12.sp)

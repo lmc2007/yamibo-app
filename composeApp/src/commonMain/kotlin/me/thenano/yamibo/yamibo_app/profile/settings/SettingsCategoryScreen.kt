@@ -192,6 +192,10 @@ private fun NovelReaderContent() {
     NovelSystemBarsBackgroundSetting()
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("簡繁轉換"))
+    NovelChineseConversionSetting()
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel(i18n("浮動跳轉按鈕"))
     NovelScrollButtonDisplayModeSetting()
     Spacer(Modifier.height(16.dp))
@@ -202,10 +206,6 @@ private fun NovelReaderContent() {
 
     SectionLabel(i18n("閱讀進度"))
     NovelPageProgressHintSetting()
-    Spacer(Modifier.height(24.dp))
-
-    SectionLabel(i18n("簡繁轉換"))
-    NovelChineseConversionSetting()
 }
 
 @Composable

@@ -10,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -53,7 +52,7 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
                 Text(
                     text = i18n("第{}頁", current),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    color = Color.White,
+                    color = colors.textOnDeepHigh,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp
                 )
@@ -99,7 +98,7 @@ private fun PageButton(text: String, enabled: Boolean, onClick: () -> Unit) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            color = if (enabled) colors.brownDeep else colors.brownLight,
+            color = if (enabled) colors.textOnSurface else colors.brownLight,
             fontWeight = FontWeight.Medium,
             fontSize = 14.sp
         )
@@ -224,7 +223,7 @@ private fun PagePickerDialog(
                         colors = ButtonDefaults.buttonColors(containerColor = colors.brownDeep),
                         shape = RoundedCornerShape(12.dp),
                     ) {
-                        Text(i18n("跳轉"), color = Color.White)
+                        Text(i18n("跳轉"), color = colors.textOnDeepHigh)
                     }
                 }
             }
@@ -250,7 +249,7 @@ private fun PageNumberButton(
             text = "$page",
             modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
             textAlign = TextAlign.Center,
-            color = if (active) Color.White else colors.textDark,
+            color = if (active) colors.textOnDeepHigh else colors.textDark,
             fontWeight = if (active) FontWeight.Bold else FontWeight.Medium,
             fontSize = 14.sp,
         )

@@ -281,7 +281,7 @@ private fun ChangelogDialog(onDismiss: () -> Unit) {
             ) {
                 Text(
                     text = i18n("更新日誌"),
-                    color = colors.brownDeep,
+                    color = colors.textOnSurface,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -316,7 +316,7 @@ private fun ChangelogDialog(onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.brownDeep,
-                        contentColor = colors.creamBackground,
+                        contentColor = colors.textOnDeep,
                     ),
                     shape = RoundedCornerShape(8.dp),
                 ) {
@@ -337,7 +337,7 @@ private fun ChangelogContent(text: String) {
             when {
                 line.startsWith("#") -> Text(
                     text = line.trimStart('#').trim(),
-                    color = colors.brownDeep,
+                    color = colors.textOnSurface,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                 )

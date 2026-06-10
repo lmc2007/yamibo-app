@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components.user
+﻿package me.thenano.yamibo.yamibo_app.components.user
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -44,7 +44,7 @@ fun UserIdentityRow(
         )
         Spacer(Modifier.width(8.dp))
         Column(Modifier.clickable { onUserClick(user) }) {
-            Text(user.name, color = colors.brownDeep, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(user.name, color = colors.textStrong, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             time?.let { Text(it, color = colors.brownLight, fontSize = 11.sp) }
         }
     }

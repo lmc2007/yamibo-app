@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.forum.search
+﻿package me.thenano.yamibo.yamibo_app.forum.search
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -331,9 +331,9 @@ private fun SearchErrorContent(message: String) {
                 modifier = Modifier.padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("!", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = colors.brownDeep.copy(alpha = 0.6f))
+                Text("!", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = colors.textStrong.copy(alpha = 0.6f))
                 Spacer(Modifier.size(8.dp))
-                Text(message, color = colors.brownDeep, fontSize = 14.sp, lineHeight = 20.sp)
+                Text(message, color = colors.textStrong, fontSize = 14.sp, lineHeight = 20.sp)
             }
         }
     }

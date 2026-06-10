@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.components
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -183,7 +183,7 @@ internal fun DetailNoteEditorDialog(
                         shape = RoundedCornerShape(12.dp),
                     ) {
                         Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                            Text(i18n("刪除"), color = colors.brownDeep, fontSize = 13.sp)
+                            Text(i18n("刪除"), color = colors.textStrong, fontSize = 13.sp)
                         }
                     }
                 }
@@ -193,7 +193,7 @@ internal fun DetailNoteEditorDialog(
                     shape = RoundedCornerShape(12.dp),
                 ) {
                     Box(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                        Text(i18n("取消"), color = colors.brownDeep, fontSize = 13.sp)
+                        Text(i18n("取消"), color = colors.textStrong, fontSize = 13.sp)
                     }
                 }
             }

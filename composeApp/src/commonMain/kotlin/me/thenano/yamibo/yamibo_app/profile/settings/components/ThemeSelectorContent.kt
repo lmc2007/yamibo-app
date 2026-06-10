@@ -71,7 +71,7 @@ fun ThemeSelectorContent(
                 ) {
                     Text(
                         text = mode.localizedLabel(),
-                        color = if (isSelected) Color.White else colors.textDark.copy(alpha = 0.7f),
+                        color = if (isSelected) colors.textOnPrimary else colors.textDark.copy(alpha = 0.7f),
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                     )

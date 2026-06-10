@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.favorite
+﻿package me.thenano.yamibo.yamibo_app.favorite
 
 
 import YamiboIcons
@@ -287,7 +287,7 @@ internal fun FavoriteCategoryManageScreen() {
                 }
             },
             title = {
-                Text(i18n("刪除類別"), color = colors.brownDeep, fontWeight = FontWeight.Bold)
+                Text(i18n("刪除類別"), color = colors.textStrong, fontWeight = FontWeight.Bold)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -366,7 +366,7 @@ private fun FavoriteCategoryCard(
                 .padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("⋮⋮", color = colors.brownDeep.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text("⋮⋮", color = colors.textStrong.copy(alpha = 0.8f), fontSize = 20.sp, fontWeight = FontWeight.Bold)
             Box(modifier = Modifier.size(10.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(category.name, color = colors.textDark, fontWeight = FontWeight.Bold, fontSize = 18.sp)

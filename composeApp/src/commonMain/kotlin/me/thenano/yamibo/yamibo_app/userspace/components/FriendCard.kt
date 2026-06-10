@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace.components
+﻿package me.thenano.yamibo.yamibo_app.userspace.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -36,7 +36,7 @@ internal fun FriendCard(
         UserAvatar(item.user.avatarUrl, size = 42)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(item.user.name, color = colors.brownDeep, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(item.user.name, color = colors.textStrong, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             item.description?.let {
                 Text(it, color = colors.brownPrimary.copy(alpha = 0.65f), fontSize = 12.sp)
             }

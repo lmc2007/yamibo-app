@@ -36,7 +36,7 @@ fun HeaderRow(title: String, actions: List<Pair<String, () -> Unit>>) {
         Modifier.fillMaxWidth().statusBarsPadding().padding(start = 12.dp, end = 12.dp, top = 12.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.brownDeep, modifier = Modifier.weight(1f))
+        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = colors.textStrong, modifier = Modifier.weight(1f))
         actions.forEachIndexed { index, action ->
             ActionChip(action.first, action.second)
             if (index != actions.lastIndex) Spacer(Modifier.width(6.dp))
@@ -87,7 +87,7 @@ private fun RowScopeMenuBox(
             modifier = Modifier.background(colors.creamSurface),
         ) {
             DropdownMenuItem(
-                text = { Text(i18n("建新類別"), color = colors.brownDeep) },
+                text = { Text(i18n("建新類別"), color = colors.textStrong) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Plus,
@@ -101,7 +101,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(i18n("管理類別"), color = colors.brownDeep) },
+                text = { Text(i18n("管理類別"), color = colors.textStrong) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Setting,
@@ -115,7 +115,7 @@ private fun RowScopeMenuBox(
                 },
             )
             DropdownMenuItem(
-                text = { Text(i18n("同步百合會收藏"), color = colors.brownDeep) },
+                text = { Text(i18n("同步百合會收藏"), color = colors.textStrong) },
                 leadingIcon = {
                     Icon(
                         imageVector = YamiboIcons.Sync,
@@ -148,7 +148,7 @@ fun FavoriteSearchTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Text(YamiboIcons.Back, color = colors.brownDeep, fontSize = 18.sp)
+            Text(YamiboIcons.Back, color = colors.textStrong, fontSize = 18.sp)
         }
         OutlinedTextField(
             value = query,
@@ -258,12 +258,12 @@ fun FavoriteSyncCategoryDialog(
             FavoriteDialogButton(
                 text = i18n("取消"),
                 background = colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = colors.brownDeep,
+                contentColor = colors.textStrong,
                 onClick = onDismiss,
             )
         },
         containerColor = colors.creamSurface,
-        titleContentColor = colors.brownDeep,
+        titleContentColor = colors.textStrong,
         textContentColor = colors.textDark,
     )
 }

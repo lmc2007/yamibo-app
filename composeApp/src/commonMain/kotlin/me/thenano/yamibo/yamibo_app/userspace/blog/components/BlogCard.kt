@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace.blog.components
+﻿package me.thenano.yamibo.yamibo_app.userspace.blog.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
@@ -31,7 +31,7 @@ internal fun BlogCard(blog: BlogSummary, onClick: () -> Unit, onUserClick: (User
         Column(Modifier.padding(14.dp)) {
             UserLine(blog.author, blog.timeInfo.text, onUserClick)
             Spacer(Modifier.height(10.dp))
-            Text(blog.title, color = colors.brownDeep, fontSize = 18.sp)
+            Text(blog.title, color = colors.textStrong, fontSize = 18.sp)
             Spacer(Modifier.height(6.dp))
             Text(
                 blog.description,

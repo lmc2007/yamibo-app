@@ -291,7 +291,7 @@ private fun LaunchUpdateAvailableContent(
         ) {
             Text(
                 text = i18n("發現新版本"),
-                color = colors.brownDeep,
+                color = colors.textStrong,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -336,7 +336,7 @@ private fun LaunchUpdateAvailableContent(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.brownDeep,
-                    contentColor = colors.creamBackground,
+                    contentColor = colors.textOnDeep,
                 ),
                 shape = RoundedCornerShape(8.dp),
             ) {
@@ -355,7 +355,7 @@ private fun LaunchUpdateAvailableContent(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(
                         containerColor = colors.creamBackground,
-                        contentColor = colors.brownDeep,
+                        contentColor = colors.textStrong,
                     ),
                     border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.6f)),
                     shape = RoundedCornerShape(8.dp),
@@ -410,7 +410,7 @@ private fun LaunchSignReminderDialog(
             ) {
                 Text(
                     text = i18n("你今天還沒簽到"),
-                    color = colors.brownDeep,
+                    color = colors.textStrong,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
@@ -428,7 +428,7 @@ private fun LaunchSignReminderDialog(
                     OutlinedButton(
                         onClick = onDismiss,
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = colors.brownDeep,
+                            contentColor = colors.textStrong,
                         ),
                     ) {
                         Text(i18n("取消"))
@@ -437,7 +437,7 @@ private fun LaunchSignReminderDialog(
                         onClick = onGoSign,
                         colors = ButtonDefaults.buttonColors(
                             containerColor = colors.brownDeep,
-                            contentColor = colors.creamBackground,
+                            contentColor = colors.textOnDeep,
                         ),
                     ) {
                         Text(i18n("前往簽到"))

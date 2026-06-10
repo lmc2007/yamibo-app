@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components.controls
+﻿package me.thenano.yamibo.yamibo_app.components.controls
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -52,7 +52,7 @@ fun YamiboSingleSelectRow(
                 modifier = Modifier.weight(1f),
             )
             if (selected) {
-                Text(selectedText, color = colors.brownDeep, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(selectedText, color = colors.textStrong, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

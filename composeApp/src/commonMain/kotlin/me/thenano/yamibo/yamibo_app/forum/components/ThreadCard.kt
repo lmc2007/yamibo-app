@@ -151,7 +151,7 @@ fun ThreadCard(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = colors.brownDeep
+                            color = colors.textOnTint
                         )
                     }
                 }

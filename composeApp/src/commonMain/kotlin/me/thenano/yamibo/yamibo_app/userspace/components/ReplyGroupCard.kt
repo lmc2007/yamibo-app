@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.userspace.components
+﻿package me.thenano.yamibo.yamibo_app.userspace.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
@@ -43,7 +43,7 @@ internal fun ReplyGroupCard(
         },
     ) {
         Column(Modifier.padding(12.dp)) {
-            Text(item.title, color = colors.brownDeep, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(item.title, color = colors.textStrong, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
             item.posts.forEach { post ->
                 Surface(

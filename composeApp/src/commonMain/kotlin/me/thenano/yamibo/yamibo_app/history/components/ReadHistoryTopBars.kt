@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.history.components
+﻿package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.foundation.layout.*
@@ -50,7 +50,7 @@ internal fun SearchTopBar(
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = colors.brownDeep, fontSize = 18.sp) }
+        IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = colors.textStrong, fontSize = 18.sp) }
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
@@ -110,7 +110,7 @@ internal fun SelectTopBar(
             modifier = Modifier.weight(1f),
         )
         Surface(onClick = onSelectAll, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
-            Text(i18n("全選"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
+            Text(i18n("全選"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.textStrong)
         }
         if (selectedCount > 0) {
             Surface(onClick = onDeleteSelected, shape = RoundedCornerShape(10.dp), color = Color(0xFFE53935).copy(alpha = 0.15f)) {
@@ -121,7 +121,7 @@ internal fun SelectTopBar(
             Text(i18n("清空全選"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFFE53935))
         }
         Surface(onClick = onCancel, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {
-            Text(i18n("取消"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.brownDeep)
+            Text(i18n("取消"), modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.textStrong)
         }
     }
 }

@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.thread.detail.tag
+﻿package me.thenano.yamibo.yamibo_app.thread.detail.tag
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -628,7 +628,7 @@ private fun BookMarkActionDialog(
     val colors = YamiboTheme.colors
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(i18n("閱讀標記"), color = colors.brownDeep) },
+        title = { Text(i18n("閱讀標記"), color = colors.textStrong) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 YamiboActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
@@ -638,7 +638,7 @@ private fun BookMarkActionDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.brownDeep) }
+            TextButton(onClick = onDismiss) { Text(i18n("取消"), color = colors.textStrong) }
         },
         containerColor = colors.creamSurface,
     )

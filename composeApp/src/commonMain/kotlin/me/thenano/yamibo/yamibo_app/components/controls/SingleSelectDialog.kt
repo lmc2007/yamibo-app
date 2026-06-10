@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.components.controls
+﻿package me.thenano.yamibo.yamibo_app.components.controls
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -58,7 +58,7 @@ fun <T> YamiboSingleSelectDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Text(title, color = colors.brownDeep, fontWeight = FontWeight.Bold)
+            Text(title, color = colors.textStrong, fontWeight = FontWeight.Bold)
         },
         text = {
             LazyColumn(
@@ -85,7 +85,7 @@ fun <T> YamiboSingleSelectDialog(
         },
         dismissButton = {},
         containerColor = colors.creamSurface,
-        titleContentColor = colors.brownDeep,
+        titleContentColor = colors.textStrong,
         textContentColor = colors.textDark,
     )
 }

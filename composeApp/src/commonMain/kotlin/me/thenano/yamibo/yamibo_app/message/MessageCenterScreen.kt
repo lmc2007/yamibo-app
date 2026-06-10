@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.message
+﻿package me.thenano.yamibo.yamibo_app.message
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -398,7 +398,7 @@ private fun ScrollableYamiboTabRow(
     ScrollableTabRow(
         selectedTabIndex = selectedIndex,
         containerColor = colors.creamSurface,
-        contentColor = colors.brownDeep,
+        contentColor = colors.textStrong,
         edgePadding = 0.dp,
         indicator = { tabPositions ->
             if (selectedIndex < tabPositions.size) {
