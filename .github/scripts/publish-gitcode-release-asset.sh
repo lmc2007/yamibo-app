@@ -17,6 +17,7 @@ fi
 
 body="$(cat "$CHANGELOG")"
 encoded_apk_name="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$APK_NAME")"
+encoded_token="$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$GITCODE_TOKEN")"
 api="https://gitcode.com/api/v5/repos/${MIRROR_OWNER}/${MIRROR_REPO}"
 release_url="https://gitcode.com/${MIRROR_OWNER}/${MIRROR_REPO}/releases/tag/${TAG}"
 fallback_asset_url="https://api.gitcode.com/api/v5/repos/${MIRROR_OWNER}/${MIRROR_REPO}/releases/${TAG}/attach_files/${encoded_apk_name}/download"
@@ -82,6 +83,14 @@ if [ -z "$upload_url" ]; then
   echo "Failed to get GitCode release upload URL: $upload_json" >&2
   exit 1
 fi
+upload_url_origin="$(python3 -c 'import sys, urllib.parse; u=urllib.parse.urlsplit(sys.argv[1]); print(urllib.parse.urlunsplit((u.scheme, u.netloc, u.path, "", "")))' "$upload_url")"
+echo "GitCode release upload URL origin: ${upload_url_origin}" >&2
+upload_url_with_token="${upload_url}"
+if [[ "$upload_url_with_token" == *\?* ]]; then
+  upload_url_with_token="${upload_url_with_token}&access_token=${encoded_token}"
+else
+  upload_url_with_token="${upload_url_with_token}?access_token=${encoded_token}"
+fi
 
 attempt_upload() {
   local name="$1"
@@ -100,8 +109,12 @@ attempt_upload() {
 
 if ! attempt_upload "post-multipart-anonymous" -X POST -F "file=@${APK}" "$upload_url" && \
    ! attempt_upload "post-multipart-token" -X POST -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" -F "file=@${APK}" "$upload_url" && \
+   ! attempt_upload "post-multipart-bearer" -X POST -H "Authorization: Bearer ${GITCODE_TOKEN}" -F "file=@${APK}" "$upload_url" && \
+   ! attempt_upload "post-multipart-access-token" -X POST -F "file=@${APK}" "$upload_url_with_token" && \
    ! attempt_upload "put-raw-anonymous" -X PUT --upload-file "$APK" "$upload_url" && \
-   ! attempt_upload "put-raw-token" -X PUT -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url"; then
+   ! attempt_upload "put-raw-token" -X PUT -H "PRIVATE-TOKEN: ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url" && \
+   ! attempt_upload "put-raw-bearer" -X PUT -H "Authorization: Bearer ${GITCODE_TOKEN}" --upload-file "$APK" "$upload_url" && \
+   ! attempt_upload "put-raw-access-token" -X PUT --upload-file "$APK" "$upload_url_with_token"; then
   echo "Failed to upload GitCode release asset." >&2
   exit 1
 fi
