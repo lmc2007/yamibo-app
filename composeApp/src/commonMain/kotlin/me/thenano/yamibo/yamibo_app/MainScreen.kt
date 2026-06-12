@@ -16,6 +16,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -82,6 +83,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     var currentTab by rememberSaveable { mutableStateOf(initialTab) }
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
     var hasNewMessage by rememberSaveable { mutableStateOf(false) }
+    val tabStateHolder = rememberSaveableStateHolder()
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -132,21 +134,9 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            MainTab.entries.forEach { tab ->
-                val selected = tab == currentTab
-                val alpha by animateFloatAsState(
-                    targetValue = if (selected) 1f else 0f,
-                    animationSpec = tween(durationMillis = 220),
-                    label = "MainScreenTabAlpha_${tab.name}",
-                )
-                Box(
-                    modifier = (if (selected) Modifier.fillMaxSize() else Modifier.size(0.dp))
-                        .zIndex(if (selected) 1f else 0f)
-                        .graphicsLayer {
-                            this.alpha = alpha
-                        }
-                ) {
-                    when (tab) {
+            tabStateHolder.SaveableStateProvider(currentTab.name) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when (currentTab) {
                         MainTab.Home -> HomeScreenContent(
                             onNewMessageStatusChange = { hasNewMessage = it },
                         )

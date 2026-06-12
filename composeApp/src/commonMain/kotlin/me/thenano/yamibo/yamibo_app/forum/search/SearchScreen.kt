@@ -48,7 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -105,6 +107,7 @@ fun SearchScreen(fid: ForumId?) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
+    var searchFieldPlaced by remember { mutableStateOf(false) }
 
     var query by remember { mutableStateOf("") }
     var state by remember { mutableStateOf<SearchState>(SearchState.Idle) }
@@ -226,7 +229,11 @@ fun SearchScreen(fid: ForumId?) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.weight(1f).focusRequester(focusRequester),
+                    modifier = Modifier
+                        .weight(1f)
+                        .onPlaced { searchFieldPlaced = true }
+                        .focusProperties { canFocus = searchFieldPlaced }
+                        .focusRequester(focusRequester),
                     placeholder = {
                         Text(
                             text = i18n("搜尋標題或連結..."),

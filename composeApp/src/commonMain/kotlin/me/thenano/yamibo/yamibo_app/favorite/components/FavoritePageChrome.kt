@@ -15,8 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -140,6 +142,7 @@ fun FavoriteSearchTopBar(
     onBack: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
+    var textFieldPlaced by remember { mutableStateOf(false) }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -153,7 +156,10 @@ fun FavoriteSearchTopBar(
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .onPlaced { textFieldPlaced = true }
+                .focusProperties { canFocus = textFieldPlaced },
             placeholder = {
                 Text(i18n("搜尋收藏標題..."), color = colors.textDark.copy(alpha = 0.4f), fontSize = 15.sp)
             },

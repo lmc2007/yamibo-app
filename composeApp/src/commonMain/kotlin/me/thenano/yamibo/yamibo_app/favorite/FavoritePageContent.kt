@@ -43,6 +43,7 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 internal fun FavoritePageContent(
     ready: FavoritePageState.Ready,
     mode: FavoritePageMode,
+    searchActive: Boolean,
     searchQuery: String,
     searchCategoryMatchCounts: Map<Long, Int>,
     sortMode: FavoriteSortMode,
@@ -88,46 +89,37 @@ internal fun FavoritePageContent(
     val colors = YamiboTheme.colors
     val selectedCount = selectedItemIds.size + selectedCollectionIds.size
     Column(Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = mode,
-            transitionSpec = {
-                (fadeIn(animationSpec = spring(stiffness = 500f)) + slideInVertically { -it / 4 }) togetherWith
-                    (fadeOut(animationSpec = spring(stiffness = 700f)) + slideOutVertically { -it / 4 })
-            },
-            label = "favorite_header_mode",
-        ) { currentMode ->
-            when (currentMode) {
-                FavoritePageMode.Normal -> {
-                    FavoriteHeaderMenuRow(
-                        title = i18n("我的收藏"),
-                        onSearch = onEnterSearch,
-                        onCreateCategory = onCreateCategory,
-                        onManageCategory = onManageCategory,
-                        onSyncFavorites = onSyncFavorites,
-                    )
-                }
-                FavoritePageMode.Search -> {
-                    FavoriteSearchTopBar(
-                        query = searchQuery,
-                        onQueryChange = onSearchQueryChange,
-                        onSearch = onSearchSubmit,
-                        onBack = onExitSearch,
-                    )
-                }
-                FavoritePageMode.Select -> {
-                    HeaderRow(i18n("已選 {} 項", selectedCount), buildList {
-                        add(i18n("全選") to onSelectAll)
-                        if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
-                            add(i18n("移動") to onOpenMoveDialog)
-                            add(i18n("合成集合") to onOpenMergeDialog)
-                            add(i18n("刪除") to onDeleteSelectedItems)
-                        }
-                        if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(i18n("編輯") to onEditSelectedCollection)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(i18n("解散") to onDissolveSelectedCollections)
-                        if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(i18n("清空") to onClearSelection)
-                        add(i18n("返回") to onCancelSelection)
-                    })
-                }
+        when (mode) {
+            FavoritePageMode.Normal -> {
+                FavoriteHeaderMenuRow(
+                    title = i18n("我的收藏"),
+                    onSearch = onEnterSearch,
+                    onCreateCategory = onCreateCategory,
+                    onManageCategory = onManageCategory,
+                    onSyncFavorites = onSyncFavorites,
+                )
+            }
+            FavoritePageMode.Search -> {
+                FavoriteSearchTopBar(
+                    query = searchQuery,
+                    onQueryChange = onSearchQueryChange,
+                    onSearch = onSearchSubmit,
+                    onBack = onExitSearch,
+                )
+            }
+            FavoritePageMode.Select -> {
+                HeaderRow(i18n("已選 {} 項", selectedCount), buildList {
+                    add(i18n("全選") to onSelectAll)
+                    if (selectedItemIds.isNotEmpty() && selectedCollectionIds.isEmpty()) {
+                        add(i18n("移動") to onOpenMoveDialog)
+                        add(i18n("合成集合") to onOpenMergeDialog)
+                        add(i18n("刪除") to onDeleteSelectedItems)
+                    }
+                    if (selectedCollectionIds.size == 1 && selectedItemIds.isEmpty()) add(i18n("編輯") to onEditSelectedCollection)
+                    if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty() && openedCollection == null) add(i18n("解散") to onDissolveSelectedCollections)
+                    if (selectedCollectionIds.isNotEmpty() && selectedItemIds.isEmpty()) add(i18n("清空") to onClearSelection)
+                    add(i18n("返回") to onCancelSelection)
+                })
             }
         }
 
@@ -146,7 +138,7 @@ internal fun FavoritePageContent(
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(category.name, fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
-                            if (mode == FavoritePageMode.Search && searchQuery.isNotBlank()) {
+                            if (searchActive && searchQuery.isNotBlank()) {
                                 Text(
                                     text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
                                     fontSize = 11.sp,
@@ -254,7 +246,7 @@ internal fun FavoritePageContent(
                 Box(Modifier.fillMaxSize()) {
                     if (gridEntries.isEmpty()) {
                         val selectedCategory = ready.categories.firstOrNull { it.id == ready.selectedCategoryId }
-                        val showDefaultSyncHint = mode != FavoritePageMode.Search &&
+                        val showDefaultSyncHint = !searchActive &&
                             selectedCategory?.name == LocalFavoriteRepository.DEFAULT_CATEGORY_NAME
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {

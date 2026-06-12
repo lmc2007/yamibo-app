@@ -130,7 +130,7 @@ fun FavoritePage() {
     val hiddenFavoritePageRuns by favoriteSyncRunner.hiddenFavoritePageRuns.collectAsState()
 
     var state by remember { mutableStateOf<FavoritePageState>(FavoritePageState.Loading) }
-    var mode by rememberSaveable { mutableStateOf(FavoritePageMode.Normal) }
+    var searchActive by remember { mutableStateOf(false) }
     var selectedItemIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
     var selectedCollectionIds by rememberSaveable { mutableStateOf(setOf<Long>()) }
     var openedCollectionId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -242,22 +242,24 @@ fun FavoritePage() {
         }
     }
 
-    DisposableEffect(mode, openedCollectionId, navigator) {
-        if (mode == FavoritePageMode.Normal && openedCollectionId == null) {
+    DisposableEffect(searchActive, selectedItemIds, selectedCollectionIds, openedCollectionId, navigator) {
+        val selecting = selectedItemIds.isNotEmpty() || selectedCollectionIds.isNotEmpty()
+        if (!searchActive && !selecting && openedCollectionId == null) {
             onDispose { }
         } else {
             val handler = {
                 when {
-                    mode == FavoritePageMode.Search -> {
-                        searchQuery = ""
-                        searchCategoryMatchCounts = emptyMap()
-                        mode = FavoritePageMode.Normal
-                        true
-                    }
-                    mode == FavoritePageMode.Select -> {
+                    selecting -> {
                         selectedItemIds = emptySet()
                         selectedCollectionIds = emptySet()
-                        mode = FavoritePageMode.Normal
+                        true
+                    }
+                    searchActive -> {
+                        searchQuery = ""
+                        searchCategoryMatchCounts = emptyMap()
+                        selectedItemIds = emptySet()
+                        selectedCollectionIds = emptySet()
+                        searchActive = false
                         true
                     }
                     openedCollectionId != null -> {
@@ -279,7 +281,6 @@ fun FavoritePage() {
         if (deleteResult.deletedCount > 0) {
             selectedItemIds = emptySet()
             selectedCollectionIds = emptySet()
-            mode = FavoritePageMode.Normal
             reload(request.categoryId)
         }
         showSnackbarMessage(
@@ -335,7 +336,6 @@ fun FavoritePage() {
         }
         selectedItemIds = emptySet()
         selectedCollectionIds = emptySet()
-        mode = FavoritePageMode.Normal
         reload(request.categoryId)
         showSnackbarMessage(i18n("已移除當下目錄收藏"))
         deleteRequest = null
@@ -348,7 +348,13 @@ fun FavoritePage() {
     val openedCollection = ready?.content?.collections?.firstOrNull { it.collection.id == openedCollectionId }
     val visibleItems = openedCollection?.items ?: ready?.content?.directItems.orEmpty()
     val trimmedSearchQuery = searchQuery.trim()
-    val searchEnabled = mode == FavoritePageMode.Search && trimmedSearchQuery.isNotBlank()
+    val selecting = selectedItemIds.isNotEmpty() || selectedCollectionIds.isNotEmpty()
+    val headerMode = when {
+        selecting -> FavoritePageMode.Select
+        searchActive -> FavoritePageMode.Search
+        else -> FavoritePageMode.Normal
+    }
+    val searchEnabled = searchActive && trimmedSearchQuery.isNotBlank()
     val resolvedLastReadMap = ready?.lastReadMap.orEmpty()
     val resolvedRemoteFavoriteOrderMap = ready?.remoteFavoriteOrderMap.orEmpty()
     val collections = sortCollections(
@@ -382,7 +388,8 @@ fun FavoritePage() {
         } else {
             FavoritePageContent(
                 ready = ready,
-                mode = mode,
+                mode = headerMode,
+                searchActive = searchActive,
                 searchQuery = searchQuery,
                 searchCategoryMatchCounts = searchCategoryMatchCounts,
                 sortMode = sortMode,
@@ -397,13 +404,15 @@ fun FavoritePage() {
                 hiddenFavoritePageRuns = hiddenFavoritePageRuns,
                 onCreateCategory = { navigator.navigate(IFavoriteCategoryEditorScreen()) },
                 onManageCategory = { navigator.navigate(IFavoriteCategoryManageScreen()) },
-                onEnterSearch = { mode = FavoritePageMode.Search },
+                onEnterSearch = { searchActive = true },
                 onSearchQueryChange = { searchQuery = it },
                 onSearchSubmit = { },
                 onExitSearch = {
                     searchQuery = ""
                     searchCategoryMatchCounts = emptyMap()
-                    mode = FavoritePageMode.Normal
+                    selectedItemIds = emptySet()
+                    selectedCollectionIds = emptySet()
+                    searchActive = false
                 },
                 onSyncFavorites = {
                     val runId = currentSyncRunId(syncState)
@@ -447,7 +456,6 @@ fun FavoritePage() {
                     openedCollectionId = null
                     selectedItemIds = emptySet()
                     selectedCollectionIds = emptySet()
-                    mode = FavoritePageMode.Normal
                     scope.launch { reload(categoryId) }
                 },
                 onShowGridMode = { showGridModeDialog = true },
@@ -464,7 +472,6 @@ fun FavoritePage() {
                 onCancelSelection = {
                     selectedItemIds = emptySet()
                     selectedCollectionIds = emptySet()
-                    mode = FavoritePageMode.Normal
                 },
                 onOpenMoveDialog = {
                     scope.launch {
@@ -507,7 +514,6 @@ fun FavoritePage() {
                             favoriteRepository.deleteCollection(collection.collection.id)
                         }
                         selectedCollectionIds = emptySet()
-                        mode = FavoritePageMode.Normal
                         reload(ready.selectedCategoryId)
                         showSnackbarMessage(i18n("已解散集合"))
                     }
@@ -518,8 +524,8 @@ fun FavoritePage() {
                 onOpenCollection = { openedCollectionId = it },
                 onToggleItem = { id -> selectedItemIds = selectedItemIds.toggle(id) },
                 onToggleCollection = { id -> selectedCollectionIds = selectedCollectionIds.toggle(id) },
-                onEnterSelectItem = { id -> mode = FavoritePageMode.Select; selectedItemIds = selectedItemIds + id },
-                onEnterSelectCollection = { id -> mode = FavoritePageMode.Select; selectedCollectionIds = selectedCollectionIds + id },
+                onEnterSelectItem = { id -> selectedItemIds = selectedItemIds + id },
+                onEnterSelectCollection = { id -> selectedCollectionIds = selectedCollectionIds + id },
                 onOpenItem = { openFavoriteItem(navigator, it) },
             )
         }
@@ -566,7 +572,6 @@ fun FavoritePage() {
                     pickerReturnState = null
                     selectedItemIds = emptySet()
                     selectedCollectionIds = emptySet()
-                    mode = FavoritePageMode.Normal
                     reload(current.selectedCategoryId)
                     showSnackbarMessage(i18n("已更新收藏位置"))
                 }
@@ -662,7 +667,6 @@ fun FavoritePage() {
                             }
                             collectionDraft = null
                             selectedCollectionIds = emptySet()
-                            mode = FavoritePageMode.Normal
                             reload(current.selectedCategoryId)
                             showSnackbarMessage(i18n("已更新集合"))
                         } else if (draft.parentCategoryId != null) {
@@ -690,7 +694,6 @@ fun FavoritePage() {
                                 collectionDraft = null
                                 selectedItemIds = emptySet()
                                 selectedCollectionIds = emptySet()
-                                mode = FavoritePageMode.Normal
                                 reload(current.selectedCategoryId)
                                 showSnackbarMessage(i18n("已建立集合"))
                             } else {
