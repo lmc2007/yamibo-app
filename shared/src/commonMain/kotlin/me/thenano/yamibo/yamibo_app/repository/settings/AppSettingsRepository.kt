@@ -105,116 +105,139 @@ enum class AppLanguage(val label: String, val languageTag: String) {
 
 class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "appsettings") {
 
+    /** 顏色主題 */
     val themeMode by enumSetting(
         name = "theme_mode",
         default = AppThemeMode.SYSTEM,
     )
 
+    /** 顏色主題 */
     val themeScheme by enumSetting(
         name = "theme_scheme",
         default = AppThemeScheme.DEFAULT,
     )
 
+    /** 語言 */
     val language by enumSetting(
         name = "language",
         default = AppLanguage.TRADITIONAL_CHINESE,
     )
 
+    /** 漫畫模式 */
     val isMangaMode by boolSetting(
         name = "manga_mode",
         default = false,
     )
 
+    /** App 啟動時清除緩存 */
     val clearCacheOnAppLaunch by boolSetting(
         name = "clear_cache_on_app_launch",
         default = false,
     )
 
+    /** 顯示首頁輪播圖 */
     val showHomeSwiperImages by boolSetting(
         name = "show_home_swiper_images",
         default = true,
     )
 
+    /** 略過刪除確認 */
     val skipFavoriteRemovalConfirm by boolSetting(
         name = "skip_favorite_removal_confirm",
         default = false,
     )
 
+    /** 新增收藏時詢問同步 */
     val favoriteAddSyncPromptEnabled by boolSetting(
         name = "favorite_add_sync_prompt_enabled",
         default = true,
     )
 
+    /** 新增收藏預設動作 */
     val favoriteAddSyncDefault by boolSetting(
         name = "favorite_add_sync_default",
         default = true,
     )
 
+    /** 完全移除收藏時詢問同步刪除 */
     val favoriteRemoveSyncPromptEnabled by boolSetting(
         name = "favorite_remove_sync_prompt_enabled",
         default = true,
     )
 
+    /** 完全移除收藏預設動作 */
     val favoriteRemoveSyncDefault by boolSetting(
         name = "favorite_remove_sync_default",
         default = false,
     )
 
+    /** 排列方式 */
     val favoriteGridMode by enumSetting(
         name = "favorite_grid_mode",
         default = FavoriteGridMode.FIXED_GRID,
     )
 
+    /** 排序方式 */
     val favoriteSortMode by enumSetting(
         name = "favorite_sort_mode",
         default = FavoriteSortMode.DEFAULT,
     )
 
+    /** 排序方式 */
     val favoriteSortDescending by boolSetting(
         name = "favorite_sort_descending",
         default = true,
     )
 
+    /** 收藏分類 */
     val favoriteLastCategoryId by intSetting(
         name = "favorite_last_category_id",
         default = 0,
     )
 
+    /** 收藏更新檢查週期 */
     val favoriteUpdateInterval by enumSetting(
         name = "favorite_update_interval",
         default = FavoriteUpdateInterval.MANUAL,
     )
 
+    /** 收藏更新檢查週期 */
     val favoriteUpdateHiddenRunId by stringSetting(
         name = "favorite_update_hidden_run_id",
         default = "",
     )
 
+    /** 啟動檢查更新間隔 */
     val appUpdateLastCheckAt by stringSetting(
         name = "app_update_last_check_at",
         default = "",
     )
 
+    /** 忽略此版本 */
     val appUpdateIgnoredVersionCode by intSetting(
         name = "app_update_ignored_version_code",
         default = 0,
     )
 
+    /** App 更新 */
     val appUpdatePreferredSourceIndex by intSetting(
         name = "app_update_preferred_source_index",
         default = 0,
     )
 
+    /** 啟動檢查更新間隔 */
     val appUpdateLaunchCheckThreshold by enumSetting(
         name = "app_update_launch_check_threshold",
         default = AppUpdateLaunchCheckThreshold.HOURS_6,
     )
 
+    /** 定期自動備份 */
     val backupInterval by enumSetting(
         name = "backup_interval",
         default = BackupInterval.HOURS_12,
     )
 
+    /** 最多自動備份檔案數量 */
     val backupMaxAutoFiles by intSetting(
         name = "backup_max_auto_files",
         default = 3,
@@ -222,41 +245,49 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         max = 10,
     )
 
+    /** 備份資料夾 */
     val backupFolderUri by stringSetting(
         name = "backup_folder_uri",
         default = "",
     )
 
+    /** 定期自動備份 */
     val backupLastAutoBackupAt by stringSetting(
         name = "backup_last_auto_backup_at",
         default = "",
     )
 
+    /** 簽到行為 */
     val signInMode by enumSetting(
         name = "sign_in_mode",
         default = SignInMode.SEMI_AUTOMATIC,
     )
 
+    /** 啟動時簽到提醒 */
     val signInLaunchReminderEnabled by boolSetting(
         name = "sign_in_launch_reminder_enabled",
         default = true,
     )
 
+    /** 啟動時簽到提醒 */
     val signInLaunchReminderDismissedDate by stringSetting(
         name = "sign_in_launch_reminder_dismissed_date",
         default = "",
     )
 
+    /** 自動進行補簽 */
     val signInAllowRepair by boolSetting(
         name = "sign_in_allow_repair",
         default = false,
     )
 
+    /** 簽到 */
     val signPageHtmlCache by stringSetting(
         name = "sign_page_html_cache",
         default = "",
     )
 
+    /** 簽到 */
     val signPageHtmlCacheUpdatedAt by stringSetting(
         name = "sign_page_html_cache_updated_at",
         default = "",
