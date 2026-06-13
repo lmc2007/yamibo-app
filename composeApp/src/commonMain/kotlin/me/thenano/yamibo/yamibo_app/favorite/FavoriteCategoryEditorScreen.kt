@@ -226,6 +226,15 @@ internal fun FavoriteCategoryEditorScreen(categoryId: Long?) {
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                         shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = colors.textDark,
+                            unfocusedTextColor = colors.textDark,
+                            cursorColor = colors.brownDeep,
+                            focusedBorderColor = colors.brownDeep,
+                            unfocusedBorderColor = colors.brownPrimary.copy(alpha = 0.35f),
+                            focusedContainerColor = colors.creamSurface,
+                            unfocusedContainerColor = colors.creamSurface,
+                        ),
                     )
                 }
             }
@@ -490,6 +499,17 @@ private fun CollectionDialog(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     shape = RoundedCornerShape(14.dp),
                     label = { Text(i18n("名稱")) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = colors.textDark,
+                        unfocusedTextColor = colors.textDark,
+                        focusedLabelColor = colors.brownDeep,
+                        unfocusedLabelColor = colors.textDark.copy(alpha = 0.58f),
+                        cursorColor = colors.brownDeep,
+                        focusedBorderColor = colors.brownDeep,
+                        unfocusedBorderColor = colors.brownPrimary.copy(alpha = 0.35f),
+                        focusedContainerColor = colors.creamSurface,
+                        unfocusedContainerColor = colors.creamSurface,
+                    ),
                 )
                 Text(i18n("顏色"), color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
