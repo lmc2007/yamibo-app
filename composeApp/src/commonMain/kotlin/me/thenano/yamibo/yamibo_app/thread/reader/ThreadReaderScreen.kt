@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -1179,38 +1179,38 @@ internal fun ThreadReaderScreen(
         }
     }
 
-    /** Scroll detection → debounced position save */
-    LaunchedEffect(listState, state) {
-        if (state != ReaderState.Success) return@LaunchedEffect
-        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
-            .debounce(2000.milliseconds)
-            .collect {
+        /** Real-time reading progress save: detects chapter/post changes and saves immediately */
+    var lastSavedPostId by remember { mutableStateOf<Long?>(null) }
+    
+    /** 1. Detect post/chapter change → save immediately when entering a new post */
+    LaunchedEffect(listState, state, posts, readerEntries, hasRestoredPosition) {
+        if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
+        snapshotFlow {
+            val visibleIndex = listState.firstVisibleItemIndex
+            val entry = readerEntries.getOrNull(visibleIndex)
+            entry?.post?.pid?.value?.toLong()
+        }
+            .distinctUntilChanged()
+            .collect { currentPostId ->
                 if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
-                val history = buildHistory() ?: return@collect
-                try {
-                    readHistoryRepo.savePosition(history)
-                } catch (_: Exception) {
+                if (currentPostId == null) return@collect
+                if (lastSavedPostId != currentPostId) {
+                    lastSavedPostId = currentPostId
+                    val history = buildHistory() ?: return@collect
+                    try {
+                        readHistoryRepo.savePosition(history)
+                    } catch (_: Exception) {
+                    }
                 }
             }
     }
 
-    /** Auto-save reading progress when navigating to a new page (chapter) */
-    LaunchedEffect(listState, state) {
+    /** 2. Debounced scroll save: save position every 2 seconds during continuous scrolling */
+    LaunchedEffect(listState, state, hasRestoredPosition) {
         if (state != ReaderState.Success) return@LaunchedEffect
-        var previousPage: Int? = null
-        snapshotFlow {
-            val currentEntry = readerEntries.getOrNull(listState.firstVisibleItemIndex)
-            currentEntry?.let { pageByPid[it.post.pid.value.toLong()] } ?: -1
-        }
-            .distinctUntilChanged()
-            .collect { currentPage ->
-                if (currentPage <= 0) return@collect
-                val prev = previousPage
-                previousPage = currentPage
-                // Skip the first emission (initial page load)
-                if (prev == null) return@collect
-                // Only save when the page actually changes
-                if (currentPage == prev) return@collect
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .debounce(2000.milliseconds)
+            .collect {
                 if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
                 val history = buildHistory() ?: return@collect
                 try {
