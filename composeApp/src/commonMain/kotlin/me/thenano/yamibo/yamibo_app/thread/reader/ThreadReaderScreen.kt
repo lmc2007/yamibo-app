@@ -1179,34 +1179,22 @@ internal fun ThreadReaderScreen(
         }
     }
 
-        /** Real-time reading progress save: detects chapter/post changes and saves immediately */
-    var lastSavedPostId by remember { mutableStateOf<Long?>(null) }
-    
-    /** 1. Detect post/chapter change → save immediately when entering a new post */
-    LaunchedEffect(listState, state, posts, readerEntries, hasRestoredPosition) {
-        if (state != ReaderState.Success || posts.isEmpty() || readerEntries.isEmpty()) return@LaunchedEffect
-        snapshotFlow {
-            val visibleIndex = listState.firstVisibleItemIndex
-            val entry = readerEntries.getOrNull(visibleIndex)
-            entry?.post?.pid?.value?.toLong()
-        }
-            .distinctUntilChanged()
-            .collect { currentPostId ->
-                if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
-                if (currentPostId == null) return@collect
-                if (lastSavedPostId != currentPostId) {
-                    lastSavedPostId = currentPostId
-                    val history = buildHistory() ?: return@collect
-                    try {
-                        readHistoryRepo.savePosition(history)
-                    } catch (_: Exception) {
-                    }
+
+    /** Save position immediately when entering chapter (position restored) */
+    LaunchedEffect(hasRestoredPosition, state) {
+        if (hasRestoredPosition && state == ReaderState.Success) {
+            val history = buildHistory()
+            if (history != null) {
+                try {
+                    readHistoryRepo.savePosition(history)
+                } catch (_: Exception) {
                 }
             }
+        }
     }
-
-    /** 2. Debounced scroll save: save position every 2 seconds during continuous scrolling */
-    LaunchedEffect(listState, state, hasRestoredPosition) {
+    
+    /** Scroll detection → debounced position save */
+    LaunchedEffect(listState, state) {
         if (state != ReaderState.Success) return@LaunchedEffect
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .debounce(2000.milliseconds)
