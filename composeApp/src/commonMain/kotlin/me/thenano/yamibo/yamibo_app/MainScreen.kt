@@ -28,6 +28,8 @@ import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
+import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -78,15 +80,10 @@ data class BottomNavItem(
 fun MainScreen(initialTab: MainTab = MainTab.Home) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
-    var currentTab by rememberSaveable {
-        mutableStateOf(if (initialTab == MainTab.Message) MainTab.Profile else initialTab)
-    }
+    var currentTab by rememberSaveable { mutableStateOf(initialTab) }
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
     var hasNewMessage by rememberSaveable { mutableStateOf(false) }
     val tabStateHolder = rememberSaveableStateHolder()
-    val visibleTabs = remember {
-        listOf(MainTab.Home, MainTab.History, MainTab.Favorite, MainTab.Profile)
-    }
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -107,19 +104,19 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         contentWindowInsets = WindowInsets(0.dp),
         bottomBar = {
             MainScreenBottomBar(
-                tabs = visibleTabs.map {
+                tabs = MainTab.entries.map {
                     BottomNavItem(
                         tab = it,
                         title = it.titleText(),
                         icon = it.icon,
-                        showBadge = it == MainTab.Profile && hasNewMessage,
+                        showBadge = it == MainTab.Message && hasNewMessage,
                     )
                 },
                 currentTab = BottomNavItem(
                     tab = currentTab,
                     title = currentTab.titleText(),
                     icon = currentTab.icon,
-                    showBadge = currentTab == MainTab.Profile && hasNewMessage,
+                    showBadge = currentTab == MainTab.Message && hasNewMessage,
                 ),
                 onTabSelected = { selected ->
                     val newTab = selected.tab
@@ -144,15 +141,13 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                             onNewMessageStatusChange = { hasNewMessage = it },
                         )
                         MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                        MainTab.Message -> ProfilePage(
-                            hasNewMessage = hasNewMessage,
-                            onNewMessageStatusChange = { hasNewMessage = it },
+                        MainTab.Message -> MessageCenterScreen(
+                            initialTab = MessageCenterTab.PrivateMessages,
+                            mainTabTopBar = true,
+                            onPrivateMessageUnreadChange = { hasNewMessage = it },
                         )
                         MainTab.Favorite -> FavoritePage()
-                        MainTab.Profile -> ProfilePage(
-                            hasNewMessage = hasNewMessage,
-                            onNewMessageStatusChange = { hasNewMessage = it },
-                        )
+                        MainTab.Profile -> ProfilePage()
                     }
                 }
             }
@@ -164,7 +159,7 @@ private fun MainTab.titleText(): String {
     return when (this) {
         MainTab.Home -> i18n("首頁")
         MainTab.History -> i18n("紀錄")
-        MainTab.Message -> i18n("我的消息")
+        MainTab.Message -> i18n("消息")
         MainTab.Favorite -> i18n("收藏")
         MainTab.Profile -> i18n("我的")
     }

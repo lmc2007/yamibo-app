@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -30,7 +31,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import kotlin.math.roundToInt
@@ -53,7 +53,6 @@ fun FavoriteListScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -76,7 +75,6 @@ fun FavoriteGridScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -99,7 +97,6 @@ fun FavoriteStaggeredScrollbar(
         totalItems = totalItems,
         firstVisibleIndex = firstVisibleIndex,
         visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -109,7 +106,6 @@ private fun FavoriteScrollbar(
     totalItems: Int,
     firstVisibleIndex: Int,
     visibleCount: Int,
-    isScrollInProgress: Boolean,
     onScrollToIndex: suspend (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -118,22 +114,10 @@ private fun FavoriteScrollbar(
     val colors = YamiboTheme.colors
     val scope = rememberCoroutineScope()
 
+    // Track whether the user is actively dragging the thumb
     var isDragging by remember { mutableStateOf(false) }
-    var isVisible by remember { mutableStateOf(false) }
-    var dragStartOffsetPx by remember { mutableStateOf(0f) }
-    var dragDeltaPx by remember { mutableStateOf(0f) }
 
-    LaunchedEffect(isScrollInProgress, isDragging, firstVisibleIndex) {
-        if (isScrollInProgress || isDragging) {
-            isVisible = true
-        } else {
-            delay(1200)
-            isVisible = false
-        }
-    }
-
-    if (!isVisible) return
-
+    // Animate thumb width: wider when dragging for better visibility
     val thumbWidth = remember { Animatable(6f) }
     LaunchedEffect(isDragging) {
         thumbWidth.animateTo(
@@ -157,16 +141,39 @@ private fun FavoriteScrollbar(
         val progress = (firstVisibleIndex.toFloat() / hiddenCount.toFloat()).coerceIn(0f, 1f)
         val thumbOffsetPx = travelPx * progress
 
-        fun scrollFromThumbOffset(offsetPx: Float) {
-            val ratio = (offsetPx / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
+        fun scrollFromTouch(y: Float) {
+            val ratio = ((y - thumbHeightPx / 2f) / travelPx.coerceAtLeast(1f)).coerceIn(0f, 1f)
             val targetIndex = (ratio * hiddenCount.toFloat()).roundToInt().coerceIn(0, totalItems - 1)
             scope.launch { onScrollToIndex(targetIndex) }
         }
 
         Box(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                // Tap anywhere on the track to jump to that position
+                .pointerInput(Unit) {
+                    detectTapGestures { offset ->
+                        scrollFromTouch(offset.y)
+                    }
+                }
+                // Use a stable key (Unit) so the gesture detector is NOT reset
+                // on every scroll frame — this prevents jitter and dropped drags.
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset ->
+                            isDragging = true
+                            scrollFromTouch(offset.y)
+                        },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            scrollFromTouch(change.position.y)
+                        },
+                        onDragEnd = { isDragging = false },
+                        onDragCancel = { isDragging = false },
+                    )
+                },
         ) {
+            // Track background — wider for better visibility
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -174,28 +181,13 @@ private fun FavoriteScrollbar(
                     .width(thumbWidth.value.dp)
                     .background(colors.brownPrimary.copy(alpha = 0.10f), RoundedCornerShape(999.dp)),
             )
+            // Thumb — wider, taller minimum, more opaque for easy touch targeting
             Box(
                 modifier = Modifier
                     .offset { IntOffset(0, thumbOffsetPx.roundToInt()) }
                     .align(Alignment.TopEnd)
                     .width(thumbWidth.value.dp)
                     .height(with(LocalDensity.current) { thumbHeightPx.toDp() })
-                    .pointerInput(totalItems, visibleCount) {
-                        detectDragGestures(
-                            onDragStart = {
-                                isDragging = true
-                                dragStartOffsetPx = thumbOffsetPx
-                                dragDeltaPx = 0f
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                dragDeltaPx += dragAmount.y
-                                scrollFromThumbOffset(dragStartOffsetPx + dragDeltaPx)
-                            },
-                            onDragEnd = { isDragging = false },
-                            onDragCancel = { isDragging = false },
-                        )
-                    }
                     .background(colors.brownDeep.copy(alpha = 0.80f), RoundedCornerShape(999.dp)),
             )
         }

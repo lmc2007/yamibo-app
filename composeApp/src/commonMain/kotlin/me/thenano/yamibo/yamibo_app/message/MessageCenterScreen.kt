@@ -121,7 +121,6 @@ fun MessageCenterScreen(
                 return
             }
         }
-        state = MessageCenterState.Loading
         val result = fetchContent(userSpaceRepository, tab, page)
         state = when (result) {
             is YamiboResult.Success -> {
@@ -138,6 +137,7 @@ fun MessageCenterScreen(
 
     LaunchedEffect(selectedTab) {
         currentPage = 1
+        state = MessageCenterState.Loading
         loadTab(selectedTab, 1)
     }
 
@@ -213,6 +213,7 @@ fun MessageCenterScreen(
                             selectedTab = selectedTab,
                             currentPage = currentPage,
                             onPageChange = { page ->
+                                state = MessageCenterState.Loading
                                 scope.launch { loadTab(selectedTab, page) }
                             },
                             onUpdateEventClick = { event ->

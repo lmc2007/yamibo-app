@@ -77,21 +77,21 @@ object HtmlParser {
             }
         }
 
-    fun appendCollapsibleSpace() {
-        if (globalBuilder.length == 0) return
-        val last = globalBuilder.toAnnotatedString().lastOrNull()
-        if (last != null && last != ' ' && last != '\n' && last != '\u00A0' && last != '\u3000') {
-            globalBuilder.append(" ")
+        fun appendCollapsibleSpace() {
+            if (globalBuilder.length == 0) return
+            val last = globalBuilder.toAnnotatedString().lastOrNull()
+            if (last != null && last != ' ' && last != '\n' && last != '\u3000') {
+                globalBuilder.append(" ")
+            }
         }
-    }
 
         fun appendTextNodeText(text: String) {
-        text.forEach { char ->
-            when (char) {
-                '\u00A0' -> globalBuilder.append("\u00A0")
-                ' ', '\n', '\t', '\u000C' -> appendCollapsibleSpace()
-                else -> globalBuilder.append(char.toString())
-            }
+            text.forEach { char ->
+                when (char) {
+                    '\u00A0' -> globalBuilder.append("\u3000")
+                    ' ', '\n', '\t', '\u000C' -> appendCollapsibleSpace()
+                    else -> globalBuilder.append(char.toString())
+                }
             }
         }
 

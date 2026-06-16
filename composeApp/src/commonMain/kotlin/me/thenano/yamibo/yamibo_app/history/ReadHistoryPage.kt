@@ -155,10 +155,8 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
         }
     }
 
-    suspend fun loadPage(page: Int, showLoading: Boolean = true) {
-        if (showLoading || state !is HistoryState.Success) {
-            state = HistoryState.Loading
-        }
+    suspend fun loadPage(page: Int) {
+        state = HistoryState.Loading
         try {
             refreshFilterCounts()
             val count = readHistoryRepo.getCombinedHistoryCountByFilters(selectedFilters)
@@ -341,7 +339,7 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
             if (mode == PageMode.Search && searchQuery.isNotBlank()) {
                 doSearch(searchQuery, currentPage)
             } else if (mode != PageMode.Select) {
-                loadPage(currentPage, showLoading = false)
+                loadPage(currentPage)
             }
         }
     }
