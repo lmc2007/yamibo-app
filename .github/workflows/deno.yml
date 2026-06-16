@@ -1,51 +1,127 @@
-name: CI Build Check
+name: Build Yamibo App
+
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master ]
+    tags:
+      - 'v*'
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, master ]
+  workflow_dispatch:
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+  ANDROID_COMPILE_SDK: 36
+  ANDROID_BUILD_TOOLS: 36.0.0
+  ANDROID_MIN_SDK: 24
+  ANDROID_TARGET_SDK: 36
+  JAVA_VERSION: 11
 
 jobs:
-  build-check:
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          submodules: recursive
 
-      - name: Set up JDK 21
+      - name: Validate Gradle Wrapper
+        uses: gradle/actions/wrapper-validation@v3
+
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: '21'
+          java-version: '11'
+          distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
         with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          cmdline-tools-version: 11076708
+          packages: >
+            platforms;android-${{ env.ANDROID_COMPILE_SDK }}
+            build-tools;${{ env.ANDROID_BUILD_TOOLS }}
+            platform-tools
 
-      - name: Grant execute permission for gradlew
+      - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
-      - name: Kotlin compilation check
-        run: ./gradlew :composeApp:compileDebugKotlinAndroid --console=plain
+      - name: Cache Gradle Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            ~/.konan
+          key: ${{ runner.os }}-gradle-kmp-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-kmp-
+            ${{ runner.os }}-gradle-
+
+      - name: Decode Keystore (Release Signing)
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > composeApp/release.keystore
+
+      - name: Run Code Generation Tasks
+        run: ./gradlew generateAppVersion generateRestorableScreenRegistry --stacktrace
+
+      - name: Merge i18n Resources
+        run: ./gradlew i18nAutoMerge --stacktrace
 
       - name: Build Debug APK
-        run: ./gradlew :composeApp:assembleDebug --console=plain
+        run: ./gradlew composeApp:assembleDebug --stacktrace
 
-      - name: Run unit tests
-        run: ./gradlew test --console=plain
+      - name: Build Release APK
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        run: ./gradlew composeApp:assembleRelease --stacktrace
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Validate update manifest
-        run: ./gradlew validateUpdateManifest --console=plain
+      - name: Run Lint Check
+        run: ./gradlew composeApp:lintDebug --continue
 
-      - name: Upload Debug APK artifact
+      - name: Run Unit Tests
+        run: ./gradlew composeApp:testDebugUnitTest
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: debug-apk
+          name: yamibo-app-debug
           path: composeApp/build/outputs/apk/debug/*.apk
-          retention-days: 7
+          retention-days: 30
+
+      - name: Upload Release APK
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: yamibo-app-release
+          path: composeApp/build/outputs/apk/release/*.apk
+          retention-days: 90
+
+      - name: Upload Lint Report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lint-report
+          path: composeApp/build/reports/lint-results-debug.html
+          retention-days: 14
+
+      - name: Create GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: composeApp/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
