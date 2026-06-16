@@ -1,54 +1,137 @@
-name: Android Build
+name: Build CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '**.txt'
+  pull_request:
+    branches: [ main, develop ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '**.txt'
   workflow_dispatch:
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g"
+  ANDROID_COMPILE_SDK: 34
+  ANDROID_BUILD_TOOLS: 34.0.0
 
 jobs:
   build:
-    name: Build APK
+    name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          submodules: recursive
           fetch-depth: 0
 
-      - name: Set up JDK
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
         with:
-          api-level: 33
-          build-tools: 33.0.2
+          gradle-version: wrapper
+          cache-read-only: false
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper/
-          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
-
-      - name: Grant execute permission to gradlew
+      - name: Grant Execute Permission for Gradlew
         run: chmod +x gradlew
 
-      - name: Build APK
-        run: ./gradlew :app:assembleRelease
+      - name: Decode Keystore (if secrets available)
+        if: ${{ secrets.KEYSTORE != '' }}
+        run: |
+          echo "${{ secrets.KEYSTORE }}" | base64 -d > app/keystore.jks
+          echo "KEYSTORE_FILE=keystore.jks" >> local.properties
+          echo "KEYSTORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> local.properties
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> local.properties
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> local.properties
 
-      # ✅ 修改：使用通配符匹配 unsigned APK
-      - name: Upload APK
+      - name: Build Debug APK
+        run: ./gradlew :composeApp:assembleDebug --stacktrace
+
+      - name: Build Release APK
+        if: success()
+        run: ./gradlew :composeApp:assembleRelease --stacktrace
+
+      - name: Run Lint Check
+        if: success()
+        run: ./gradlew :composeApp:lintDebug --stacktrace
+        continue-on-error: true
+
+      - name: Run Unit Tests
+        if: success()
+        run: ./gradlew test --stacktrace
+        continue-on-error: true
+
+      - name: Upload Debug APK
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: 300文学-APK
-          path: app/build/outputs/apk/release/*.apk
-          compression-level: 9
+          name: yamibo-app-debug
+          path: composeApp/build/outputs/apk/debug/*.apk
+          retention-days: 30
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: yamibo-app-release
+          path: composeApp/build/outputs/apk/release/*.apk
+          retention-days: 90
+
+      - name: Upload Build Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-reports
+          path: |
+            **/build/reports/**
+            **/build/test-results/**
+          retention-days: 14
+
+  check:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
+
+      - name: Grant Execute Permission
+        run: chmod +x gradlew
+
+      - name: Kotlin Detekt Check
+        run: ./gradlew detekt --stacktrace
+        continue-on-error: true
+
+      - name: Upload Detekt Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detekt-reports
+          path: build/reports/detekt/**
+          retention-days: 14
