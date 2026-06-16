@@ -46,6 +46,8 @@ internal fun FavoritePageContent(
     searchActive: Boolean,
     searchQuery: String,
     searchCategoryMatchCounts: Map<Long, Int>,
+    favoriteFilterActive: Boolean,
+    showFavoriteCounts: Boolean,
     sortMode: FavoriteSortMode,
     sortDescending: Boolean,
     favoriteGridMode: FavoriteGridMode,
@@ -59,6 +61,8 @@ internal fun FavoritePageContent(
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onEnterSearch: () -> Unit,
+    onShowFilter: () -> Unit,
+    onToggleFavoriteCounts: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onExitSearch: () -> Unit,
@@ -93,7 +97,11 @@ internal fun FavoritePageContent(
             FavoritePageMode.Normal -> {
                 FavoriteHeaderMenuRow(
                     title = i18n("我的收藏"),
+                    filterActive = favoriteFilterActive,
+                    showFavoriteCounts = showFavoriteCounts,
                     onSearch = onEnterSearch,
+                    onShowFilter = onShowFilter,
+                    onToggleFavoriteCounts = onToggleFavoriteCounts,
                     onCreateCategory = onCreateCategory,
                     onManageCategory = onManageCategory,
                     onSyncFavorites = onSyncFavorites,
@@ -138,7 +146,7 @@ internal fun FavoritePageContent(
                     text = {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(category.name, fontSize = 15.sp, fontWeight = if (category.id == ready.selectedCategoryId) FontWeight.Bold else FontWeight.Medium)
-                            if (searchActive && searchQuery.isNotBlank()) {
+                            if (searchCategoryMatchCounts.containsKey(category.id)) {
                                 Text(
                                     text = searchCategoryMatchCounts[category.id]?.toString() ?: "0",
                                     fontSize = 11.sp,

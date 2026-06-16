@@ -21,6 +21,7 @@ import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.dto.model.TagValue
 import io.github.littlesurvival.dto.value.ThreadId
 import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -77,23 +78,10 @@ internal fun TagListScreen(
     Scaffold(
         containerColor = colors.creamBackground,
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        i18n("標籤列表"),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colors.creamBackground
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.pop() }) {
-                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = colors.brownDeep
-                )
+            YamiboTopBar(
+                title = i18n("標籤列表"),
+                titleFontSize = 18,
+                onBack = { navigator.pop() },
             )
         }
     ) { paddingValues ->

@@ -40,6 +40,12 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         interval = 0.05f,
     )
 
+    val readerFontId by stringSetting(
+        name = "reader_font_id",
+        description = "novel_reader_font",
+        default = "",
+    )
+
     val contentWidthFraction by floatSetting(
         name = "content_width",
         description = "novel_reader_content_width",

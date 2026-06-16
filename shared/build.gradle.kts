@@ -3,6 +3,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.composeMultiplatform)
+    alias(libs.plugins.composeCompiler)
     alias(libs.plugins.sqldelight)
     alias(libs.plugins.kotlinSerialization)
 }
@@ -28,6 +30,7 @@ kotlin {
             implementation(libs.yamibo.api)
             implementation(libs.sqldelight.coroutines)
             implementation(libs.okio)
+            implementation(compose.ui)
         }
         androidMain.dependencies {
             implementation(libs.androidx.security.crypto)

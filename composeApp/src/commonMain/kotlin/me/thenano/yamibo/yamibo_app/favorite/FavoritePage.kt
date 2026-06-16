@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.*
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboMultiSelectDialog
 import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -71,6 +72,12 @@ private data class FavoriteDeleteRequest(
     val collectionId: Long?,
     val hasMultiPathItems: Boolean,
     val hasRemoteSyncedItems: Boolean,
+)
+
+private data class FavoriteForumFilterOption(
+    val forumKey: String?,
+    val label: String,
+    val count: Int,
 )
 
 sealed interface FavoriteGridEntry {
@@ -153,6 +160,11 @@ fun FavoritePage() {
     var syncTargetCategoryId by rememberSaveable { mutableStateOf<Long?>(null) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var searchCategoryMatchCounts by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var showFavoriteFilterDialog by remember { mutableStateOf(false) }
+    var selectedFavoriteForumFilterKeys by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var showFavoriteCounts by rememberSaveable { mutableStateOf(false) }
+    var favoriteCategoryCounts by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
+    var favoriteForumCounts by remember { mutableStateOf<List<FavoriteForumFilterOption>>(emptyList()) }
 
     fun showSnackbarMessage(message: String) {
         scope.launch {
@@ -345,6 +357,24 @@ fun FavoritePage() {
     LaunchedEffect(searchQuery, ready?.categories?.map { it.id }) {
         refreshSearchCounts(searchQuery)
     }
+    LaunchedEffect(showFavoriteCounts, showFavoriteFilterDialog, ready?.categories?.map { it.id }) {
+        favoriteCategoryCounts = if (showFavoriteCounts && ready != null) {
+            withContext(Dispatchers.Default) {
+                readyFavoriteCounts(favoriteRepository)
+            }
+        } else {
+            emptyMap()
+        }
+    }
+    LaunchedEffect(showFavoriteFilterDialog) {
+        favoriteForumCounts = if (showFavoriteFilterDialog) {
+            withContext(Dispatchers.Default) {
+                readyFavoriteForumCounts(favoriteRepository)
+            }
+        } else {
+            emptyList()
+        }
+    }
     val openedCollection = ready?.content?.collections?.firstOrNull { it.collection.id == openedCollectionId }
     val visibleItems = openedCollection?.items ?: ready?.content?.directItems.orEmpty()
     val trimmedSearchQuery = searchQuery.trim()
@@ -355,12 +385,33 @@ fun FavoritePage() {
         else -> FavoritePageMode.Normal
     }
     val searchEnabled = searchActive && trimmedSearchQuery.isNotBlank()
+    val knownForumKeys = favoriteForumCounts.mapNotNullTo(mutableSetOf()) { it.forumKey }
+    val normalizedFavoriteForumFilterKeys = selectedFavoriteForumFilterKeys
+        .filterTo(mutableSetOf()) { key -> knownForumKeys.isEmpty() || key in knownForumKeys }
+    val categoryBadgeCounts = when {
+        searchEnabled -> searchCategoryMatchCounts
+        showFavoriteCounts -> favoriteCategoryCounts
+        else -> emptyMap()
+    }
+    fun matchesForumFilter(item: FavoriteItem): Boolean {
+        return normalizedFavoriteForumFilterKeys.isEmpty() ||
+            favoriteForumKey(item) in normalizedFavoriteForumFilterKeys
+    }
     val resolvedLastReadMap = ready?.lastReadMap.orEmpty()
     val resolvedRemoteFavoriteOrderMap = ready?.remoteFavoriteOrderMap.orEmpty()
     val collections = sortCollections(
-        ready?.content?.collections.orEmpty().filter {
-            !searchEnabled || collectionMatchesQuery(it, trimmedSearchQuery)
-        },
+        ready?.content?.collections.orEmpty()
+            .map { collection ->
+                if (normalizedFavoriteForumFilterKeys.isEmpty()) {
+                    collection
+                } else {
+                    collection.copy(items = collection.items.filter(::matchesForumFilter))
+                }
+            }
+            .filter { collection ->
+                (normalizedFavoriteForumFilterKeys.isEmpty() || collection.items.isNotEmpty()) &&
+                    (!searchEnabled || collectionMatchesQuery(collection, trimmedSearchQuery))
+            },
         sortMode,
         sortDescending,
         resolvedLastReadMap,
@@ -368,7 +419,7 @@ fun FavoritePage() {
     )
     val items = sortItems(
         visibleItems.filter {
-            !searchEnabled || favoriteItemMatchesQuery(it, trimmedSearchQuery)
+            matchesForumFilter(it) && (!searchEnabled || favoriteItemMatchesQuery(it, trimmedSearchQuery))
         },
         sortMode,
         sortDescending,
@@ -391,7 +442,9 @@ fun FavoritePage() {
                 mode = headerMode,
                 searchActive = searchActive,
                 searchQuery = searchQuery,
-                searchCategoryMatchCounts = searchCategoryMatchCounts,
+                searchCategoryMatchCounts = categoryBadgeCounts,
+                favoriteFilterActive = normalizedFavoriteForumFilterKeys.isNotEmpty(),
+                showFavoriteCounts = showFavoriteCounts,
                 sortMode = sortMode,
                 sortDescending = sortDescending,
                 favoriteGridMode = favoriteGridMode,
@@ -405,6 +458,8 @@ fun FavoritePage() {
                 onCreateCategory = { navigator.navigate(IFavoriteCategoryEditorScreen()) },
                 onManageCategory = { navigator.navigate(IFavoriteCategoryManageScreen()) },
                 onEnterSearch = { searchActive = true },
+                onShowFilter = { showFavoriteFilterDialog = true },
+                onToggleFavoriteCounts = { showFavoriteCounts = !showFavoriteCounts },
                 onSearchQueryChange = { searchQuery = it },
                 onSearchSubmit = { },
                 onExitSearch = {
@@ -533,6 +588,46 @@ fun FavoritePage() {
         YamiboSnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp)
+        )
+    }
+
+    if (showFavoriteFilterDialog && ready != null) {
+        val allOption = FavoriteForumFilterOption(
+            forumKey = null,
+            label = i18n("全部"),
+            count = favoriteForumCounts.sumOf { it.count },
+        )
+        val options = listOf(allOption) + favoriteForumCounts
+        val selectedOptions = if (normalizedFavoriteForumFilterKeys.isEmpty()) {
+            setOf(allOption)
+        } else {
+            options.filterTo(mutableSetOf()) { option -> option.forumKey in normalizedFavoriteForumFilterKeys }
+        }
+        YamiboMultiSelectDialog(
+            title = i18n("篩選收藏"),
+            options = options,
+            selected = selectedOptions,
+            onConfirm = { selected ->
+                showFavoriteFilterDialog = false
+                selectedFavoriteForumFilterKeys = if (allOption in selected) {
+                    emptySet()
+                } else {
+                    selected.mapNotNullTo(mutableSetOf()) { it.forumKey }
+                }
+                selectedItemIds = emptySet()
+                selectedCollectionIds = emptySet()
+            },
+            onCancel = { showFavoriteFilterDialog = false },
+            label = { option ->
+                i18n("{} ({})", option.label, option.count)
+            },
+            toggleSelection = { option, current ->
+                when {
+                    option.forumKey == null -> setOf(option)
+                    option in current -> (current - option).ifEmpty { setOf(allOption) }
+                    else -> (current - allOption) + option
+                }
+            },
         )
     }
 
@@ -962,6 +1057,52 @@ private suspend fun readySearchCounts(
             put(category.id, categoryMatchCount(content, query))
         }
     }
+}
+
+private suspend fun readyFavoriteCounts(
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+): Map<Long, Int> {
+    val categories = favoriteRepository.getCategories()
+    return buildMap {
+        categories.forEach { category ->
+            put(category.id, categoryFavoriteCount(favoriteRepository.getCategoryContent(category.id)))
+        }
+    }
+}
+
+private fun categoryFavoriteCount(content: FavoriteCategoryContent): Int {
+    return content.directItems.size + content.collections.sumOf { it.items.size }
+}
+
+private suspend fun readyFavoriteForumCounts(
+    favoriteRepository: me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository,
+): List<FavoriteForumFilterOption> {
+    return favoriteRepository.getAllFavoriteItems()
+        .groupBy(::favoriteForumKey)
+        .map { (key, items) ->
+            FavoriteForumFilterOption(
+                forumKey = key,
+                label = favoriteForumLabel(items.firstOrNull()),
+                count = items.size,
+            )
+        }
+        .sortedWith(compareByDescending<FavoriteForumFilterOption> { it.count }.thenBy { it.label })
+}
+
+private fun favoriteForumKey(item: FavoriteItem): String {
+    if (item.targetType == FavoriteTargetType.TagManga) {
+        return "tag"
+    }
+    return item.forumId?.value?.toString()
+        ?: item.forumName?.takeIf { it.isNotBlank() }?.let { "name:$it" }
+        ?: "unknown"
+}
+
+private fun favoriteForumLabel(item: FavoriteItem?): String {
+    if (item?.targetType == FavoriteTargetType.TagManga) {
+        return i18n("標籤")
+    }
+    return item?.forumName?.takeIf { it.isNotBlank() } ?: i18n("未知版塊")
 }
 
 private fun categoryMatchCount(

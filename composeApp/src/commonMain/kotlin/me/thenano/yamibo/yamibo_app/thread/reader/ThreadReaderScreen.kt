@@ -34,6 +34,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.*
@@ -42,8 +43,10 @@ import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -126,6 +129,12 @@ private data class ReaderCatalogCurrentPosition(
     val pid: PostId?,
 )
 
+private data class VisibleChapterProgress(
+    val post: Post,
+    val progressPercent: Int,
+    val read: Boolean,
+)
+
 private fun buildReaderBodySegments(post: Post, contentHtml: String): List<ReaderBodySegment>? {
     if (post.images.size < 6) return null
 
@@ -176,6 +185,11 @@ internal fun ThreadReaderScreen(
 ) {
     DebugRecomposeProbe("ThreadReaderScreen", tid.value.toString())
     val colors = YamiboTheme.colors
+    SystemBarsEffect(
+        statusBarColor = colors.creamBackground,
+        navigationBarColor = colors.creamBackground,
+        priority = 100,
+    )
     val appSettingsRepository = LocalAppSettingsRepository.current
     val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
@@ -183,6 +197,7 @@ internal fun ThreadReaderScreen(
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
+    val chapterStateRepository = LocalChapterStateRepository.current
     ReadingTimeTracker()
     val navigator = LocalNavigator.current
     val platformContext = LocalPlatformContext.current
@@ -230,6 +245,7 @@ internal fun ThreadReaderScreen(
     var pendingSavedPosition by remember(tid, targetPid) { mutableStateOf<ThreadReadingHistory?>(null) }
     var isRestoringSavedPosition by remember { mutableStateOf(false) }
     var pendingTargetPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
+    var activeChapterProgressPid by remember(tid, targetPid) { mutableStateOf(targetPid?.value?.toLong()) }
 
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
@@ -252,6 +268,7 @@ internal fun ThreadReaderScreen(
     var showFavoriteAddSyncConfirm by remember { mutableStateOf(false) }
     var showFavoriteRemoveSyncConfirm by remember { mutableStateOf(false) }
     var postBookMarkEntries by remember { mutableStateOf<Map<Long, BookMarkRepository.Entry>>(emptyMap()) }
+    var postChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var catalogActionPost by remember { mutableStateOf<Post?>(null) }
 
     suspend fun reloadPostBookMarks() {
@@ -260,8 +277,42 @@ internal fun ThreadReaderScreen(
             .associateBy { it.targetId }
     }
 
+    suspend fun reloadPostChapterStates() {
+        postChapterStates = chapterStateRepository
+            .getEntriesByParent(ChapterStateRepository.TargetType.ThreadPost, tid.value.toLong())
+            .associateBy { it.targetId }
+    }
+
+    suspend fun syncAutoReadMarks(progresses: List<VisibleChapterProgress>) {
+        var changed = false
+        progresses.forEach { progress ->
+            val postId = progress.post.pid.value.toLong()
+            val currentState = postChapterStates[postId]
+            if (currentState?.read == true) return@forEach
+
+            val shouldSaveProgress = activeChapterProgressPid == postId && progress.progressPercent in 1..87
+            val shouldMarkRead = progress.read
+            if (!shouldSaveProgress && !shouldMarkRead) return@forEach
+            if (!shouldMarkRead && progress.progressPercent <= (currentState?.progressPercent ?: 0)) return@forEach
+
+            chapterStateRepository.upsertProgress(
+                targetType = ChapterStateRepository.TargetType.ThreadPost,
+                parentId = tid.value.toLong(),
+                targetId = postId,
+                title = progress.post.title.ifBlank { i18n("（無標題）") },
+                progressPercent = if (shouldMarkRead) 100 else progress.progressPercent,
+                read = shouldMarkRead,
+            )
+            changed = true
+        }
+        if (changed) {
+            reloadPostChapterStates()
+        }
+    }
+
     LaunchedEffect(tid) {
         reloadPostBookMarks()
+        reloadPostChapterStates()
     }
     
     fun resolveValidCoverUrl(rawUrl: String?): String? {
@@ -645,6 +696,49 @@ internal fun ThreadReaderScreen(
             }
         }
     }
+
+    fun visibleChapterProgresses(): List<VisibleChapterProgress> {
+        if (posts.isEmpty() || readerEntries.isEmpty()) return emptyList()
+        val layoutInfo = listState.layoutInfo
+        val visibleItems = layoutInfo.visibleItemsInfo
+        if (visibleItems.isEmpty()) return emptyList()
+
+        val viewportBottom = layoutInfo.viewportEndOffset
+        val progressEntries = readerEntries.withIndex()
+            .filter { (_, entry) ->
+                when (entry.kind) {
+                    ReaderEntryKind.WholePost,
+                    ReaderEntryKind.SegmentedHeader,
+                    ReaderEntryKind.SegmentedBody,
+                    ReaderEntryKind.SegmentedFooter -> true
+                    else -> false
+                }
+            }
+        val progressEntryRangeByPid = progressEntries
+            .groupBy { it.value.post.pid.value.toLong() }
+            .mapValues { (_, entries) -> entries.first().index..entries.last().index }
+
+        return visibleItems
+            .mapNotNull { item ->
+                val entry = readerEntries.getOrNull(item.index) ?: return@mapNotNull null
+                val range = progressEntryRangeByPid[entry.post.pid.value.toLong()] ?: return@mapNotNull null
+                val entryCount = (range.last - range.first + 1).coerceAtLeast(1)
+                val entryOffset = (item.index - range.first).coerceIn(0, entryCount - 1)
+                val entryRatio = ((viewportBottom - item.offset).toFloat() / item.size.coerceAtLeast(1).toFloat())
+                    .coerceIn(0f, 1f)
+                val progressPercent = (((entryOffset + entryRatio) / entryCount.toFloat()) * 100f)
+                    .toInt()
+                    .coerceIn(0, 100)
+                VisibleChapterProgress(
+                    post = entry.post,
+                    progressPercent = progressPercent,
+                    read = progressPercent >= 88,
+                )
+            }
+            .groupBy { it.post.pid.value.toLong() }
+            .mapNotNull { (_, progresses) -> progresses.maxByOrNull { it.progressPercent } }
+    }
+
     val entryIndexByPid = remember(readerEntries) {
         buildMap {
             readerEntries.forEachIndexed { index, entry ->
@@ -938,6 +1032,7 @@ internal fun ThreadReaderScreen(
         runBlocking {
             try {
                 readHistoryRepo.savePosition(history)
+                syncAutoReadMarks(visibleChapterProgresses())
             } catch (_: Exception) {
             }
         }
@@ -952,6 +1047,7 @@ internal fun ThreadReaderScreen(
         scope.launch {
             try {
                 readHistoryRepo.savePosition(history)
+                syncAutoReadMarks(visibleChapterProgresses())
             } catch (_: Exception) {
             }
             navigator.pop()
@@ -966,6 +1062,7 @@ internal fun ThreadReaderScreen(
             buildHistory()?.copy(threadCover = resolvedCoverUrl)?.let { history ->
                 try {
                     readHistoryRepo.savePosition(history)
+                    syncAutoReadMarks(visibleChapterProgresses())
                 } catch (_: Exception) {
                 }
             }
@@ -1089,6 +1186,26 @@ internal fun ThreadReaderScreen(
         listState.scrollToItem(index, offset)
     }
 
+    suspend fun scrollToChapterTarget(index: Int, pid: Long) {
+        val progressPercent = postChapterStates[pid]
+            ?.progressPercent
+            ?.takeIf { it in 1..87 }
+            ?: 0
+        if (progressPercent <= 0) {
+            listState.scrollToItem(index)
+            return
+        }
+
+        listState.scrollToItem(index)
+        withFrameNanos { }
+        val itemHeight = listState.layoutInfo.visibleItemsInfo
+            .firstOrNull { it.index == index }
+            ?.size
+            ?: 0
+        val offset = (itemHeight * (progressPercent / 100f)).toInt().coerceAtLeast(0)
+        listState.scrollToItem(index, offset)
+    }
+
     suspend fun restoreSavedPosition(savedPosition: ThreadReadingHistory) {
         val savedIndex = savedPosition.firstVisibleItemIndex
         val savedOffset = savedPosition.firstVisibleItemOffset
@@ -1169,7 +1286,7 @@ internal fun ThreadReaderScreen(
 
         val targetIndex = entryIndexByPid[targetPidLong] ?: -1
         if (targetIndex >= 0) {
-            listState.scrollToItem(targetIndex)
+            scrollToChapterTarget(targetIndex, targetPidLong)
             hasRestoredPosition = true
             pendingTargetPid = null
         } else {
@@ -1189,6 +1306,20 @@ internal fun ThreadReaderScreen(
                 val history = buildHistory() ?: return@collect
                 try {
                     readHistoryRepo.savePosition(history)
+                    syncAutoReadMarks(visibleChapterProgresses())
+                } catch (_: Exception) {
+                }
+            }
+    }
+
+    LaunchedEffect(listState, state, readerEntries, postChapterStates) {
+        if (state != ReaderState.Success) return@LaunchedEffect
+        snapshotFlow { visibleChapterProgresses() }
+            .sample(500.milliseconds)
+            .collect { progresses ->
+                if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
+                try {
+                    syncAutoReadMarks(progresses)
                 } catch (_: Exception) {
                 }
             }
@@ -1356,19 +1487,21 @@ internal fun ThreadReaderScreen(
                         bookmarkedPostIds = postBookMarkEntries.values
                             .filter { it.bookmarked }
                             .mapTo(mutableSetOf()) { it.targetId },
-                        readPostIds = postBookMarkEntries.values
-                            .filter { it.read }
-                            .mapTo(mutableSetOf()) { it.targetId },
+                        readPostIds = emptySet(),
+                        chapterStates = postChapterStates,
                         onPageOrPostClick = { page, post ->
                             scope.launch {
                                 if (post != null) {
+                                    activeChapterProgressPid = post.pid.value.toLong()
                                     drawerState.close()
                                     if (page !in loadedPages) {
                                         loadPage(page)
                                         delay(50.milliseconds) // Wait briefly for Compose to layout the new items
                                     }
                                     val targetIndex = entryIndexByPid[post.pid.value.toLong()] ?: -1
-                                    if (targetIndex >= 0) listState.scrollToItem(targetIndex)
+                                    if (targetIndex >= 0) {
+                                        scrollToChapterTarget(targetIndex, post.pid.value.toLong())
+                                    }
                                 } else {
                                     // User just clicked the page header to expand catalog, load the page, don't close drawer
                                     if (page !in loadedPages) {
@@ -1985,15 +2118,17 @@ internal fun ThreadReaderScreen(
     }
 
     catalogActionPost?.let { post ->
-        val entry = postBookMarkEntries[post.pid.value.toLong()]
+        val bookmarkEntry = postBookMarkEntries[post.pid.value.toLong()]
+        val chapterState = postChapterStates[post.pid.value.toLong()]
         CatalogBookMarkActionDialog(
-            bookmarked = entry?.bookmarked == true,
-            read = entry?.read == true,
+            bookmarked = bookmarkEntry?.bookmarked == true,
+            read = chapterState?.read == true,
+            hasProgress = chapterState?.hasProgress == true,
             onDismiss = { catalogActionPost = null },
             onToggleBookMark = {
                 catalogActionPost = null
                 scope.launch {
-                    val next = entry?.bookmarked != true
+                    val next = bookmarkEntry?.bookmarked != true
                     bookMarkRepository.setBookmarked(
                         targetType = BookMarkRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
@@ -2008,36 +2143,44 @@ internal fun ThreadReaderScreen(
                     )
                 }
             },
-            onToggleRead = {
+            onMarkRead = {
                 catalogActionPost = null
                 scope.launch {
-                    val next = entry?.read != true
-                    bookMarkRepository.setRead(
-                        targetType = BookMarkRepository.TargetType.ThreadPost,
+                    chapterStateRepository.setRead(
+                        targetType = ChapterStateRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
                         title = post.title.ifBlank { i18n("（無標題）") },
-                        read = next,
+                        read = true,
                     )
-                    reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(
-                        if (next) i18n("已標為已讀") else i18n("已標為未讀"),
-                        duration = SnackbarDuration.Short,
-                    )
+                    reloadPostChapterStates()
+                    snackbarHostState.showSnackbar(i18n("已標為已讀"), duration = SnackbarDuration.Short)
                 }
             },
-            onClearHistory = {
+            onMarkUnread = {
                 catalogActionPost = null
                 scope.launch {
-                    bookMarkRepository.setRead(
-                        targetType = BookMarkRepository.TargetType.ThreadPost,
+                    chapterStateRepository.setRead(
+                        targetType = ChapterStateRepository.TargetType.ThreadPost,
                         parentId = tid.value.toLong(),
                         targetId = post.pid.value.toLong(),
                         title = post.title.ifBlank { i18n("（無標題）") },
                         read = false,
                     )
-                    reloadPostBookMarks()
-                    snackbarHostState.showSnackbar(i18n("已清除閱讀紀錄"), duration = SnackbarDuration.Short)
+                    reloadPostChapterStates()
+                    snackbarHostState.showSnackbar(i18n("已標為未讀"), duration = SnackbarDuration.Short)
+                }
+            },
+            onClearHistory = {
+                catalogActionPost = null
+                scope.launch {
+                    chapterStateRepository.clearParent(
+                        targetType = ChapterStateRepository.TargetType.ThreadPost,
+                        parentId = tid.value.toLong(),
+                    )
+                    readHistoryRepo.deleteHistory(tid, threadType, authorId)
+                    reloadPostChapterStates()
+                    snackbarHostState.showSnackbar(i18n("已清除全部閱讀紀錄"), duration = SnackbarDuration.Short)
                 }
             },
         )
@@ -2054,6 +2197,7 @@ private fun ReaderCatalogPanelWithPosition(
     loadedPostsByPage: Map<Int, List<Post>>,
     bookmarkedPostIds: Set<Long>,
     readPostIds: Set<Long>,
+    chapterStates: Map<Long, ChapterStateRepository.Entry>,
     onPageOrPostClick: (Int, Post?) -> Unit,
     onPostLongPress: (Post) -> Unit,
 ) {
@@ -2074,6 +2218,7 @@ private fun ReaderCatalogPanelWithPosition(
         currentPid = currentPosition.pid,
         bookmarkedPostIds = bookmarkedPostIds,
         readPostIds = readPostIds,
+        chapterStates = chapterStates,
         onPageOrPostClick = onPageOrPostClick,
         onPostLongPress = onPostLongPress,
     )
@@ -2179,9 +2324,11 @@ private fun calculateReaderPageProgress(
 private fun CatalogBookMarkActionDialog(
     bookmarked: Boolean,
     read: Boolean,
+    hasProgress: Boolean,
     onDismiss: () -> Unit,
     onToggleBookMark: () -> Unit,
-    onToggleRead: () -> Unit,
+    onMarkRead: () -> Unit,
+    onMarkUnread: () -> Unit,
     onClearHistory: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -2191,8 +2338,13 @@ private fun CatalogBookMarkActionDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 CatalogActionRow(if (bookmarked) i18n("移除書籤") else i18n("新增書籤"), onToggleBookMark)
-                CatalogActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), onToggleRead)
-                CatalogActionRow(i18n("清除閱讀紀錄"), onClearHistory)
+                if (hasProgress) {
+                    CatalogActionRow(i18n("標為已讀"), onMarkRead)
+                    CatalogActionRow(i18n("標為未讀"), onMarkUnread)
+                } else {
+                    CatalogActionRow(if (read) i18n("標為未讀") else i18n("標為已讀"), if (read) onMarkUnread else onMarkRead)
+                }
+                CatalogActionRow(i18n("清除全部閱讀紀錄"), onClearHistory)
             }
         },
         confirmButton = {},

@@ -11,14 +11,24 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 class FavoriteUpdateCancelReceiver : BroadcastReceiver() {
+    enum class Action(val rawValue: String) {
+        Interrupt("interrupt"),
+        Cancel("cancel"),
+    }
+
     override fun onReceive(context: Context, intent: Intent) {
         val runId = intent.getStringExtra(EXTRA_RUN_ID) ?: return
+        val action = Action.entries.firstOrNull { it.rawValue == intent.getStringExtra(EXTRA_ACTION) } ?: Action.Interrupt
         val pending = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             try {
-                AndroidFavoriteUpdateSupport.createRepository(context).interruptRun(runId)
+                val repository = AndroidFavoriteUpdateSupport.createRepository(context)
+                when (action) {
+                    Action.Interrupt -> repository.interruptRun(runId)
+                    Action.Cancel -> repository.cancelRun(runId)
+                }
                 WorkManager.getInstance(context.applicationContext)
-                    .cancelUniqueWork(AndroidFavoriteUpdateScheduler.UNIQUE_MANUAL_WORK)
+                    .cancelAllWorkByTag(AndroidFavoriteUpdateScheduler.WORK_TAG)
             } finally {
                 pending.finish()
             }
@@ -26,17 +36,19 @@ class FavoriteUpdateCancelReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        private const val ACTION_CANCEL = "me.thenano.yamibo.favorite.update.CANCEL"
+        private const val ACTION_UPDATE_TASK = "me.thenano.yamibo.favorite.update.TASK_ACTION"
         private const val EXTRA_RUN_ID = "run_id"
+        private const val EXTRA_ACTION = "action"
 
-        fun createPendingIntent(context: Context, runId: String): PendingIntent {
+        fun createPendingIntent(context: Context, runId: String, action: Action): PendingIntent {
             val intent = Intent(context, FavoriteUpdateCancelReceiver::class.java).apply {
-                action = ACTION_CANCEL
+                this.action = ACTION_UPDATE_TASK
                 putExtra(EXTRA_RUN_ID, runId)
+                putExtra(EXTRA_ACTION, action.rawValue)
             }
             return PendingIntent.getBroadcast(
                 context,
-                runId.hashCode(),
+                31 * runId.hashCode() + action.rawValue.hashCode(),
                 intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )

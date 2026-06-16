@@ -91,19 +91,19 @@ sealed class YamiboColorScheme {
     /** Classic Black */
     data object ClassicBlack : YamiboColorScheme() {
         override val name = "classic_black"
-        override val brownDeep = 0xFF1A1A1A
-        override val brownPrimary = 0xFF555555
-        override val brownLight = 0xFF666666
-        override val creamBackground = 0xFF121212
-        override val creamSurface = 0xFF1E1E1E
-        override val orangeAccent = 0xFFBB86FC
-        override val textDark = 0xFFE0E0E0
-        override val redAccent = 0xFFCF6679
-        override val pinnedBg = 0xFF252525
-        override val announceBg = 0xFF2A2A2A
-        override val navBarBg = 0xFF121212
-        override val navBarIconSelected = 0xFFBB86FC
-        override val navBarIconUnselected = 0xFF888888
+        override val brownDeep = 0xFFD3D3D3
+        override val brownPrimary = 0xFFAAAAAA
+        override val brownLight = 0xFF444444
+        override val creamBackground = 0xFF0A0A0A
+        override val creamSurface = 0xFF000000
+        override val orangeAccent = 0xFFE6892D
+        override val textDark = 0xFFDEDEDE
+        override val redAccent = 0xFF2CD0D0
+        override val pinnedBg = 0xFF1C0D02
+        override val announceBg = 0xFF00071E
+        override val navBarBg = 0xFF0A0A0A
+        override val navBarIconSelected = 0xFFE6892D
+        override val navBarIconUnselected = 0xFF777777
     }
 
     /** Classic White */

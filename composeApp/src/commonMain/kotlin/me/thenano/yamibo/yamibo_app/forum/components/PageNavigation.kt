@@ -25,7 +25,9 @@ import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
     val colors = YamiboTheme.colors
     val current = pageNav.currentPage ?: 1
-    val total = pageNav.totalPages ?: 1
+    val total = pageNav.totalPages
+    val prevPage = pageNav.prevPageIndex ?: (current - 1).takeIf { pageNav.prevUrl != null && it >= 1 }
+    val nextPage = pageNav.nextPageIndex ?: (current + 1).takeIf { pageNav.nextUrl != null }
     var showPagePicker by remember { mutableStateOf(false) }
 
     Column(
@@ -39,13 +41,14 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
             /** prev button */
             PageButton(
                 text = i18n("上一頁"),
-                enabled = pageNav.prevUrl != null,
-                onClick = { if (current > 1) onPageChange(current - 1) }
+                enabled = prevPage != null,
+                onClick = { prevPage?.let(onPageChange) }
             )
 
             /** current page display / picker trigger */
             Surface(
-                onClick = { showPagePicker = true },
+                onClick = { if (total != null) showPagePicker = true },
+                enabled = total != null,
                 shape = RoundedCornerShape(12.dp),
                 color = colors.brownDeep,
             ) {
@@ -61,14 +64,14 @@ fun PageNavigation(pageNav: PageNav, onPageChange: (Int) -> Unit) {
             /** next button */
             PageButton(
                 text = i18n("下一頁"),
-                enabled = pageNav.nextUrl != null,
-                onClick = { if (current < total) onPageChange(current + 1) }
+                enabled = nextPage != null,
+                onClick = { nextPage?.let(onPageChange) }
             )
         }
     }
 
     /** Popup page picker dialog */
-    if (showPagePicker) {
+    if (showPagePicker && total != null) {
         PagePickerDialog(
             currentPage = current,
             totalPages = total,

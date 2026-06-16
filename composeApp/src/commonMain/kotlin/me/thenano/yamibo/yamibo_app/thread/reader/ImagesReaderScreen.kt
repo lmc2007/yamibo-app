@@ -49,11 +49,14 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
 import me.thenano.yamibo.yamibo_app.LocalThreadRepository
 import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
@@ -72,6 +75,13 @@ import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
+
+private data class ImageReaderPageTarget(
+    val threadId: Int,
+    val page: Int,
+    val transitionSerial: Int,
+    val directionOverride: Int = 0,
+)
 
 @Suppress("DuplicatedCode")
 @Composable
@@ -92,11 +102,18 @@ fun ImagesReaderScreen(
     authorId: UserId?,
     tagThreads: List<ThreadSummary>?,
 ) {
+    val colors = YamiboTheme.colors
+    SystemBarsEffect(
+        statusBarColor = colors.creamBackground,
+        navigationBarColor = colors.creamBackground,
+        priority = 100,
+    )
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val historyRepo = LocalReadHistoryRepository.current
     val threadRepository = LocalThreadRepository.current
+    val chapterStateRepository = LocalChapterStateRepository.current
     val platformContext = LocalPlatformContext.current
     ReadingTimeTracker()
 
@@ -122,6 +139,51 @@ fun ImagesReaderScreen(
     val touchZoneLayout = mangaSettingsRepo.touchZone.state()
     
     val isRtl = readingMode == ReadingMode.SINGLE_RTL
+    var tagThreadChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
+
+    suspend fun reloadTagThreadChapterStates() {
+        val currentTagId = tagId ?: return
+        tagThreadChapterStates = chapterStateRepository
+            .getEntriesByParent(
+                targetType = ChapterStateRepository.TargetType.TagMangaThread,
+                parentId = currentTagId.value.toLong(),
+            )
+            .associateBy { it.targetId }
+    }
+
+    LaunchedEffect(tagId) {
+        reloadTagThreadChapterStates()
+    }
+
+    suspend fun syncTagMangaProgress(pageIndex: Int, totalPages: Int) {
+        val currentTagId = tagId ?: return
+        val currentIndex = currentThreadIndex()
+        if (currentIndex < 0) return
+        if (totalPages <= 0) return
+
+        val thread = currentThreads.getOrNull(currentIndex) ?: return
+        val imagePageIndex = pageIndex.coerceIn(0, totalPages - 1)
+        val progressPercent = (((imagePageIndex + 1) * 100f) / totalPages)
+            .toInt()
+            .coerceIn(1, 100)
+        val existing = chapterStateRepository.getEntry(
+            targetType = ChapterStateRepository.TargetType.TagMangaThread,
+            parentId = currentTagId.value.toLong(),
+            targetId = thread.tid.value.toLong(),
+        )
+        if (existing?.read == true && progressPercent < 100) return
+
+        chapterStateRepository.upsertProgress(
+            targetType = ChapterStateRepository.TargetType.TagMangaThread,
+            parentId = currentTagId.value.toLong(),
+            targetId = thread.tid.value.toLong(),
+            title = thread.title.ifBlank { i18n("（無標題）") },
+            progressPercent = progressPercent,
+            read = progressPercent >= 100,
+            lastPageIndex = imagePageIndex,
+            totalPages = totalPages,
+        )
+    }
     val isVerticalMode = readingMode == ReadingMode.SINGLE_TTB
     val isScrollMode = readingMode == ReadingMode.SCROLL_CONTINUOUS || readingMode == ReadingMode.SCROLL_GAP
 
@@ -129,6 +191,9 @@ fun ImagesReaderScreen(
     var isLoadingImages by remember { mutableStateOf(actualImageList.isEmpty()) }
     var actualPostId by remember(activeTid) { mutableStateOf(if (activeTid == tid) postId else null) }
     var startFromLastPage by remember { mutableStateOf(false) }
+    var restoreHistoryForActiveThread by remember { mutableStateOf(loadHistory) }
+    var pageTurnDirection by remember { mutableIntStateOf(0) }
+    var pageTransitionSerial by remember { mutableIntStateOf(0) }
 
     /** State */
     var showOverlay by remember { mutableStateOf(false) }
@@ -140,6 +205,12 @@ fun ImagesReaderScreen(
     var showCatalog by remember { mutableStateOf(false) }
     val tagRepository = LocalTagRepository.current
     val loadedThreadsByPage = remember { mutableStateMapOf<Int, List<ThreadSummary>>() }
+
+    LaunchedEffect(showCatalog, tagId) {
+        if (showCatalog) {
+            reloadTagThreadChapterStates()
+        }
+    }
 
     LaunchedEffect(currentTagPage, currentThreads) {
         if (currentThreads.isNotEmpty()) {
@@ -198,7 +269,7 @@ fun ImagesReaderScreen(
     val minPage: () -> Int = { if (tagId != null) -1 else 0 }
     val maxPage: () -> Int = { if (tagId != null) totalContentPages() else totalContentPages() - 1 }
 
-    var currentPage by remember(activeTid) { mutableIntStateOf(initialPage - 1) }
+    var currentPage by remember { mutableIntStateOf(initialPage - 1) }
 
     var retryTrigger by remember { mutableIntStateOf(0) }
 
@@ -235,14 +306,15 @@ fun ImagesReaderScreen(
                         if (startFromLastPage && actualImageList.isNotEmpty()) {
                             snapNextTransition = true
                             currentPage = actualImageList.size - 1
-                        } else if (loadHistory) {
+                        } else if (loadHistory && restoreHistoryForActiveThread) {
                             var didRestore = false
 
                             fun onRestoreScrollListState(history: ReadHistoryRepository.AnyReadingHistory) {
                                 when(history) {
                                     is ReadHistoryRepository.TagMangaReadingHistory,is ReadHistoryRepository.TagMangaReadingHistory -> {
                                         snapNextTransition = true
-                                        val finalPageToRestore = if (history.threadImagePageIndex >= actualImageList.size) 0 else history.threadImagePageIndex.coerceIn(minPage(), totalContentPages())
+                                        val finalPageToRestore = history.threadImagePageIndex
+                                            .coerceIn(0, (actualImageList.size - 1).coerceAtLeast(0))
                                         currentPage = finalPageToRestore
                                         if (history.firstVisibleItemIndex != null && finalPageToRestore > 0 && isScrollMode) {
                                             scope.launch {
@@ -285,6 +357,7 @@ fun ImagesReaderScreen(
                         }
                     }
                     startFromLastPage = false
+                    restoreHistoryForActiveThread = false
                     isLoadingImages = false
                 } else {
                     isLoadingImages = false
@@ -335,6 +408,10 @@ fun ImagesReaderScreen(
                             lastVisitTime = currentTimeMillis(),
                             coverUrl = finalCover
                         )
+                    )
+                    syncTagMangaProgress(
+                        pageIndex = snapshotPage.coerceIn(minPage(), maxPage()),
+                        totalPages = total.coerceAtLeast(1),
                     )
                 } else if (isMangaForum && postIdSnap != null) {
                     historyRepo.saveImagePosition(
@@ -398,29 +475,50 @@ fun ImagesReaderScreen(
     // Scroll Mode boundary jumper accumulator
     var scrollOverscrollY by remember { mutableFloatStateOf(0f) }
 
+    fun prepareChapterSwitch(
+        forward: Boolean,
+        startAtLastPage: Boolean = false,
+        startPageIndex: Int? = null,
+    ) {
+        scrollOverscrollY = 0f
+        restoreHistoryForActiveThread = false
+        startFromLastPage = startAtLastPage
+        pageTurnDirection = if (forward) 1 else -1
+        pageTransitionSerial++
+        currentPage = startPageIndex?.coerceAtLeast(0) ?: 0
+        actualImageList = emptyList()
+        actualPostId = null
+        resetZoom()
+        if (isScrollMode) {
+            scope.launch {
+                scrollListState.scrollToItem(0)
+            }
+        }
+    }
+
+    fun setReaderPage(page: Int) {
+        pageTurnDirection = 0
+        currentPage = page
+    }
+
     val launchNextChapter = {
         if (tagId != null && !isLoadingImages && hasNextChapter) {
             isLoadingImages = true
-            scrollOverscrollY = 0f
             scope.launch {
                 if (currentThreadIndex() >= 0 && currentThreadIndex() < currentThreads.lastIndex) {
+                    prepareChapterSwitch(forward = true)
                     activeTid = currentThreads[currentThreadIndex() + 1].tid
-                    currentPage = 0
-                    actualImageList = emptyList()
-                    actualPostId = null
                 } else if (currentTagPage < (currentTagTotalPages ?: 1)) {
                     val pageToLoad = currentTagPage + 1
                     val cached = tagRepository.getCachedTagPage(tagId, pageToLoad)
                     val result = if (cached != null) YamiboResult.Success(cached) else tagRepository.fetchTagPage(tagId, pageToLoad)
                     if (result is YamiboResult.Success) {
+                        prepareChapterSwitch(forward = true)
                         currentThreads = result.value.threadSummaries
                         currentTagPage = pageToLoad
                         if (currentThreads.isNotEmpty()) {
                             activeTid = currentThreads.first().tid
                         }
-                        currentPage = 0
-                        actualImageList = emptyList()
-                        actualPostId = null
                     } else {
                         snackbarHostState.showSnackbar(i18n("無法載入下一頁"))
                     }
@@ -434,28 +532,21 @@ fun ImagesReaderScreen(
     val launchPrevChapter = {
         if (tagId != null && !isLoadingImages && hasPrevChapter) {
             isLoadingImages = true
-            scrollOverscrollY = 0f
             scope.launch {
                 if (currentThreadIndex() > 0) {
+                    prepareChapterSwitch(forward = false, startAtLastPage = true)
                     activeTid = currentThreads[currentThreadIndex() - 1].tid
-                    currentPage = 0
-                    actualImageList = emptyList()
-                    actualPostId = null
-                    startFromLastPage = true
                 } else if (currentTagPage > 1) {
                     val pageToLoad = currentTagPage - 1
                     val cached = tagRepository.getCachedTagPage(tagId, pageToLoad)
                     val result = if (cached != null) YamiboResult.Success(cached) else tagRepository.fetchTagPage(tagId, pageToLoad)
                     if (result is YamiboResult.Success) {
+                        prepareChapterSwitch(forward = false, startAtLastPage = true)
                         currentThreads = result.value.threadSummaries
                         currentTagPage = pageToLoad
                         if (currentThreads.isNotEmpty()) {
                             activeTid = currentThreads.last().tid
                         }
-                        currentPage = 0
-                        actualImageList = emptyList()
-                        actualPostId = null
-                        startFromLastPage = true
                     } else {
                         snackbarHostState.showSnackbar(i18n("無法載入上一頁"))
                     }
@@ -498,7 +589,7 @@ fun ImagesReaderScreen(
                         if (currentPage == minPage() && hasPrevChapter) launchPrevChapter()
                         return
                     }
-                    if (currentPage > minPage()) { currentPage--; resetZoom() }
+                    if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
                     else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
                 }
                 TouchAction.NEXT -> {
@@ -506,7 +597,7 @@ fun ImagesReaderScreen(
                         if (currentPage == maxPage() && hasNextChapter) launchNextChapter()
                         return
                     }
-                    if (currentPage < maxPage()) { currentPage++; resetZoom() }
+                    if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
                     else if (currentPage == maxPage() && hasNextChapter) { launchNextChapter() }
                 }
                 TouchAction.MENU -> showOverlay = true
@@ -610,20 +701,20 @@ fun ImagesReaderScreen(
                                 if (scaleAnim.value <= 1.05f) { // Only turn page if not zoomed in
                                     if (isVerticalMode) {
                                         if (dragAccY < -80f) {
-                                            if (currentPage < maxPage()) { currentPage++; resetZoom() }
+                                            if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
                                             else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
                                         } else if (dragAccY > 80f) {
-                                            if (currentPage > minPage()) { currentPage--; resetZoom() }
+                                            if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
                                             else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
                                         }
                                     } else {
                                         val dir = if (isRtl) -1 else 1
                                         val effectiveDrag = dragAccX * dir
                                         if (effectiveDrag < -80f) {
-                                            if (currentPage < maxPage()) { currentPage++; resetZoom() }
+                                            if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
                                             else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
                                         } else if (effectiveDrag > 80f) {
-                                            if (currentPage > minPage()) { currentPage--; resetZoom() }
+                                            if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
                                             else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
                                         }
                                     }
@@ -860,9 +951,15 @@ fun ImagesReaderScreen(
                 }
             } else {
                 AnimatedContent(
-                    targetState = currentPage,
+                    targetState = ImageReaderPageTarget(
+                        threadId = activeTid.value,
+                        page = currentPage,
+                        transitionSerial = pageTransitionSerial,
+                        directionOverride = pageTurnDirection,
+                    ),
                     transitionSpec = {
-                        val dir = if (targetState > initialState) 1 else -1
+                        val forcedDir = targetState.directionOverride.takeIf { it != 0 }
+                        val dir = forcedDir ?: if (targetState.page > initialState.page) 1 else -1
 
                         if (snapNextTransition) {
                             snapNextTransition = false
@@ -877,7 +974,8 @@ fun ImagesReaderScreen(
                         }
                     },
                     modifier = Modifier.fillMaxSize()
-                ) { page ->
+                ) { pageTarget ->
+                    val page = pageTarget.page
                     when (page) {
                         -1 -> InterstitialCard(
                             item = ReaderItem.InterstitialItem(
@@ -979,7 +1077,7 @@ fun ImagesReaderScreen(
                 navigator.pop()
             },
             onPageChange = { page ->
-                currentPage = page.coerceIn(0, actualImageList.lastIndex)
+                setReaderPage(page.coerceIn(0, actualImageList.lastIndex))
                 if (isScrollMode) {
                     val targetIndex = if (tagId != null) currentPage + 1 else currentPage
                     scope.launch { scrollListState.scrollToItem(targetIndex) }
@@ -1022,6 +1120,7 @@ fun ImagesReaderScreen(
                     loadedThreadsByPage = loadedThreadsByPage,
                     currentTagPage = currentTagPage,
                     currentThreadId = activeTid,
+                    chapterStates = tagThreadChapterStates,
                     onPageOrThreadClick = { page, targetThread ->
                         if (targetThread == null) {
                             if (!loadedThreadsByPage.containsKey(page)) {
@@ -1041,17 +1140,31 @@ fun ImagesReaderScreen(
                             }
                         } else {
                             showCatalog = false
-                            currentTagPage = page
                             // Navigate to target thread by updating local state
                             if (targetThread.tid != activeTid) {
+                                val previousTagPage = currentTagPage
+                                val previousThreadIndex = currentThreadIndex()
+                                val targetThreadIndex = (loadedThreadsByPage[page] ?: currentThreads)
+                                    .indexOfFirst { it.tid == targetThread.tid }
+                                val movingForward = when {
+                                    page > previousTagPage -> 1
+                                    page < previousTagPage -> -1
+                                    targetThreadIndex >= 0 && previousThreadIndex >= 0 && targetThreadIndex > previousThreadIndex -> 1
+                                    else -> -1
+                                } > 0
+                                val targetStartPageIndex = tagThreadChapterStates[targetThread.tid.value.toLong()]
+                                    ?.lastPageIndex
+                                prepareChapterSwitch(
+                                    forward = movingForward,
+                                    startPageIndex = targetStartPageIndex,
+                                )
                                 activeTid = targetThread.tid
-                                if (page != currentTagPage) {
+                                if (page != previousTagPage) {
                                     currentTagPage = page
                                     currentThreads = loadedThreadsByPage[page] ?: emptyList()
+                                } else {
+                                    currentTagPage = page
                                 }
-                                currentPage = 0
-                                actualImageList = emptyList()
-                                actualPostId = null
                             }
                         }
                     },

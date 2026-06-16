@@ -52,6 +52,18 @@ interface FavoriteUpdateRepository {
         val itemCount: Int,
     )
 
+    data class CategoryFilter(
+        val categoryId: Long,
+        val categoryName: String,
+        val enabled: Boolean,
+        val itemCount: Int,
+    )
+
+    data class ScopeTarget(
+        val fid: Int?,
+        val categoryIds: Set<Long>,
+    )
+
     data class RunSnapshot(
         val runId: String,
         val status: RunStatus,
@@ -89,8 +101,14 @@ interface FavoriteUpdateRepository {
     suspend fun getRunSnapshot(runId: String): RunSnapshot?
     suspend fun runUpdate(runId: String)
     suspend fun getActiveEvents(): List<UpdateEvent>
+    suspend fun getActiveEventsFiltered(): List<UpdateEvent>
     suspend fun markEventRead(eventId: Long)
     suspend fun dismissEvent(eventId: Long)
     suspend fun getFidFilters(): List<FidFilter>
+    suspend fun getActiveEventFidFilters(): List<FidFilter>
     suspend fun setFidEnabled(fid: Int, enabled: Boolean)
+    suspend fun getCategoryFilters(): List<CategoryFilter>
+    suspend fun getActiveEventCategoryFilters(): List<CategoryFilter>
+    suspend fun setCategoryEnabled(categoryId: Long, enabled: Boolean)
+    suspend fun getScopeTargets(): List<ScopeTarget>
 }

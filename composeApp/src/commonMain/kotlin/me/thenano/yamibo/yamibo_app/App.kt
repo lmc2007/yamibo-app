@@ -24,9 +24,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.*
@@ -36,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -88,10 +92,16 @@ fun App() {
 
     val navigator = LocalNavigator.current
     val appSettingsRepository = LocalAppSettingsRepository.current
+    val fontRepository = LocalFontRepository.current
     val authRepository = LocalAuthRepository.current
     val signRepository = LocalSignRepository.current
     val appUpdateRepository = LocalAppUpdateRepository.current
     val appLanguage = appSettingsRepository.language.state()
+    val appFontId = appSettingsRepository.appFontId.state()
+    val loadedFonts by fontRepository.fonts.collectAsState()
+    val appFontFamily = remember(appFontId, loadedFonts) {
+        fontRepository.getAppFontFamily()
+    }
     val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
@@ -119,101 +129,105 @@ fun App() {
     }
 
     AppLocaleProvider(appLanguage) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = YamiboTheme.colors.creamBackground
+        MaterialTheme(
+            typography = appFontFamily?.let { Typography().withFontFamily(it) } ?: Typography(),
         ) {
-            Box(modifier = Modifier.fillMaxSize()) {
-                val topIndex = stack.lastIndex
-                val topId = stack.lastOrNull()?.id
-                val renderPreviousForPush =
-                    navigator.lastAction == NavAction.Push &&
-                        topIndex > 0 &&
-                        completedPushTopId != topId
-                stack.forEachIndexed { index, navigatable ->
-                    val isPopping = index == poppingIdx
-                    val isTop = index == stack.lastIndex
-                    val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
-                    val shouldDraw =
-                        isTop ||
-                            isPopping ||
-                            (poppingIdx >= 0 && index == poppingIdx - 1) ||
-                            (renderPreviousForPush && index == topIndex - 1)
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = YamiboTheme.colors.creamBackground
+            ) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val topIndex = stack.lastIndex
+                    val topId = stack.lastOrNull()?.id
+                    val renderPreviousForPush =
+                        navigator.lastAction == NavAction.Push &&
+                            topIndex > 0 &&
+                            completedPushTopId != topId
+                    stack.forEachIndexed { index, navigatable ->
+                        val isPopping = index == poppingIdx
+                        val isTop = index == stack.lastIndex
+                        val isNewPush = navigator.lastAction == NavAction.Push && isTop && !isPopping
+                        val shouldDraw =
+                            isTop ||
+                                isPopping ||
+                                (poppingIdx >= 0 && index == poppingIdx - 1) ||
+                                (renderPreviousForPush && index == topIndex - 1)
 
-                    key(navigatable.id) {
-                        // New push screens start invisible (false→true), others start visible
-                        val visibleState = remember {
-                            MutableTransitionState(!isNewPush)
-                        }
-
-                        // Drive animation: pop = true→false, otherwise stay/become true
-                        if (isPopping) {
-                            visibleState.targetState = false
-                        } else {
-                            visibleState.targetState = true
-                        }
-
-                        holder.SaveableStateProvider(navigatable.id) {
-                            AnimatedVisibility(
-                                visibleState = visibleState,
-                                enter = slideInHorizontally(
-                                    initialOffsetX = { it },
-                                    animationSpec = tween(duration)
-                                ) + fadeIn(animationSpec = tween(duration)),
-                                exit = slideOutHorizontally(
-                                    targetOffsetX = { it },
-                                    animationSpec = tween(duration)
-                                ) + fadeOut(animationSpec = tween(duration)),
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .drawOnlyWhen(shouldDraw)
-                                    .blockPointerPassthrough(isTop || isPopping)
-                                    .zIndex(index.toFloat())
-                            ) {
-                                navigatable.Content()
+                        key(navigatable.id) {
+                            // New push screens start invisible (false→true), others start visible
+                            val visibleState = remember {
+                                MutableTransitionState(!isNewPush)
                             }
-                        }
 
-                        // When exit animation finished, actually remove from stack
-                        if (isPopping && visibleState.isIdle && !visibleState.currentState) {
-                            LaunchedEffect(Unit) {
-                                navigator.completePop()
+                            // Drive animation: pop = true→false, otherwise stay/become true
+                            if (isPopping) {
+                                visibleState.targetState = false
+                            } else {
+                                visibleState.targetState = true
                             }
-                        }
-                        if (isNewPush && visibleState.isIdle && visibleState.currentState && completedPushTopId != navigatable.id) {
-                            LaunchedEffect(navigatable.id) {
-                                completedPushTopId = navigatable.id
+
+                            holder.SaveableStateProvider(navigatable.id) {
+                                AnimatedVisibility(
+                                    visibleState = visibleState,
+                                    enter = slideInHorizontally(
+                                        initialOffsetX = { it },
+                                        animationSpec = tween(duration)
+                                    ) + fadeIn(animationSpec = tween(duration)),
+                                    exit = slideOutHorizontally(
+                                        targetOffsetX = { it },
+                                        animationSpec = tween(duration)
+                                    ) + fadeOut(animationSpec = tween(duration)),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .drawOnlyWhen(shouldDraw)
+                                        .blockPointerPassthrough(isTop || isPopping)
+                                        .zIndex(index.toFloat())
+                                ) {
+                                    navigatable.Content()
+                                }
+                            }
+
+                            // When exit animation finished, actually remove from stack
+                            if (isPopping && visibleState.isIdle && !visibleState.currentState) {
+                                LaunchedEffect(Unit) {
+                                    navigator.completePop()
+                                }
+                            }
+                            if (isNewPush && visibleState.isIdle && visibleState.currentState && completedPushTopId != navigatable.id) {
+                                LaunchedEffect(navigatable.id) {
+                                    completedPushTopId = navigatable.id
+                                }
                             }
                         }
                     }
                 }
+                LaunchSignReminderDialog(
+                    visible = showSignReminder,
+                    onDismiss = {
+                        appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
+                        showSignReminder = false
+                    },
+                    onGoSign = {
+                        showSignReminder = false
+                        navigator.popToRoot()
+                        navigator.replace(IMainScreen(MainTab.Profile))
+                    },
+                )
+                LaunchUpdateAvailableDialog(
+                    release = launchUpdateRelease,
+                    onDismiss = { launchUpdateRelease = null },
+                    onDownload = { release ->
+                        launchUpdateRelease = null
+                        coroutineScope.launch {
+                            appUpdateRepository.downloadAndInstall(release)
+                        }
+                    },
+                    onOpenReleasePage = { release ->
+                        launchUpdateRelease = null
+                        appUpdateRepository.openReleasePage(release)
+                    },
+                )
             }
-            LaunchSignReminderDialog(
-                visible = showSignReminder,
-                onDismiss = {
-                    appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
-                    showSignReminder = false
-                },
-                onGoSign = {
-                    showSignReminder = false
-                    navigator.popToRoot()
-                    navigator.replace(IMainScreen(MainTab.Profile))
-                },
-            )
-            LaunchUpdateAvailableDialog(
-                release = launchUpdateRelease,
-                onDismiss = { launchUpdateRelease = null },
-                onDownload = { release ->
-                    launchUpdateRelease = null
-                    coroutineScope.launch {
-                        appUpdateRepository.downloadAndInstall(release)
-                    }
-                },
-                onOpenReleasePage = { release ->
-                    launchUpdateRelease = null
-                    appUpdateRepository.openReleasePage(release)
-                },
-            )
         }
     }
 
@@ -230,6 +244,27 @@ fun App() {
         }
     }
 }
+
+private fun Typography.withFontFamily(fontFamily: FontFamily): Typography = copy(
+    displayLarge = displayLarge.withFontFamily(fontFamily),
+    displayMedium = displayMedium.withFontFamily(fontFamily),
+    displaySmall = displaySmall.withFontFamily(fontFamily),
+    headlineLarge = headlineLarge.withFontFamily(fontFamily),
+    headlineMedium = headlineMedium.withFontFamily(fontFamily),
+    headlineSmall = headlineSmall.withFontFamily(fontFamily),
+    titleLarge = titleLarge.withFontFamily(fontFamily),
+    titleMedium = titleMedium.withFontFamily(fontFamily),
+    titleSmall = titleSmall.withFontFamily(fontFamily),
+    bodyLarge = bodyLarge.withFontFamily(fontFamily),
+    bodyMedium = bodyMedium.withFontFamily(fontFamily),
+    bodySmall = bodySmall.withFontFamily(fontFamily),
+    labelLarge = labelLarge.withFontFamily(fontFamily),
+    labelMedium = labelMedium.withFontFamily(fontFamily),
+    labelSmall = labelSmall.withFontFamily(fontFamily),
+)
+
+private fun TextStyle.withFontFamily(fontFamily: FontFamily): TextStyle =
+    copy(fontFamily = fontFamily)
 
 private fun Modifier.blockPointerPassthrough(enabled: Boolean): Modifier =
     if (!enabled) {

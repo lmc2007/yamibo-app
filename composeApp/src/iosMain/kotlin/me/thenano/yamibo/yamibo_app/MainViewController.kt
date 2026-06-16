@@ -20,6 +20,8 @@ import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
+import me.thenano.yamibo.yamibo_app.repository.font.IOSFontPlatform
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -68,6 +70,7 @@ fun MainViewController() = ComposeUIViewController {
     val favoriteRepository = remember { IOSLocalFavoriteRepository(dbFactory) }
     val detailNoteRepository = remember { IOSDetailNoteRepository(dbFactory) }
     val bookMarkRepository = remember { IOSLocalBookMarkRepository(dbFactory) }
+    val chapterStateRepository = remember { IOSLocalChapterStateRepository(dbFactory) }
     val remoteFavoriteRepository = remember { IOSFavoriteRepository(cookieStore, yamiboClient) }
     val favoriteSyncDatabase = remember { Database(dbFactory.createDriver()) }
     val favoriteSyncRepository = remember {
@@ -120,6 +123,14 @@ fun MainViewController() = ComposeUIViewController {
         )
     }
     val themeRepository = remember { IOSThemeRepository() }
+    val fontRepository = remember {
+        DefaultFontRepository(
+            settingsStore = settingsStore,
+            appSettingsRepository = appSettingsRepository,
+            novelReaderSettingsRepository = novelReaderSettingsRepository,
+            platform = IOSFontPlatform(),
+        )
+    }
     val appUpdateRepository = remember {
         DefaultAppUpdateRepository(
             appSettingsRepository = appSettingsRepository,
@@ -142,6 +153,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalChineseConversionRepository provides chineseConversionRepository,
         LocalDetailNoteRepository provides detailNoteRepository,
         LocalBookMarkRepository provides bookMarkRepository,
+        LocalChapterStateRepository provides chapterStateRepository,
         LocalFavoriteRepository provides favoriteRepository,
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,
@@ -153,6 +165,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalReadHistoryRepository provides readHistoryRepository,
         LocalSignRepository provides signRepository,
         LocalThemeRepository provides themeRepository,
+        LocalFontRepository provides fontRepository,
         LocalTagRepository provides tagRepository,
         LocalAppSettingsRepository provides appSettingsRepository,
         LocalDiskCacheFactory provides diskCacheFactory,

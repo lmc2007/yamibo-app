@@ -12,8 +12,10 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.ForumRepository
+import me.thenano.yamibo.yamibo_app.repository.FontRepository
 import me.thenano.yamibo.yamibo_app.repository.InAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as LocalBookMarkRepositoryType
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as LocalChapterStateRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository as LocalFavoriteRepositoryType
 import me.thenano.yamibo.yamibo_app.repository.NovelPrePostCommentsCacheRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -66,6 +68,9 @@ val LocalDetailNoteRepository =
 val LocalBookMarkRepository =
     compositionLocalOf<LocalBookMarkRepositoryType> { error("LocalBookMarkRepository not provided") }
 
+val LocalChapterStateRepository =
+    compositionLocalOf<LocalChapterStateRepositoryType> { error("LocalChapterStateRepository not provided") }
+
 val LocalFavoriteRepository =
     compositionLocalOf<LocalFavoriteRepositoryType> { error("LocalFavoriteRepository not provided") }
 
@@ -89,6 +94,9 @@ val LocalBackgroundAccessRepository =
 
 val LocalThemeRepository =
     compositionLocalOf<ThemeRepository> { error("LocalThemeRepository not provided") }
+
+val LocalFontRepository =
+    compositionLocalOf<FontRepository> { error("LocalFontRepository not provided") }
 
 val LocalNovelThreadCacheRepository =
     compositionLocalOf<NovelPrePostCommentsCacheRepository> { error("LocalNovelThreadCacheRepository not provided") }

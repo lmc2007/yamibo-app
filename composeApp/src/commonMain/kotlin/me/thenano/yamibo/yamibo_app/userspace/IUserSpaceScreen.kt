@@ -3,6 +3,8 @@
 import androidx.compose.runtime.Composable
 import io.github.littlesurvival.dto.value.UserId
 import kotlinx.serialization.Serializable
+import me.thenano.yamibo.yamibo_app.IMainScreen
+import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.RestorableNavigatable
@@ -48,9 +50,11 @@ class IUserSpaceScreen(
         override fun decode(payload: String): RestorableNavigatable {
             val data = decodeRestorePayload<UserSpaceScreenRestorePayload>(payload)
             if (data.groupName == "Messages") {
+                if (data.initialTabName == "Updates") {
+                    return IMainScreen(initialTab = MainTab.Updates)
+                }
                 return IMessageCenterScreen(
                     initialTab = when (data.initialTabName) {
-                        "Updates" -> MessageCenterTab.Updates
                         "Notices" -> MessageCenterTab.Notices
                         else -> MessageCenterTab.PrivateMessages
                     },

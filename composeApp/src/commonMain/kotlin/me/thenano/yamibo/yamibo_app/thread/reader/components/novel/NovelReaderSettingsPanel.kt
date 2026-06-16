@@ -30,6 +30,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonDisp
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonJumpTargetSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonThresholdSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
+import me.thenano.yamibo.yamibo_app.profile.settings.bound.ReaderFontSelectorSetting
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -78,6 +79,9 @@ fun NovelReaderSettingsPanel(
 
                     Spacer(Modifier.height(16.dp))
                     NovelLineSpacingSetting()
+
+                    Spacer(Modifier.height(16.dp))
+                    ReaderFontSelectorSetting()
 
                     Spacer(Modifier.height(16.dp))
                     NovelSystemBarsBackgroundSetting()

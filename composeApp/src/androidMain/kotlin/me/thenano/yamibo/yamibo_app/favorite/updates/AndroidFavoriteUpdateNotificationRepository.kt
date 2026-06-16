@@ -33,7 +33,7 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         val processed = (snapshot.completedCount + snapshot.skippedCount + snapshot.failedCount).coerceAtMost(total)
         val progress = if (total > 0) ((processed * 100f) / total).toInt().coerceIn(0, 100) else 0
         return NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_stat_yamibo_update)
             .setContentTitle(i18n("收藏更新"))
             .setContentText(snapshot.currentItem?.takeIf { it.isNotBlank() } ?: i18n("正在檢查收藏更新"))
             .setOnlyAlertOnce(true)
@@ -41,7 +41,8 @@ internal class AndroidFavoriteUpdateNotificationRepository(
             .setProgress(100, progress, total == 0)
             .setContentIntent(createOpenAppPendingIntent())
             .setPriority(NotificationCompat.PRIORITY_LOW)
-            .addAction(0, i18n("取消"), FavoriteUpdateCancelReceiver.createPendingIntent(appContext, snapshot.runId))
+            .addAction(0, i18n("暫停"), FavoriteUpdateCancelReceiver.createPendingIntent(appContext, snapshot.runId, FavoriteUpdateCancelReceiver.Action.Interrupt))
+            .addAction(0, i18n("取消"), FavoriteUpdateCancelReceiver.createPendingIntent(appContext, snapshot.runId, FavoriteUpdateCancelReceiver.Action.Cancel))
             .build()
     }
 
@@ -50,7 +51,7 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         notificationManager.notify(
             NOTIFICATION_ID,
             NotificationCompat.Builder(appContext, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_yamibo_update)
                 .setContentTitle(i18n("收藏更新完成"))
                 .setContentText(if (snapshot.detectedCount > 0) i18n("偵測到 {} 個更新", snapshot.detectedCount) else i18n("沒有偵測到更新"))
                 .setAutoCancel(true)
@@ -66,7 +67,7 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         notificationManager.notify(
             NOTIFICATION_ID,
             NotificationCompat.Builder(appContext, CHANNEL_ID)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.ic_stat_yamibo_update)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setAutoCancel(true)
@@ -108,4 +109,3 @@ internal class AndroidFavoriteUpdateNotificationRepository(
         const val NOTIFICATION_ID = 228120
     }
 }
-

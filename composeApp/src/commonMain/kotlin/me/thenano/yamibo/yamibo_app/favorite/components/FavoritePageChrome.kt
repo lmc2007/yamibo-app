@@ -49,21 +49,35 @@ fun HeaderRow(title: String, actions: List<Pair<String, () -> Unit>>) {
 @Composable
 fun FavoriteHeaderMenuRow(
     title: String,
+    filterActive: Boolean,
+    showFavoriteCounts: Boolean,
     onSearch: () -> Unit,
+    onShowFilter: () -> Unit,
+    onToggleFavoriteCounts: () -> Unit,
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onSyncFavorites: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val colors = YamiboTheme.colors
 
     YamiboMainTabTopBar(
         title = title,
     ) {
         YamiboMainTabIconAction(YamiboIcons.Search, i18n("搜尋收藏"), onSearch, iconSize = 28, iconOffsetY = 4)
+        YamiboMainTabIconAction(
+            icon = YamiboIcons.FilterList,
+            contentDescription = i18n("篩選收藏"),
+            onClick = onShowFilter,
+            iconSize = 26,
+            tint = if (filterActive) colors.orangeAccent else colors.brownDeep,
+        )
         RowScopeMenuBox(
             showMenu = showMenu,
+            showFavoriteCounts = showFavoriteCounts,
             onShowMenu = { showMenu = true },
             onDismissMenu = { showMenu = false },
+            onToggleFavoriteCounts = onToggleFavoriteCounts,
             onCreateCategory = onCreateCategory,
             onManageCategory = onManageCategory,
             onSyncFavorites = onSyncFavorites,
@@ -74,8 +88,10 @@ fun FavoriteHeaderMenuRow(
 @Composable
 private fun RowScopeMenuBox(
     showMenu: Boolean,
+    showFavoriteCounts: Boolean,
     onShowMenu: () -> Unit,
     onDismissMenu: () -> Unit,
+    onToggleFavoriteCounts: () -> Unit,
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onSyncFavorites: () -> Unit,
@@ -114,6 +130,20 @@ private fun RowScopeMenuBox(
                 onClick = {
                     onDismissMenu()
                     onManageCategory()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(i18n("顯示收藏數量"), color = colors.textStrong) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = if (showFavoriteCounts) YamiboIcons.CheckboxEnabled else YamiboIcons.CheckboxDisabled,
+                        contentDescription = null,
+                        tint = colors.brownPrimary,
+                    )
+                },
+                onClick = {
+                    onDismissMenu()
+                    onToggleFavoriteCounts()
                 },
             )
             DropdownMenuItem(

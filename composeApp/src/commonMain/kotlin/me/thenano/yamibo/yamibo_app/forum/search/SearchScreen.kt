@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -72,6 +72,7 @@ import me.thenano.yamibo.yamibo_app.forum.components.PageNavigation
 import me.thenano.yamibo.yamibo_app.forum.components.ThreadCard
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -105,6 +106,11 @@ fun SearchScreen(fid: ForumId?) {
     val authRepository = LocalAuthRepository.current
     val threadRepository = LocalThreadRepository.current
     val navigator = LocalNavigator.current
+    SystemBarsEffect(
+        statusBarColor = colors.brownDeep,
+        navigationBarColor = colors.creamBackground,
+        priority = 100,
+    )
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
     var searchFieldPlaced by remember { mutableStateOf(false) }
@@ -215,12 +221,14 @@ fun SearchScreen(fid: ForumId?) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(colors.creamBackground)
-            .systemBarsPadding(),
+            .background(colors.creamBackground),
     ) {
         Surface(color = colors.brownDeep, shadowElevation = 4.dp) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { if (!restorePreviousSearchPage()) navigator.pop() }) {

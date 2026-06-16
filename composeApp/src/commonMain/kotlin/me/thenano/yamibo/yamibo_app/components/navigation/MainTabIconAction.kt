@@ -6,6 +6,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
@@ -31,13 +32,13 @@ fun YamiboMainTabIconAction(
     onClick: () -> Unit,
     iconSize: Int = 27,
     iconOffsetY: Int = 0,
+    tint: Color = YamiboTheme.colors.brownDeep,
 ) {
-    val colors = YamiboTheme.colors
     IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = colors.brownDeep,
+            tint = tint,
             modifier = Modifier
                 .size(iconSize.dp)
                 .offset(y = iconOffsetY.dp),

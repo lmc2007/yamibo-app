@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import me.thenano.yamibo.yamibo_app.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.favorite.components.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -120,21 +121,11 @@ internal fun FavoriteCategoryManageScreen() {
             YamiboSnackbarHost(snackbarHostState)
         },
         topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = i18n("管理類別"),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                    )
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navigator.pop() }) {
-                        Text(YamiboIcons.Back, color = colors.creamBackground, fontSize = 20.sp)
-                    }
-                },
-                actions = {
+            YamiboTopBar(
+                title = i18n("管理類別"),
+                titleFontSize = 18,
+                onBack = navigator::pop,
+            ) {
                     Surface(
                         onClick = { navigator.navigate(IFavoriteCategoryEditorScreen()) },
                         color = colors.brownPrimary.copy(alpha = 0.18f),
@@ -147,9 +138,7 @@ internal fun FavoriteCategoryManageScreen() {
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.brownDeep),
-            )
+            }
         },
     ) { paddingValues ->
         Box(

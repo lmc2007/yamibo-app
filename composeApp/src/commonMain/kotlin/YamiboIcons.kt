@@ -30,6 +30,10 @@ object YamiboIcons {
     val ThreeDots: ImageVector by lazy { buildThreeDots() }
     val Heart: ImageVector by lazy { buildHeart() }
     val History: ImageVector by lazy { buildHistory() }
+    val New: ImageVector by lazy { buildNew() }
+    val FilterList: ImageVector by lazy { buildFilterList() }
+    val CheckboxEnabled: ImageVector by lazy { buildCheckboxEnabled() }
+    val CheckboxDisabled: ImageVector by lazy { buildCheckboxDisabled() }
     val Trashcan: ImageVector by lazy { buildTrashcan() }
     val Reload: ImageVector by lazy { buildReload() }
     val Sync: ImageVector by lazy { buildSync() }
@@ -985,6 +989,161 @@ object YamiboIcons {
                 reflectiveCurveToRelative(0.49f, 1.1f, 1.1f, 1.1f)
                 curveToRelative(0.61f, 0f, 1.1f, -0.49f, 1.1f, -1.1f)
                 reflectiveCurveToRelative(-0.49f, -1.1f, -1.1f, -1.1f)
+                close()
+            }
+        }.build()
+
+    private fun buildNew(): ImageVector =
+        ImageVector.Builder(
+            name = "New",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 16f,
+            viewportHeight = 16f,
+        ).apply {
+            path(fill = SolidColor(Color.Black)) {
+                moveTo(8f, 0f)
+                lineTo(5.69f, 1.65f)
+                lineTo(2.857f, 1.871f)
+                lineTo(2.148f, 4.621f)
+                lineTo(0.121f, 6.611f)
+                lineTo(1.346f, 9.174f)
+                lineTo(1.072f, 12f)
+                lineTo(3.658f, 13.176f)
+                lineTo(5.264f, 15.518f)
+                lineTo(8f, 14.758f)
+                lineTo(10.736f, 15.518f)
+                lineTo(12.342f, 13.176f)
+                lineTo(14.928f, 12f)
+                lineTo(14.654f, 9.174f)
+                lineTo(15.88f, 6.61f)
+                lineTo(13.853f, 4.62f)
+                lineTo(13.143f, 1.87f)
+                lineTo(10.312f, 1.65f)
+                close()
+                moveTo(7f, 4f)
+                horizontalLineTo(9f)
+                verticalLineTo(7f)
+                lineTo(8.5f, 9f)
+                horizontalLineTo(7.5f)
+                lineTo(7f, 7f)
+                close()
+                moveTo(8f, 10f)
+                curveTo(8.552f, 10f, 9f, 10.448f, 9f, 11f)
+                curveTo(9f, 11.552f, 8.552f, 12f, 8f, 12f)
+                curveTo(7.448f, 12f, 7f, 11.552f, 7f, 11f)
+                curveTo(7f, 10.448f, 7.448f, 10f, 8f, 10f)
+                close()
+            }
+        }.build()
+
+    private fun buildFilterList(): ImageVector =
+        ImageVector.Builder(
+            name = "FilterList",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(21f, 6f)
+                horizontalLineTo(19f)
+                moveTo(21f, 12f)
+                horizontalLineTo(16f)
+                moveTo(21f, 18f)
+                horizontalLineTo(16f)
+                moveTo(7f, 20f)
+                verticalLineTo(13.561f)
+                curveTo(7f, 13.353f, 7f, 13.249f, 6.98f, 13.15f)
+                curveTo(6.961f, 13.061f, 6.932f, 12.976f, 6.891f, 12.896f)
+                curveTo(6.844f, 12.805f, 6.779f, 12.724f, 6.649f, 12.562f)
+                lineTo(3.351f, 8.438f)
+                curveTo(3.221f, 8.276f, 3.156f, 8.195f, 3.109f, 8.104f)
+                curveTo(3.068f, 8.024f, 3.039f, 7.939f, 3.02f, 7.85f)
+                curveTo(3f, 7.751f, 3f, 7.647f, 3f, 7.439f)
+                verticalLineTo(5.6f)
+                curveTo(3f, 5.04f, 3f, 4.76f, 3.109f, 4.546f)
+                curveTo(3.205f, 4.358f, 3.358f, 4.205f, 3.546f, 4.109f)
+                curveTo(3.76f, 4f, 4.04f, 4f, 4.6f, 4f)
+                horizontalLineTo(13.4f)
+                curveTo(13.96f, 4f, 14.24f, 4f, 14.454f, 4.109f)
+                curveTo(14.642f, 4.205f, 14.795f, 4.358f, 14.891f, 4.546f)
+                curveTo(15f, 4.76f, 15f, 5.04f, 15f, 5.6f)
+                verticalLineTo(7.439f)
+                curveTo(15f, 7.647f, 15f, 7.751f, 14.98f, 7.85f)
+                curveTo(14.961f, 7.939f, 14.932f, 8.024f, 14.891f, 8.104f)
+                curveTo(14.844f, 8.195f, 14.779f, 8.276f, 14.649f, 8.438f)
+                lineTo(11.351f, 12.562f)
+                curveTo(11.221f, 12.724f, 11.156f, 12.805f, 11.109f, 12.896f)
+                curveTo(11.068f, 12.976f, 11.039f, 13.061f, 11.02f, 13.15f)
+                curveTo(11f, 13.249f, 11f, 13.353f, 11f, 13.561f)
+                verticalLineTo(17f)
+                lineTo(7f, 20f)
+                close()
+            }
+        }.build()
+
+    private fun buildCheckboxEnabled(): ImageVector =
+        ImageVector.Builder(
+            name = "CheckboxEnabled",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(5f, 4f)
+                horizontalLineTo(19f)
+                curveTo(19.552f, 4f, 20f, 4.448f, 20f, 5f)
+                verticalLineTo(19f)
+                curveTo(20f, 19.552f, 19.552f, 20f, 19f, 20f)
+                horizontalLineTo(5f)
+                curveTo(4.448f, 20f, 4f, 19.552f, 4f, 19f)
+                verticalLineTo(5f)
+                curveTo(4f, 4.448f, 4.448f, 4f, 5f, 4f)
+                close()
+                moveTo(7.5f, 12.2f)
+                lineTo(10.6f, 15.3f)
+                lineTo(16.8f, 8.7f)
+            }
+        }.build()
+
+    private fun buildCheckboxDisabled(): ImageVector =
+        ImageVector.Builder(
+            name = "CheckboxDisabled",
+            defaultWidth = 24.dp,
+            defaultHeight = 24.dp,
+            viewportWidth = 24f,
+            viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = null,
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 2f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(5f, 4f)
+                horizontalLineTo(19f)
+                curveTo(19.552f, 4f, 20f, 4.448f, 20f, 5f)
+                verticalLineTo(19f)
+                curveTo(20f, 19.552f, 19.552f, 20f, 19f, 20f)
+                horizontalLineTo(5f)
+                curveTo(4.448f, 20f, 4f, 19.552f, 4f, 19f)
+                verticalLineTo(5f)
+                curveTo(4f, 4.448f, 4.448f, 4f, 5f, 4f)
                 close()
             }
         }.build()

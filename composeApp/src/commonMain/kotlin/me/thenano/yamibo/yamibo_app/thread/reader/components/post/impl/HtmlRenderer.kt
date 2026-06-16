@@ -4,6 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.selection.DisableSelection
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
+import me.thenano.yamibo.yamibo_app.LocalFontRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -304,6 +307,7 @@ private fun RubyTextBlock(
     text: AnnotatedString,
     rubies: List<HtmlBlock.RubyText>,
     textAlign: TextAlign,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -327,6 +331,7 @@ private fun RubyTextBlock(
                 RubyFlowLine(
                     segments = line.segments,
                     horizontalArrangement = horizontalArrangement,
+                    fontFamily = fontFamily,
                     fontSizeSp = fontSizeSp,
                     lineHeightSp = lineHeightSp,
                     textColor = textColor,
@@ -336,7 +341,7 @@ private fun RubyTextBlock(
                     Text(
                         text = segment.text,
                         color = textColor,
-                        fontFamily = HtmlDefaultFontFamily,
+                        fontFamily = fontFamily,
                         fontSize = fontSizeSp.sp,
                         lineHeight = lineHeightSp.sp,
                     )
@@ -351,6 +356,7 @@ private fun RubyTextBlock(
 private fun RubyFlowLine(
     segments: List<RubySegment>,
     horizontalArrangement: Arrangement.Horizontal,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -365,6 +371,7 @@ private fun RubyFlowLine(
                     if (segment.text.isNotEmpty()) {
                         RubyPlainTextSegment(
                             text = segment.text,
+                            fontFamily = fontFamily,
                             fontSizeSp = fontSizeSp,
                             lineHeightSp = lineHeightSp,
                             textColor = textColor,
@@ -375,6 +382,7 @@ private fun RubyFlowLine(
                 is RubySegment.Ruby -> {
                     RubySegmentView(
                         ruby = segment.ruby,
+                        fontFamily = fontFamily,
                         fontSizeSp = fontSizeSp,
                         lineHeightSp = lineHeightSp,
                         textColor = textColor,
@@ -388,6 +396,7 @@ private fun RubyFlowLine(
 @Composable
 private fun RubyPlainTextSegment(
     text: AnnotatedString,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -399,7 +408,7 @@ private fun RubyPlainTextSegment(
         Text(
             text = text,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
             lineHeight = fontSizeSp.sp,
             modifier = Modifier.offset(y = baseTop),
@@ -410,6 +419,7 @@ private fun RubyPlainTextSegment(
 @Composable
 private fun RubySegmentView(
     ruby: HtmlBlock.RubyText,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -427,7 +437,7 @@ private fun RubySegmentView(
         Text(
             text = ruby.rubyText,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = rubyFontSizeSp.sp,
             lineHeight = rubyFontSizeSp.sp,
             maxLines = 1,
@@ -436,7 +446,7 @@ private fun RubySegmentView(
         Text(
             text = ruby.baseText,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
             lineHeight = fontSizeSp.sp,
             maxLines = 1,
@@ -556,8 +566,14 @@ private fun HtmlBlockRenderer(
     val navigator = LocalNavigator.current
     
     val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val fontRepository = LocalFontRepository.current
     val fontSize = novelSettingsRepo.fontSize.state()
     val lineSpacing = novelSettingsRepo.lineSpacing.state()
+    val readerFontId = novelSettingsRepo.readerFontId.state()
+    val fontList by fontRepository.fonts.collectAsState()
+    val readerFontFamily = remember(readerFontId, fontList) {
+        fontRepository.getReaderFontFamily() ?: HtmlDefaultFontFamily
+    }
     @Suppress("DEPRECATION") val clipboardManager = LocalClipboardManager.current
     val isDarkTheme = (colors.creamBackground.red + colors.creamBackground.green + colors.creamBackground.blue) < 1.5f
 
@@ -691,6 +707,7 @@ private fun HtmlBlockRenderer(
                     text = adjustedAnnotatedString,
                     rubies = block.rubies,
                     textAlign = block.textAlign,
+                    fontFamily = readerFontFamily,
                     fontSizeSp = fontSize.toFloat(),
                     lineHeightSp = lineHeightSp,
                     textColor = colors.htmlTextDark,
@@ -701,7 +718,7 @@ private fun HtmlBlockRenderer(
                     text = adjustedAnnotatedString,
                     style = TextStyle(
                         color = colors.htmlTextDark,
-                        fontFamily = HtmlDefaultFontFamily,
+                        fontFamily = readerFontFamily,
                         fontSize = fontSize.sp,
                         lineHeight = lineHeightSp.sp,
                         textAlign = block.textAlign
@@ -1141,6 +1158,7 @@ private fun HtmlBlockRenderer(
             if (rows.isEmpty()) return
 
             val maxCols = rows.maxOf { it.cells.size }
+            val useLazyRows = rows.size > 40
 
             Card(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -1149,92 +1167,98 @@ private fun HtmlBlockRenderer(
                 colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
             ) {
                 val scrollState = rememberScrollState()
+                val renderRow: @Composable (Int, HtmlBlock.TableRow) -> Unit = { rowIdx, row ->
+                    val isFirstRow = rowIdx == 0
+                    val isHeaderRow = isFirstRow && row.cells.any { it.isHeader }
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        for (colIdx in 0 until maxCols) {
+                            val cell = row.cells.getOrNull(colIdx)
+                            val cellBg = when {
+                                isHeaderRow -> colors.brownDeep
+                                rowIdx % 2 == 0 -> colors.creamSurface
+                                else -> colors.creamBackground
+                            }
+                            val cellTextColor = if (isHeaderRow) Color.White else colors.htmlTextDark
+
+                            Box(
+                                modifier = Modifier
+                                    .widthIn(min = 80.dp, max = 240.dp)
+                                    .background(cellBg)
+                                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                            ) {
+                                if (cell != null && cell.blocks.isNotEmpty()) {
+                                    Column {
+                                        cell.blocks.forEach { innerBlock ->
+                                            when (innerBlock) {
+                                                is HtmlBlock.Text -> {
+                                                    val tableFontSize = (fontSize - 3).coerceAtLeast(10)
+                                                    val adjustedTableText = adjustAnnotatedString(innerBlock.annotatedString)
+                                                    val tableLineHeightSp = htmlTextLineHeightSp(
+                                                        baseFontSizeSp = tableFontSize.toFloat(),
+                                                        lineSpacing = lineSpacing,
+                                                        text = adjustedTableText,
+                                                    )
+                                                    Text(
+                                                        text = adjustedTableText,
+                                                        style = TextStyle(
+                                                            color = cellTextColor,
+                                                            fontFamily = readerFontFamily,
+                                                            fontSize = tableFontSize.sp,
+                                                            lineHeight = tableLineHeightSp.sp,
+                                                            fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
+                                                            textAlign = innerBlock.textAlign
+                                                        )
+                                                    )
+                                                }
+                                                else -> HtmlBlockRenderer(
+                                                    block = innerBlock,
+                                                    tid = tid,
+                                                    linkContext = linkContext,
+                                                    onImageSuccess = onImageSuccess,
+                                                    onImageError = onImageError,
+                                                    onImageReload = onImageReload,
+                                                    imageErrorMessageFor = imageErrorMessageFor,
+                                                    imageRetryKeyFor = imageRetryKeyFor,
+                                                    imageCachedHeightFor = imageCachedHeightFor,
+                                                    imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
+                                                    onImageHeightChanged = onImageHeightChanged,
+                                                    onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (colIdx < maxCols - 1) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .heightIn(min = 36.dp)
+                                        .background(colors.brownPrimary.copy(alpha = 0.15f))
+                                )
+                            }
+                        }
+                    }
+
+                    if (rowIdx < rows.size - 1) {
+                        HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.15f))
+                    }
+                }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .horizontalScroll(scrollState)
                 ) {
-                    Column {
-                        rows.forEachIndexed { rowIdx, row ->
-                            val isFirstRow = rowIdx == 0
-                            val isHeaderRow = isFirstRow && row.cells.any { it.isHeader }
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                for (colIdx in 0 until maxCols) {
-                                    val cell = row.cells.getOrNull(colIdx)
-                                    val cellBg = when {
-                                        isHeaderRow -> colors.brownDeep
-                                        rowIdx % 2 == 0 -> colors.creamSurface
-                                        else -> colors.creamBackground
-                                    }
-                                    val cellTextColor = if (isHeaderRow) Color.White else colors.htmlTextDark
-
-                                    Box(
-                                        modifier = Modifier
-                                            .widthIn(min = 80.dp, max = 240.dp)
-                                            .background(cellBg)
-                                            .padding(horizontal = 10.dp, vertical = 8.dp)
-                                    ) {
-                                        if (cell != null && cell.blocks.isNotEmpty()) {
-                                            Column {
-                                                cell.blocks.forEach { innerBlock ->
-                                                    when (innerBlock) {
-                                                        is HtmlBlock.Text -> {
-                                                            val tableFontSize = (fontSize - 3).coerceAtLeast(10)
-                                                            val adjustedTableText = adjustAnnotatedString(innerBlock.annotatedString)
-                                                            val tableLineHeightSp = htmlTextLineHeightSp(
-                                                                baseFontSizeSp = tableFontSize.toFloat(),
-                                                                lineSpacing = lineSpacing,
-                                                                text = adjustedTableText,
-                                                            )
-                                                            Text(
-                                                                text = adjustedTableText,
-                                                                style = TextStyle(
-                                                                    color = cellTextColor,
-                                                                    fontFamily = HtmlDefaultFontFamily,
-                                                                    fontSize = tableFontSize.sp,
-                                                                    lineHeight = tableLineHeightSp.sp,
-                                                                    fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
-                                                                    textAlign = innerBlock.textAlign
-                                                                )
-                                                            )
-                                                        }
-                                                        else -> HtmlBlockRenderer(
-                                                            block = innerBlock,
-                                                            tid = tid,
-                                                            linkContext = linkContext,
-                                                            onImageSuccess = onImageSuccess,
-                                                            onImageError = onImageError,
-                                                            onImageReload = onImageReload,
-                                                            imageErrorMessageFor = imageErrorMessageFor,
-                                                            imageRetryKeyFor = imageRetryKeyFor,
-                                                            imageCachedHeightFor = imageCachedHeightFor,
-                                                            imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
-                                                            onImageHeightChanged = onImageHeightChanged,
-                                                            onImageAspectRatioChanged = onImageAspectRatioChanged,
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Column divider
-                                    if (colIdx < maxCols - 1) {
-                                        Box(
-                                            modifier = Modifier
-                                                .width(1.dp)
-                                                .heightIn(min = 36.dp)
-                                                .background(colors.brownPrimary.copy(alpha = 0.15f))
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Row divider
-                            if (rowIdx < rows.size - 1) {
-                                HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.15f))
-                            }
+                    if (useLazyRows) {
+                        LazyColumn(modifier = Modifier.heightIn(max = 560.dp)) {
+                            itemsIndexed(rows) { rowIdx, row -> renderRow(rowIdx, row) }
+                        }
+                    } else {
+                        Column {
+                            rows.forEachIndexed { rowIdx, row -> renderRow(rowIdx, row) }
                         }
                     }
                 }

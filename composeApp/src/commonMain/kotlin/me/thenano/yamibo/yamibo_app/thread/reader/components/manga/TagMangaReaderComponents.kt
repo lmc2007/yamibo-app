@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.value.ThreadId
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
@@ -133,35 +135,40 @@ internal fun TagCatalogPanel(
     loadedThreadsByPage: Map<Int, List<ThreadSummary>>,
     currentTagPage: Int,
     currentThreadId: ThreadId?,
+    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     onPageOrThreadClick: (Int, ThreadSummary?) -> Unit,
     onDismiss: () -> Unit
 ) {
     val colors = YamiboTheme.colors
     var expandedPages by remember { mutableStateOf(setOf(currentTagPage)) }
 
-    // Auto expand current page when it changes
     LaunchedEffect(currentTagPage) {
         if (!expandedPages.contains(currentTagPage)) {
             expandedPages = expandedPages + currentTagPage
         }
     }
 
-    // Scrim
     Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)).clickable(
-            interactionSource = remember { MutableInteractionSource() },
-            indication = null
-        ) { onDismiss() })
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.5f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onDismiss() }
+    )
 
-    // Panel
     Box(
-        modifier = Modifier.fillMaxWidth(0.8f).fillMaxHeight()
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .fillMaxHeight()
             .background(colors.creamBackground, RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp))
     ) {
         Column {
-            // Header
             Row(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -177,7 +184,6 @@ internal fun TagCatalogPanel(
 
             HorizontalDivider(color = colors.brownPrimary.copy(alpha = 0.15f))
 
-            // Thread list
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(totalPages) { index ->
                     val page = index + 1
@@ -190,7 +196,6 @@ internal fun TagCatalogPanel(
                     )
 
                     Column {
-                        // Page Header
                         Surface(
                             color = if (isExpanded) colors.brownLight.copy(alpha = 0.1f) else colors.creamBackground,
                             onClick = {
@@ -221,7 +226,6 @@ internal fun TagCatalogPanel(
                             }
                         }
 
-                        // Content List (Expanded)
                         AnimatedVisibility(
                             visible = isExpanded,
                             enter = expandVertically() + fadeIn(),
@@ -241,12 +245,15 @@ internal fun TagCatalogPanel(
                             } else {
                                 val pageThreads = loadedThreadsByPage[page] ?: emptyList()
                                 Column(modifier = Modifier.fillMaxWidth().background(colors.creamSurface)) {
-                                    pageThreads.forEach { thread ->
+                                    pageThreads.forEachIndexed { threadIndex, thread ->
                                         val isCurrentThread = thread.tid == currentThreadId
+                                        val chapterState = chapterStates[thread.tid.value.toLong()]
+                                        val isRead = chapterState?.read == true
+                                        val progressText = chapterState?.progressLabel()
                                         Surface(
                                             color = if (isCurrentThread) colors.brownLight.copy(alpha = 0.15f) else colors.creamSurface,
                                             onClick = { onPageOrThreadClick(page, thread) },
-                                            modifier = Modifier.fillMaxWidth()
+                                            modifier = Modifier.fillMaxWidth().alpha(if (isRead) 0.6f else 1f)
                                         ) {
                                             Row(
                                                 modifier = Modifier
@@ -273,9 +280,18 @@ internal fun TagCatalogPanel(
                                                     fontWeight = if (isCurrentThread) FontWeight.Bold else FontWeight.Normal,
                                                     modifier = Modifier.weight(1f)
                                                 )
+                                                if (!isRead && progressText != null) {
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(
+                                                        text = progressText,
+                                                        color = colors.orangeAccent,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                    )
+                                                }
                                             }
                                         }
-                                        if (thread != pageThreads.lastOrNull()) {
+                                        if (threadIndex < pageThreads.lastIndex) {
                                             HorizontalDivider(
                                                 modifier = Modifier.padding(horizontal = 24.dp),
                                                 color = colors.brownPrimary.copy(alpha = 0.08f)
@@ -294,3 +310,9 @@ internal fun TagCatalogPanel(
     }
 }
 
+private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+    if (read) return null
+    val currentPage = lastPageIndex?.plus(1) ?: return null
+    val totalPage = totalPages?.takeIf { it > 0 } ?: return null
+    return "$currentPage/$totalPage"
+}

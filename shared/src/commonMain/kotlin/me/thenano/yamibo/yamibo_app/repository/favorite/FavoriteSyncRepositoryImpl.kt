@@ -358,6 +358,7 @@ class FavoriteSyncRepositoryImpl(
 
             val itemId = when {
                 existingItem != null && existingMapping?.itemId != null -> {
+                    repairExistingBlankTitle(existingItem, remoteItem)
                     val path = localFavoriteRepository
                         .getFavoritePaths(existingItem.id)
                         .firstOrNull()
@@ -372,6 +373,7 @@ class FavoriteSyncRepositoryImpl(
                 }
 
                 existingItem != null -> {
+                    repairExistingBlankTitle(existingItem, remoteItem)
                     localFavoriteRepository.addItemsToLocations(
                         itemIds = setOf(existingItem.id),
                         categoryIds = setOf(current.targetCategoryId),
@@ -387,7 +389,12 @@ class FavoriteSyncRepositoryImpl(
                 else -> {
                     when (val threadResult = fetchThreadSummary(remoteItem.threadId)) {
                         is YamiboResult.Success -> {
-                            persistRemoteThreadIntoLocal(threadResult.value, current.targetCategoryId)
+                            if (threadResult.value.isUsableFavoriteMetadata()) {
+                                persistRemoteThreadIntoLocal(threadResult.value, remoteItem, current.targetCategoryId)
+                            } else {
+                                warnings += emptyThreadMetadataMessage(remoteItem)
+                                persistRemoteThreadFallback(remoteItem, current.targetCategoryId)
+                            }
                             current = updateSnapshot(
                                 current.copy(importedCount = current.importedCount + 1),
                                 warnings = warnings,
@@ -641,15 +648,20 @@ class FavoriteSyncRepositoryImpl(
         )
     }
 
-    private suspend fun persistRemoteThreadIntoLocal(threadPage: ThreadPage, categoryId: Long) {
+    private suspend fun persistRemoteThreadIntoLocal(
+        threadPage: ThreadPage,
+        remoteItem: RemoteFavoriteItem,
+        categoryId: Long,
+    ) {
         val isNovel = YamiboForum.isNovelForum(threadPage.thread.forum.fid)
         val authorId = threadPage.posts.firstOrNull()?.author?.uid
         val coverUrl = extractCoverUrl(threadPage)
         val lastUpdatedTime = extractLastUpdatedTime(threadPage)
+        val title = threadPage.thread.title.trim().ifBlank { remoteItem.fallbackTitle() }
         if (isNovel) {
             localFavoriteRepository.addNovelThreadFavorite(
                 tid = threadPage.thread.tid,
-                title = threadPage.thread.title,
+                title = title,
                 authorId = authorId,
                 coverUrl = coverUrl,
                 lastUpdatedTime = lastUpdatedTime,
@@ -660,7 +672,7 @@ class FavoriteSyncRepositoryImpl(
         } else {
             localFavoriteRepository.addNormalThreadFavorite(
                 tid = threadPage.thread.tid,
-                title = threadPage.thread.title,
+                title = title,
                 coverUrl = coverUrl,
                 lastUpdatedTime = lastUpdatedTime,
                 forumId = threadPage.thread.forum.fid,
@@ -668,6 +680,40 @@ class FavoriteSyncRepositoryImpl(
                 categoryIds = listOf(categoryId),
             )
         }
+    }
+
+    private suspend fun persistRemoteThreadFallback(remoteItem: RemoteFavoriteItem, categoryId: Long) {
+        localFavoriteRepository.addNormalThreadFavorite(
+            tid = remoteItem.threadId,
+            title = remoteItem.fallbackTitle(),
+            coverUrl = null,
+            lastUpdatedTime = null,
+            forumId = null,
+            forumName = null,
+            categoryIds = listOf(categoryId),
+        )
+    }
+
+    private fun repairExistingBlankTitle(
+        existingItem: me.thenano.yamibo.yamiboapp.LocalFavoriteItem,
+        remoteItem: RemoteFavoriteItem,
+    ) {
+        if (existingItem.title.isNotBlank()) return
+        itemQueries.updateFavoriteItem(
+            title = remoteItem.fallbackTitle(),
+            coverUrl = existingItem.coverUrl,
+            lastUpdatedTime = existingItem.lastUpdatedTime,
+            forumId = existingItem.forumId,
+            forumName = existingItem.forumName,
+            authorId = existingItem.authorId,
+            lastFavoriteStatusUpdateAt = currentTimeMillis(),
+            id = existingItem.id,
+        )
+    }
+
+    private fun ThreadPage.isUsableFavoriteMetadata(): Boolean {
+        return thread.title.isNotBlank() &&
+            (posts.isNotEmpty() || thread.forum.name.isNotBlank())
     }
 
     private suspend fun collectCategoryThreadItems(categoryId: Long): List<LocalFavoriteRepository.FavoriteItem> {
@@ -804,6 +850,10 @@ class FavoriteSyncRepositoryImpl(
         reason: String,
     ): String {
         return truncateLogLine(i18n("無法匯入帖子 {}：{}", formatPostLabel(remoteItem.threadId, remoteItem.title), reason))
+    }
+
+    private fun emptyThreadMetadataMessage(remoteItem: RemoteFavoriteItem): String {
+        return truncateLogLine(i18n("帖子詳情為空，已保留收藏列表標題：{}", formatPostLabel(remoteItem.threadId, remoteItem.title)))
     }
 
     private fun uploadFailureMessage(
@@ -956,6 +1006,8 @@ class FavoriteSyncRepositoryImpl(
         val threadId: ThreadId,
         val favoriteId: FavoriteId,
         val title: String,
-    )
+    ) {
+        fun fallbackTitle(): String = title.trim().ifBlank { "#${threadId.value}" }
+    }
 }
 

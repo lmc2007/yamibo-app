@@ -26,17 +26,20 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
+import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdatesScreen
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
+import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 enum class MainTab(val icon: ImageVector) {
     Home(YamiboIcons.Home),
     History(YamiboIcons.History),
+    Updates(YamiboIcons.New),
     Message(YamiboIcons.Message),
     Favorite(YamiboIcons.Explore),
     Profile(YamiboIcons.Profile)
@@ -84,6 +87,14 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
     var hasNewMessage by rememberSaveable { mutableStateOf(false) }
     val tabStateHolder = rememberSaveableStateHolder()
+    val statusBarColor = when (currentTab) {
+        MainTab.Home -> colors.brownDeep
+        else -> colors.creamBackground
+    }
+    SystemBarsEffect(
+        statusBarColor = statusBarColor,
+        navigationBarColor = colors.navBarBg,
+    )
 
     DisposableEffect(currentTab) {
         val handler = {
@@ -141,6 +152,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                             onNewMessageStatusChange = { hasNewMessage = it },
                         )
                         MainTab.History -> ReadHistoryPage(reTapHistoryToken)
+                        MainTab.Updates -> FavoriteUpdatesScreen()
                         MainTab.Message -> MessageCenterScreen(
                             initialTab = MessageCenterTab.PrivateMessages,
                             mainTabTopBar = true,
@@ -159,6 +171,7 @@ private fun MainTab.titleText(): String {
     return when (this) {
         MainTab.Home -> i18n("首頁")
         MainTab.History -> i18n("紀錄")
+        MainTab.Updates -> i18n("更新")
         MainTab.Message -> i18n("消息")
         MainTab.Favorite -> i18n("收藏")
         MainTab.Profile -> i18n("我的")

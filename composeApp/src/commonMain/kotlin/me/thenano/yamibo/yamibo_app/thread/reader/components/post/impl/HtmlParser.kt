@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -318,10 +319,12 @@ object HtmlParser {
                         "font" -> {
                             val colorAttr = node.attr("color")
                             val sizeAttr = node.attr("size")
+                            val faceAttr = node.attr("face")
                             val styleAttr = node.attr("style")
                             
                             var spanStyle = SpanStyle()
                             parseColor(colorAttr)?.let { spanStyle = spanStyle.copy(color = it) }
+                            parseFontFamily(faceAttr)?.let { spanStyle = spanStyle.copy(fontFamily = it) }
                             if (sizeAttr.isNotEmpty()) {
                                 spanStyle = spanStyle.copy(fontSize = fontSizeToSp(sizeAttr))
                             }
@@ -477,6 +480,9 @@ object HtmlParser {
         declarations["background-color"]?.let { bgStr ->
             parseColor(bgStr)?.let { current = current.copy(background = it) }
         }
+        declarations["font-family"]?.let { family ->
+            parseFontFamily(family)?.let { current = current.copy(fontFamily = it) }
+        }
 
         // Support font-size: Npx / Npt / Nem
         val fontSizeMatch = declarations["font-size"]?.let { Regex("^([\\d.]+)\\s*(px|pt|em)$").find(it) }
@@ -494,6 +500,32 @@ object HtmlParser {
             }
         }
         return current
+    }
+
+    private fun parseFontFamily(value: String?): FontFamily? {
+        if (value.isNullOrBlank()) return null
+        val normalized = value
+            .split(",")
+            .firstOrNull()
+            ?.trim()
+            ?.trim('"', '\'')
+            ?.lowercase()
+            ?: return null
+        return when {
+            normalized.contains("mono") || normalized.contains("consolas") || normalized.contains("courier") ->
+                FontFamily.Monospace
+
+            normalized.contains("serif") && !normalized.contains("sans") ->
+                FontFamily.Serif
+
+            normalized.contains("sans") || normalized.contains("arial") || normalized.contains("helvetica") ->
+                FontFamily.SansSerif
+
+            normalized.contains("cursive") ->
+                FontFamily.Cursive
+
+            else -> null
+        }
     }
 
     private fun parseStyleDeclarations(styleAttr: String): Map<String, String> {

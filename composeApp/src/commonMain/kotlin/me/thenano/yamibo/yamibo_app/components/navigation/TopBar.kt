@@ -1,26 +1,16 @@
 package me.thenano.yamibo.yamibo_app.components.navigation
 
 import YamiboIcons
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /**
  * Standard Yamibo nested-page top bar.
@@ -53,37 +43,21 @@ fun YamiboTopBar(
     onBack: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    val colors = YamiboTheme.colors
-    val rootModifier = if (applyStatusPadding) {
-        modifier.fillMaxWidth().statusBarsPadding()
-    } else {
-        modifier.fillMaxWidth()
-    }
-    Surface(modifier = rootModifier, color = colors.brownDeep, shadowElevation = 2.dp) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 12.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    YamiboAppBar(
+        title = title,
+        style = YamiboAppBarStyle.NestedBrown,
+        modifier = modifier,
+        applyStatusPadding = applyStatusPadding,
+        titleAlign = titleAlign,
+        titleFontSize = titleFontSize,
+        navigationWidth = if (onBack == null) 0.dp else 44.dp,
+        navigation = {
             if (onBack != null) {
                 IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
                     Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
                 }
             }
-            Text(
-                text = title,
-                modifier = Modifier.weight(1f).padding(horizontal = if (titleAlign == TextAlign.Center) 8.dp else 4.dp),
-                color = Color.White,
-                fontSize = titleFontSize.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = titleAlign,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-                content = actions,
-            )
-        }
-    }
+        },
+        actions = actions,
+    )
 }

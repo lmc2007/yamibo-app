@@ -8,7 +8,16 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.Text
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -25,32 +34,20 @@ import io.github.littlesurvival.dto.page.UserSpaceNoticePage
 import io.github.littlesurvival.dto.page.UserSpacePrivateMessagePage
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.*
-import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
-import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
-import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
-import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
-import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
-import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
 
 enum class MessageCenterTab(val title: String) {
-    Updates(i18n("更新")),
     PrivateMessages(i18n("我的消息")),
     Notices(i18n("我的提醒")),
 }
@@ -62,11 +59,6 @@ private sealed interface MessageCenterState {
 }
 
 internal sealed interface MessageCenterContent {
-    data class Updates(
-        val events: List<FavoriteUpdateRepository.UpdateEvent>,
-        val filters: List<FavoriteUpdateRepository.FidFilter>,
-        val runState: FavoriteUpdateRepository.RunState,
-    ) : MessageCenterContent
     data class PrivateMessages(val page: UserSpacePrivateMessagePage) : MessageCenterContent
     data class Notices(val page: UserSpaceNoticePage) : MessageCenterContent
 }
@@ -80,13 +72,6 @@ fun MessageCenterScreen(
 ) {
     val colors = YamiboTheme.colors
     val userSpaceRepository = LocalUserSpaceRepository.current
-    val favoriteUpdateRepository = LocalFavoriteUpdateRepository.current
-    val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
-    val favoriteUpdateRunState by favoriteUpdateRunner.state.collectAsState()
-    val favoriteUpdateRefreshKey = favoriteUpdateRunState.refreshKey()
-    val appSettingsRepository = LocalAppSettingsRepository.current
-    val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
-    val favoriteUpdateHiddenRunId = appSettingsRepository.favoriteUpdateHiddenRunId.state()
     val authRepository = LocalAuthRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
@@ -97,20 +82,8 @@ fun MessageCenterScreen(
     var currentPage by remember { mutableIntStateOf(1) }
     var state by remember { mutableStateOf<MessageCenterState>(MessageCenterState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
-    var showGlobalRefreshConfirm by remember { mutableStateOf(false) }
 
     suspend fun loadTab(tab: MessageCenterTab, page: Int, preferCache: Boolean = true) {
-        if (tab == MessageCenterTab.Updates) {
-            currentPage = 1
-            state = MessageCenterState.Success(
-                MessageCenterContent.Updates(
-                    events = favoriteUpdateRepository.getActiveEvents(),
-                    filters = favoriteUpdateRepository.getFidFilters(),
-                    runState = favoriteUpdateRunState,
-                )
-            )
-            return
-        }
         if (preferCache) {
             cachedContent(userSpaceRepository, tab, page)?.let {
                 currentPage = page
@@ -139,12 +112,6 @@ fun MessageCenterScreen(
         currentPage = 1
         state = MessageCenterState.Loading
         loadTab(selectedTab, 1)
-    }
-
-    LaunchedEffect(favoriteUpdateRefreshKey) {
-        if (selectedTab == MessageCenterTab.Updates) {
-            loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-        }
     }
 
     Scaffold(
@@ -206,72 +173,12 @@ fun MessageCenterScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         MessageCenterMainContent(
-                            content = when (val content = current.content) {
-                                is MessageCenterContent.Updates -> content.copy(runState = favoriteUpdateRunState)
-                                else -> content
-                            },
+                            content = current.content,
                             selectedTab = selectedTab,
                             currentPage = currentPage,
                             onPageChange = { page ->
                                 state = MessageCenterState.Loading
                                 scope.launch { loadTab(selectedTab, page) }
-                            },
-                            onUpdateEventClick = { event ->
-                                scope.launch { favoriteUpdateRepository.markEventRead(event.id) }
-                                navigateFavoriteUpdateEvent(event, navigator)
-                            },
-                            onGlobalFavoriteUpdate = { showGlobalRefreshConfirm = true },
-                            onCancelFavoriteUpdate = { runId ->
-                                scope.launch {
-                                    favoriteUpdateRunner.cancelUpdate(runId)
-                                    loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar(i18n("已取消收藏更新檢查"), duration = SnackbarDuration.Short)
-                                }
-                            },
-                            onInterruptFavoriteUpdate = { runId ->
-                                scope.launch {
-                                    favoriteUpdateRunner.interruptUpdate(runId)
-                                    loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                    snackbarHostState.showSnackbar(i18n("已中斷收藏更新檢查"), duration = SnackbarDuration.Short)
-                                }
-                            },
-                            onResumeFavoriteUpdate = {
-                                scope.launch {
-                                    when (val result = favoriteUpdateRunner.resumeInterruptedUpdate()) {
-                                        is FavoriteUpdateRunner.LaunchResult.Started -> {
-                                            appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
-                                            loadTab(MessageCenterTab.Updates, 1, preferCache = false)
-                                            snackbarHostState.showSnackbar(i18n("繼續檢查收藏更新"), duration = SnackbarDuration.Short)
-                                        }
-                                        is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                            snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
-                                        }
-                                        null -> {
-                                            snackbarHostState.showSnackbar(i18n("沒有可繼續的收藏更新任務"), duration = SnackbarDuration.Short)
-                                        }
-                                    }
-                                }
-                            },
-                            favoriteUpdateInterval = favoriteUpdateInterval,
-                            onFavoriteUpdateIntervalChange = { interval ->
-                                scope.launch {
-                                    appSettingsRepository.favoriteUpdateInterval.setValue(interval)
-                                    favoriteUpdateRunner.schedulePeriodicUpdate(interval)
-                                    snackbarHostState.showSnackbar(
-                                        i18n("刷新週期已改為 {}", interval.localizedLabel()),
-                                        duration = SnackbarDuration.Short,
-                                    )
-                                }
-                            },
-                            favoriteUpdateHiddenRunId = favoriteUpdateHiddenRunId,
-                            onHideFavoriteUpdateStatus = { runId ->
-                                appSettingsRepository.favoriteUpdateHiddenRunId.setValue(runId)
-                            },
-                            onToggleFavoriteUpdateFid = { fid, enabled ->
-                                state = state.withUpdatedFavoriteUpdateFilter(fid, enabled)
-                                scope.launch {
-                                    favoriteUpdateRepository.setFidEnabled(fid, enabled)
-                                }
                             },
                             onUserClick = { user -> navigator.navigate(IUserSpaceScreen(user.uid, user.name)) },
                             onNoticeUserClick = { userId -> navigator.navigate(IUserSpaceScreen(userId)) },
@@ -286,36 +193,6 @@ fun MessageCenterScreen(
                 }
             }
         }
-    }
-
-    if (showGlobalRefreshConfirm) {
-        AlertDialog(
-            onDismissRequest = { showGlobalRefreshConfirm = false },
-            title = { Text(i18n("全域刷新收藏更新")) },
-            text = { Text(i18n("將重新檢查所有收藏並建立新的更新任務。網站維護中可能會產生大量錯誤記錄。")) },
-            confirmButton = {
-                YamiboActionChip(text = i18n("開始刷新"), onClick = {
-                    showGlobalRefreshConfirm = false
-                    scope.launch {
-                        when (val result = favoriteUpdateRunner.startGlobalRefresh()) {
-                            is FavoriteUpdateRunner.LaunchResult.Started -> {
-                                appSettingsRepository.favoriteUpdateHiddenRunId.setValue("")
-                                snackbarHostState.showSnackbar(
-                                    i18n("開始全域刷新收藏更新"),
-                                    duration = SnackbarDuration.Short
-                                )
-                            }
-
-                            is FavoriteUpdateRunner.LaunchResult.Rejected -> {
-                                snackbarHostState.showSnackbar(i18n(result.reason), duration = SnackbarDuration.Short)
-                            }
-                        }
-                    }
-                })
-            },
-            dismissButton = { YamiboActionChip(text = i18n("取消"), onClick = { showGlobalRefreshConfirm = false }) },
-            containerColor = colors.creamSurface,
-        )
     }
 }
 
@@ -422,7 +299,6 @@ private suspend fun fetchContent(
     tab: MessageCenterTab,
     page: Int,
 ): YamiboResult<MessageCenterContent> = when (tab) {
-    MessageCenterTab.Updates -> YamiboResult.Failure(i18n("更新頁不需要網路載入"))
     MessageCenterTab.PrivateMessages -> repository.fetchPrivateMessages(page).mapSuccess { MessageCenterContent.PrivateMessages(it) }
     MessageCenterTab.Notices -> repository.fetchNotices(page).mapSuccess { MessageCenterContent.Notices(it) }
 }
@@ -432,42 +308,17 @@ private fun cachedContent(
     tab: MessageCenterTab,
     page: Int,
 ): MessageCenterContent? = when (tab) {
-    MessageCenterTab.Updates -> null
     MessageCenterTab.PrivateMessages -> repository.getCachedPrivateMessages(page)?.let { MessageCenterContent.PrivateMessages(it) }
     MessageCenterTab.Notices -> repository.getCachedNotices(page)?.let { MessageCenterContent.Notices(it) }
 }
 
 private fun MessageCenterContent.pageNumber(): Int? = when (this) {
-    is MessageCenterContent.Updates -> 1
     is MessageCenterContent.PrivateMessages -> page.pageNav?.currentPage
     is MessageCenterContent.Notices -> page.pageNav?.currentPage
 }
 
-private fun MessageCenterState.withUpdatedFavoriteUpdateFilter(
-    fid: Int,
-    enabled: Boolean,
-): MessageCenterState {
-    val success = this as? MessageCenterState.Success ?: return this
-    val updates = success.content as? MessageCenterContent.Updates ?: return this
-    return success.copy(
-        content = updates.copy(
-            filters = updates.filters.map { filter ->
-                if (filter.fid == fid) filter.copy(enabled = enabled) else filter
-            },
-        ),
-    )
-}
-
 private fun UserSpacePrivateMessagePage.hasUnreadMessages(): Boolean =
     (unreadCount ?: 0) > 0 || messages.any { (it.unreadCount ?: 0) > 0 }
-
-private fun FavoriteUpdateRepository.RunState.refreshKey(): String = when (this) {
-    FavoriteUpdateRepository.RunState.Idle -> "idle"
-    is FavoriteUpdateRepository.RunState.Running -> "running:${snapshot.detectedCount}"
-    is FavoriteUpdateRepository.RunState.Interrupted -> "interrupted:${snapshot.detectedCount}"
-    is FavoriteUpdateRepository.RunState.Failed -> "failed:${snapshot.detectedCount}"
-    is FavoriteUpdateRepository.RunState.Completed -> "completed:${snapshot.detectedCount}"
-}
 
 private fun <T, R> YamiboResult<T>.mapSuccess(transform: (T) -> R): YamiboResult<R> = when (this) {
     is YamiboResult.Success -> YamiboResult.Success(transform(value))
@@ -475,34 +326,6 @@ private fun <T, R> YamiboResult<T>.mapSuccess(transform: (T) -> R): YamiboResult
     is YamiboResult.NotLoggedIn -> this
     is YamiboResult.NoPermission -> this
     is YamiboResult.Maintenance -> this
-}
-
-private fun navigateFavoriteUpdateEvent(
-    event: FavoriteUpdateRepository.UpdateEvent,
-    navigator: ComposableNavigator,
-) {
-    when (event.targetType) {
-        LocalFavoriteRepository.FavoriteTargetType.TagManga -> navigator.navigate(
-            ITagDetailScreen(
-                tagId = io.github.littlesurvival.dto.value.TagId(event.targetId.toInt()),
-                title = event.title,
-            )
-        )
-        LocalFavoriteRepository.FavoriteTargetType.ThreadNovel -> navigator.navigate(
-            INovelThreadDetailScreen(
-                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
-                title = event.title,
-                authorId = event.authorId?.toInt()?.let { io.github.littlesurvival.dto.value.UserId(it) },
-            )
-        )
-        LocalFavoriteRepository.FavoriteTargetType.ThreadNormal -> navigator.navigate(
-            IThreadReaderScreen(
-                tid = io.github.littlesurvival.dto.value.ThreadId(event.targetId.toInt()),
-                title = event.title,
-                threadType = ReadHistoryRepository.ThreadEntryType.Normal,
-            )
-        )
-    }
 }
 
 private fun sendPrivateMessageWebView(): IActionWebView =

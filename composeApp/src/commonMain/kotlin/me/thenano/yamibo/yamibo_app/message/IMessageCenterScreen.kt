@@ -39,7 +39,10 @@ class IMessageCenterScreen(
         override fun decode(payload: String): RestorableNavigatable {
             val data = decodeRestorePayload<MessageCenterRestorePayload>(payload)
             return IMessageCenterScreen(
-                initialTab = MessageCenterTab.valueOf(data.initialTabName),
+                initialTab = when (data.initialTabName) {
+                    MessageCenterTab.Notices.name -> MessageCenterTab.Notices
+                    else -> MessageCenterTab.PrivateMessages
+                },
                 mainTabTopBar = data.mainTabTopBar,
             )
         }

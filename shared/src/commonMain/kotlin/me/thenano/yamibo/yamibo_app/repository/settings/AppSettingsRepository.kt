@@ -123,6 +123,12 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = AppLanguage.TRADITIONAL_CHINESE,
     )
 
+    /** App 字體 */
+    val appFontId by stringSetting(
+        name = "app_font_id",
+        default = "",
+    )
+
     /** 漫畫模式 */
     val isMangaMode by boolSetting(
         name = "manga_mode",
