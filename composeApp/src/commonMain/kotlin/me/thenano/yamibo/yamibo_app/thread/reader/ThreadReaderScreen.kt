@@ -1194,6 +1194,32 @@ internal fun ThreadReaderScreen(
             }
     }
 
+    /** Auto-save reading progress when navigating to a new page (chapter) */
+    LaunchedEffect(listState, state) {
+        if (state != ReaderState.Success) return@LaunchedEffect
+        var previousPage: Int? = null
+        snapshotFlow {
+            val currentEntry = readerEntries.getOrNull(listState.firstVisibleItemIndex)
+            currentEntry?.let { pageByPid[it.post.pid.value.toLong()] } ?: -1
+        }
+            .distinctUntilChanged()
+            .collect { currentPage ->
+                if (currentPage <= 0) return@collect
+                val prev = previousPage
+                previousPage = currentPage
+                // Skip the first emission (initial page load)
+                if (prev == null) return@collect
+                // Only save when the page actually changes
+                if (currentPage == prev) return@collect
+                if (!hasRestoredPosition || pendingSavedPosition != null || isRestoringSavedPosition) return@collect
+                val history = buildHistory() ?: return@collect
+                try {
+                    readHistoryRepo.savePosition(history)
+                } catch (_: Exception) {
+                }
+            }
+    }
+
     LaunchedEffect(listState, state, scrollButtonDisplayMode, scrollButtonDirectionThreshold) {
         if (state != ReaderState.Success || scrollButtonDisplayMode == ReaderScrollButtonDisplayMode.NEVER) {
             showScrollJumpButtonAfterSlide = false
