@@ -1,0 +1,54 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build APK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 33
+          build-tools: 33.0.2
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper/
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Grant execute permission to gradlew
+        run: chmod +x gradlew
+
+      - name: Build APK
+        run: ./gradlew :app:assembleRelease
+
+      # ✅ 修改：使用通配符匹配 unsigned APK
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: 300文学-APK
+          path: app/build/outputs/apk/release/*.apk
+          compression-level: 9
