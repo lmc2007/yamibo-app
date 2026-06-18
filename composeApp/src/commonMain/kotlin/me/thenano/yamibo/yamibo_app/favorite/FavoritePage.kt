@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
 
 import androidx.compose.foundation.background
@@ -680,7 +680,7 @@ fun FavoritePage() {
             title = {
                 Text(
                     i18n("同步百合會收藏"),
-                    color = colors.brownDeep,
+                    color = colors.textStrong,
                     fontWeight = FontWeight.Bold,
                 )
             },

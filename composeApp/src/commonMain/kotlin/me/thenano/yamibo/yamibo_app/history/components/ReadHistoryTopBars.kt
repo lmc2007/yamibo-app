@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.history.components
+package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
 import androidx.compose.foundation.layout.*
@@ -113,7 +113,7 @@ internal fun SelectTopBar(
             text = i18n("已選 {} 項", selectedCount),
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = colors.brownDeep,
+            color = colors.textStrong,
             modifier = Modifier.weight(1f),
         )
         Surface(onClick = onSelectAll, shape = RoundedCornerShape(10.dp), color = colors.brownPrimary.copy(alpha = 0.12f)) {

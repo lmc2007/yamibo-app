@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.sync
+package me.thenano.yamibo.yamibo_app.favorite.sync
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -237,6 +237,7 @@ fun FavoriteSyncStatusCard(
                     title = i18n("日誌"),
                     message = it,
                     tint = colors.brownPrimary,
+                    textColor = colors.textDark,
                     maxHeight = messageMaxHeight,
                 )
             }
@@ -245,7 +246,8 @@ fun FavoriteSyncStatusCard(
                 SyncMessageBlock(
                     title = i18n("提醒"),
                     message = it,
-                    tint = colors.brownDeep,
+                    tint = colors.orangeAccent,
+                    textColor = colors.textStrong,
                     maxHeight = messageMaxHeight,
                 )
             }
@@ -254,7 +256,8 @@ fun FavoriteSyncStatusCard(
                 SyncMessageBlock(
                     title = i18n("錯誤"),
                     message = it,
-                    tint = Color(0xFFB74D42),
+                    tint = colors.redAccent,
+                    textColor = colors.redAccent,
                     maxHeight = messageMaxHeight,
                 )
             }
@@ -339,6 +342,7 @@ private fun SyncMessageBlock(
     title: String,
     message: String,
     tint: Color,
+    textColor: Color = tint,
     maxHeight: Dp,
 ) {
     val scrollState = rememberScrollState()
@@ -375,7 +379,7 @@ private fun SyncMessageBlock(
         border = BorderStroke(1.dp, tint.copy(alpha = 0.16f)),
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = title, color = tint, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            Text(text = title, color = textColor, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             Spacer(Modifier.height(4.dp))
             Box(
                 modifier = Modifier
@@ -392,7 +396,7 @@ private fun SyncMessageBlock(
                     lines.forEach { line ->
                         Text(
                             text = line,
-                            color = tint,
+                            color = textColor,
                             fontSize = 13.sp,
                             lineHeight = 18.sp,
                             maxLines = 4,

@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.detail.components
+package me.thenano.yamibo.yamibo_app.thread.detail.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -56,11 +56,11 @@ internal fun DetailNoteActionButton(
                 imageVector = YamiboIcons.EditOrSign,
                 contentDescription = null,
                 modifier = Modifier.size(14.dp),
-                tint = colors.brownDeep,
+                tint = colors.textStrong,
             )
             Text(
                 text = if (hasNote) i18n("編輯筆記") else i18n("新增筆記"),
-                color = colors.brownDeep,
+                color = colors.textStrong,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -103,11 +103,11 @@ internal fun DetailNoteCard(
                         imageVector = YamiboIcons.EditOrSign,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = colors.brownDeep,
+                        tint = colors.textStrong,
                     )
                     Text(
                         text = i18n("筆記"),
-                        color = colors.brownDeep,
+                        color = colors.textStrong,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -170,7 +170,7 @@ internal fun DetailNoteEditorDialog(
                 shape = RoundedCornerShape(12.dp),
             ) {
                 Box(Modifier.padding(horizontal = 16.dp, vertical = 9.dp), contentAlignment = Alignment.Center) {
-                    Text(i18n("保存"), color = colors.creamBackground, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(i18n("保存"), color = colors.textOnDeepHigh, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         },

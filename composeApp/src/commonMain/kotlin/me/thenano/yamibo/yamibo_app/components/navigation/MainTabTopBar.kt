@@ -118,16 +118,15 @@ fun YamiboHomeTopBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colors.brownDeep,
-                        colors.brownPrimary,
-                        colors.creamBackground,
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            colors.brownDeep,
+                            colors.brownPrimary,
+                        )
                     )
                 )
-            )
-            .padding(horizontal = 16.dp, vertical = 20.dp),
+                .padding(horizontal = 16.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {

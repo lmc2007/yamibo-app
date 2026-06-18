@@ -122,7 +122,7 @@ internal fun ReaderCatalogPanel(
         ) {
             Text(
                 text = i18n("目錄"),
-                color = colors.creamBackground,
+                color = colors.textOnDeepHigh,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )

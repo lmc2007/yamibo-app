@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite
+package me.thenano.yamibo.yamibo_app.favorite
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -271,7 +271,7 @@ fun FavoriteActionButton(
             Icon(
                 imageVector = if (filled) YamiboIcons.StarFilled else YamiboIcons.StarOutline,
                 contentDescription = i18n("收藏"),
-                tint = tint,
+                tint = if (filled) YamiboTheme.colors.orangeAccent else tint,
                 modifier = Modifier.size(iconSize.dp),
             )
         }

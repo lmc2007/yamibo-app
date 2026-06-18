@@ -32,7 +32,7 @@ fun YamiboMainTabIconAction(
     onClick: () -> Unit,
     iconSize: Int = 27,
     iconOffsetY: Int = 0,
-    tint: Color = YamiboTheme.colors.brownDeep,
+    tint: Color = YamiboTheme.colors.textOnBackground,
 ) {
     IconButton(onClick = onClick, modifier = Modifier.size(36.dp)) {
         Icon(

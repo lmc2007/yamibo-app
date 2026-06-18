@@ -177,6 +177,7 @@ private fun FavoriteUpdateHeader(
     onShowResultFilter: () -> Unit,
     onShowUpdateScopeFilter: () -> Unit,
 ) {
+    val colors = YamiboTheme.colors
     var showIntervalDialog by remember { mutableStateOf(false) }
     val running = (runState as? FavoriteUpdateRepository.RunState.Running)?.snapshot
     val interrupted = (runState as? FavoriteUpdateRepository.RunState.Interrupted)?.snapshot
@@ -195,7 +196,7 @@ private fun FavoriteUpdateHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(i18n("收藏更新"), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Text(i18n("收藏更新"), color = colors.textStrong, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 YamiboActionChip(
                     i18n("結果: {}", resultFilterLabel),

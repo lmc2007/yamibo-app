@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.components
+package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -70,7 +70,7 @@ fun FavoriteHeaderMenuRow(
             contentDescription = i18n("篩選收藏"),
             onClick = onShowFilter,
             iconSize = 26,
-            tint = if (filterActive) colors.orangeAccent else colors.brownDeep,
+            tint = if (filterActive) colors.orangeAccent else colors.textOnBackground,
         )
         RowScopeMenuBox(
             showMenu = showMenu,
@@ -236,7 +236,7 @@ fun FavoriteSyncCategoryDialog(
         title = {
             Text(
                 i18n("同步到哪個類別"),
-                color = colors.brownDeep,
+                color = colors.textStrong,
                 fontWeight = FontWeight.Bold,
             )
         },
