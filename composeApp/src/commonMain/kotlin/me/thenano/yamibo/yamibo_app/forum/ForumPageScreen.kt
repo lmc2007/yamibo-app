@@ -59,6 +59,13 @@ private sealed interface ForumState {
     data class Error(val message: String) : ForumState
 }
 
+private data class ForumPageSnapshot(
+    val state: ForumState,
+    val currentPage: Int,
+    val filterType: FilterType?,
+    val orderType: OrderType?,
+)
+
 /** Main Forum Screen Entry */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,21 +84,26 @@ fun ForumPageScreen(fid: ForumId, name: String) {
     var selectedFilterType by remember { mutableStateOf<FilterType?>(null) }
     var showOrderDialog by remember { mutableStateOf(false) }
     var showFilterDialog by remember { mutableStateOf(false) }
+    var loadGeneration by remember { mutableIntStateOf(0) }
+    val pageHistory = remember { mutableStateListOf<ForumPageSnapshot>() }
 
     suspend fun loadPage(
         page: Int,
         filterType: FilterType? = selectedFilterType,
         orderType: OrderType? = selectedOrderType,
         preferCache: Boolean = true,
+        requestGeneration: Int = loadGeneration,
     ) {
         val cached = if (preferCache) forumRepository.getCachedForumPage(fid, page, filterType, orderType) else null
         if (cached != null) {
+            if (requestGeneration != loadGeneration) return
             currentPage = cached.pageNav?.currentPage ?: page
             state = ForumState.Success(cached)
             return
         }
 
         val result = forumRepository.fetchForum(fid, page, filterType, orderType)
+        if (requestGeneration != loadGeneration) return
         state =
             when (result) {
                 is YamiboResult.Success -> {
@@ -103,14 +115,50 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             }
     }
 
+    fun restorePreviousPage(): Boolean {
+        val snapshot = pageHistory.removeLastOrNull() ?: return false
+        loadGeneration += 1
+        state = snapshot.state
+        currentPage = snapshot.currentPage
+        selectedFilterType = snapshot.filterType
+        selectedOrderType = snapshot.orderType
+        return true
+    }
+
+    fun navigateToPage(page: Int) {
+        if (page == currentPage) return
+        pageHistory.add(
+            ForumPageSnapshot(
+                state = state,
+                currentPage = currentPage,
+                filterType = selectedFilterType,
+                orderType = selectedOrderType,
+            )
+        )
+        loadGeneration += 1
+        val requestGeneration = loadGeneration
+        state = ForumState.Loading
+        scope.launch { loadPage(page, requestGeneration = requestGeneration) }
+    }
+
     LaunchedEffect(fid) {
+        pageHistory.clear()
+        loadGeneration += 1
+        val requestGeneration = loadGeneration
         val cached = forumRepository.getCachedForumPage(fid, filterType = selectedFilterType, orderType = selectedOrderType)
         if (cached != null) {
+            if (requestGeneration != loadGeneration) return@LaunchedEffect
             currentPage = cached.pageNav?.currentPage ?: 1
             state = ForumState.Success(cached)
             return@LaunchedEffect
         }
-        loadPage(1)
+        loadPage(1, requestGeneration = requestGeneration)
+    }
+
+    DisposableEffect(navigator) {
+        val handler = { restorePreviousPage() }
+        navigator.backHandlers.add(handler)
+        onDispose { navigator.backHandlers.remove(handler) }
     }
 
     Scaffold(
@@ -128,7 +176,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                 }
             ForumTopBar(
                 title = forumName,
-                onBack = { navigator.pop() },
+                onBack = { if (!restorePreviousPage()) navigator.pop() },
                 onSearch = { navigator.navigate(ISearchScreen(fid)) },
                 onPostThread = {
                     navigator.navigate(
@@ -230,10 +278,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
                             selectedFilterType = selectedFilterType,
                             onShowOrderDialog = { showOrderDialog = true },
                             onShowFilterDialog = { showFilterDialog = true },
-                            onPageChange = { page ->
-                                state = ForumState.Loading
-                                scope.launch { loadPage(page) }
-                            },
+                            onPageChange = ::navigateToPage,
                             onSubForumClick = { subFid, subName ->
                                 navigator.navigate(IForumScreen(subFid, subName))
                             },
@@ -292,9 +337,19 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             onDismiss = { showOrderDialog = false },
             onSelect = { orderType ->
                 showOrderDialog = false
+                pageHistory.clear()
+                loadGeneration += 1
+                val requestGeneration = loadGeneration
                 selectedOrderType = orderType
                 state = ForumState.Loading
-                scope.launch { loadPage(currentPage, selectedFilterType, orderType) }
+                scope.launch {
+                    loadPage(
+                        currentPage,
+                        selectedFilterType,
+                        orderType,
+                        requestGeneration = requestGeneration,
+                    )
+                }
             },
         )
     }
@@ -305,9 +360,19 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             onDismiss = { showFilterDialog = false },
             onSelect = { filterType ->
                 showFilterDialog = false
+                pageHistory.clear()
+                loadGeneration += 1
+                val requestGeneration = loadGeneration
                 selectedFilterType = filterType
                 state = ForumState.Loading
-                scope.launch { loadPage(currentPage, filterType, selectedOrderType) }
+                scope.launch {
+                    loadPage(
+                        currentPage,
+                        filterType,
+                        selectedOrderType,
+                        requestGeneration = requestGeneration,
+                    )
+                }
             },
         )
     }

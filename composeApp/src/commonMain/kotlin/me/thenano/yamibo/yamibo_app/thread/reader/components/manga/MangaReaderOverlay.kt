@@ -81,22 +81,7 @@ fun MangaReaderOverlay(
                 titleFontSize = 16,
                 onBack = onBack,
                 systemBarsPriority = 30,
-            ) {
-                if (onCatalog != null) {
-                    IconButton(onClick = onCatalog, modifier = Modifier.size(36.dp)) {
-                        Text("☰", color = Color.White, fontSize = 22.sp)
-                    }
-                }
-                YamiboTopBarIconAction(YamiboIcons.Setting, i18n("設定"), onSettings, iconSize = 22)
-                if (onShare != null) {
-                    YamiboTopBarIconAction(YamiboIcons.Share, i18n("分享"), onShare, iconSize = 22)
-                }
-                if (onNavigateToThread != null) {
-                    IconButton(onClick = onNavigateToThread, modifier = Modifier.size(36.dp)) {
-                        Text("📖", fontSize = 20.sp)
-                    }
-                }
-            }
+            )
         }
 
         // Bottom Bar

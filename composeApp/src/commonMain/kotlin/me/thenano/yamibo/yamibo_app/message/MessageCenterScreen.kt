@@ -563,7 +563,7 @@ private fun MessageCenterTabRow(
                 text = {
                     Text(
                         text = tab.title,
-                        color = colors.brownDeep,
+                        color = colors.textOnSurface,
                         fontSize = 14.sp,
                         maxLines = 1,
                     )
@@ -589,7 +589,7 @@ private fun ScrollableYamiboTabRow(
             if (selectedIndex < tabPositions.size) {
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                    color = colors.brownDeep,
+                    color = colors.textStrong,
                     height = 2.dp,
                 )
             }
