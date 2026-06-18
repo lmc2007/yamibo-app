@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post.impl
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.*
@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.littlesurvival.dto.value.ThreadId
+import me.thenano.yamibo.yamibo_app.LocalFontRepository
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -266,6 +267,12 @@ fun HtmlBlocksRenderer(
     onImageHeightChanged: ((String, Int) -> Unit)? = null,
     onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
 ) {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val fontRepository = LocalFontRepository.current
+    val readerFontId = novelSettingsRepo.readerFontId.state()
+    val readerFontFamily = remember(readerFontId) {
+        fontRepository.getFontFamily(readerFontId) ?: HtmlDefaultFontFamily
+    }
     val hasSelectableText = remember(blocks) {
         blocks.any { it is HtmlBlock.Text }
     }
@@ -285,6 +292,7 @@ fun HtmlBlocksRenderer(
                     imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                     onImageHeightChanged = onImageHeightChanged,
                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                    fontFamily = readerFontFamily,
                 )
             }
         }
@@ -304,6 +312,7 @@ private fun RubyTextBlock(
     text: AnnotatedString,
     rubies: List<HtmlBlock.RubyText>,
     textAlign: TextAlign,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -327,6 +336,7 @@ private fun RubyTextBlock(
                 RubyFlowLine(
                     segments = line.segments,
                     horizontalArrangement = horizontalArrangement,
+                    fontFamily = fontFamily,
                     fontSizeSp = fontSizeSp,
                     lineHeightSp = lineHeightSp,
                     textColor = textColor,
@@ -336,7 +346,7 @@ private fun RubyTextBlock(
                     Text(
                         text = segment.text,
                         color = textColor,
-                        fontFamily = HtmlDefaultFontFamily,
+                        fontFamily = fontFamily,
                         fontSize = fontSizeSp.sp,
                         lineHeight = lineHeightSp.sp,
                     )
@@ -351,6 +361,7 @@ private fun RubyTextBlock(
 private fun RubyFlowLine(
     segments: List<RubySegment>,
     horizontalArrangement: Arrangement.Horizontal,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -365,6 +376,7 @@ private fun RubyFlowLine(
                     if (segment.text.isNotEmpty()) {
                         RubyPlainTextSegment(
                             text = segment.text,
+                            fontFamily = fontFamily,
                             fontSizeSp = fontSizeSp,
                             lineHeightSp = lineHeightSp,
                             textColor = textColor,
@@ -375,6 +387,7 @@ private fun RubyFlowLine(
                 is RubySegment.Ruby -> {
                     RubySegmentView(
                         ruby = segment.ruby,
+                        fontFamily = fontFamily,
                         fontSizeSp = fontSizeSp,
                         lineHeightSp = lineHeightSp,
                         textColor = textColor,
@@ -388,6 +401,7 @@ private fun RubyFlowLine(
 @Composable
 private fun RubyPlainTextSegment(
     text: AnnotatedString,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -399,7 +413,7 @@ private fun RubyPlainTextSegment(
         Text(
             text = text,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
             lineHeight = fontSizeSp.sp,
             modifier = Modifier.offset(y = baseTop),
@@ -410,6 +424,7 @@ private fun RubyPlainTextSegment(
 @Composable
 private fun RubySegmentView(
     ruby: HtmlBlock.RubyText,
+    fontFamily: FontFamily,
     fontSizeSp: Float,
     lineHeightSp: Float,
     textColor: Color,
@@ -427,7 +442,7 @@ private fun RubySegmentView(
         Text(
             text = ruby.rubyText,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = rubyFontSizeSp.sp,
             lineHeight = rubyFontSizeSp.sp,
             maxLines = 1,
@@ -436,7 +451,7 @@ private fun RubySegmentView(
         Text(
             text = ruby.baseText,
             color = textColor,
-            fontFamily = HtmlDefaultFontFamily,
+            fontFamily = fontFamily,
             fontSize = fontSizeSp.sp,
             lineHeight = fontSizeSp.sp,
             maxLines = 1,
@@ -549,6 +564,7 @@ private fun HtmlBlockRenderer(
     imagePlaceholderAspectRatioFor: ((String) -> Float?)? = null,
     onImageHeightChanged: ((String, Int) -> Unit)? = null,
     onImageAspectRatioChanged: ((String, Float) -> Unit)? = null,
+    fontFamily: FontFamily = HtmlDefaultFontFamily,
 ) {
     DebugRecomposeProbe("HtmlBlockRenderer", "${block::class.simpleName}:${block.hashCode()}")
     val colors = YamiboTheme.colors
@@ -691,6 +707,7 @@ private fun HtmlBlockRenderer(
                     text = adjustedAnnotatedString,
                     rubies = block.rubies,
                     textAlign = block.textAlign,
+                    fontFamily = fontFamily,
                     fontSizeSp = fontSize.toFloat(),
                     lineHeightSp = lineHeightSp,
                     textColor = colors.htmlTextDark,
@@ -701,7 +718,7 @@ private fun HtmlBlockRenderer(
                     text = adjustedAnnotatedString,
                     style = TextStyle(
                         color = colors.htmlTextDark,
-                        fontFamily = HtmlDefaultFontFamily,
+                        fontFamily = fontFamily,
                         fontSize = fontSize.sp,
                         lineHeight = lineHeightSp.sp,
                         textAlign = block.textAlign
@@ -807,7 +824,7 @@ private fun HtmlBlockRenderer(
                         .padding(vertical = 1.dp),
                     contentScale = ContentScale.FillWidth,
                     enableContextMenu = true,
-                    isDarkTheme = false,
+                    isDarkTheme = isDarkTheme,
                     enableCrossfade = false,
                     onSuccess = onImageSuccess,
                     onError = onImageError,
@@ -877,7 +894,7 @@ private fun HtmlBlockRenderer(
                     ) {
                         Text(
                             text = block.fileName,
-                            color = colors.brownDeep,
+                            color = colors.textStrong,
                             fontSize = 14.sp,
                             lineHeight = 18.sp,
                             fontWeight = FontWeight.Medium,
@@ -1004,7 +1021,7 @@ private fun HtmlBlockRenderer(
                 Column(modifier = Modifier.padding(12.dp).fillMaxWidth()) {
                     Text(
                         text = if (expanded) "▼ ${block.title ?: i18n("點擊展開 / 收起")}" else "▶ ${block.title ?: i18n("點擊展開 / 收起")}",
-                        color = colors.brownDeep,
+                        color = colors.textStrong,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -1028,6 +1045,7 @@ private fun HtmlBlockRenderer(
                                     imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                                     onImageHeightChanged = onImageHeightChanged,
                                     onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                    fontFamily = fontFamily,
                                 )
                             }
                         }
@@ -1080,6 +1098,7 @@ private fun HtmlBlockRenderer(
                             imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                             onImageHeightChanged = onImageHeightChanged,
                             onImageAspectRatioChanged = onImageAspectRatioChanged,
+                            fontFamily = fontFamily,
                         )
                     }
                 }
@@ -1115,6 +1134,7 @@ private fun HtmlBlockRenderer(
                             imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                             onImageHeightChanged = onImageHeightChanged,
                             onImageAspectRatioChanged = onImageAspectRatioChanged,
+                            fontFamily = fontFamily,
                         )
                     }
                 }
@@ -1191,7 +1211,7 @@ private fun HtmlBlockRenderer(
                                                                 text = adjustedTableText,
                                                                 style = TextStyle(
                                                                     color = cellTextColor,
-                                                                    fontFamily = HtmlDefaultFontFamily,
+                                                                    fontFamily = fontFamily,
                                                                     fontSize = tableFontSize.sp,
                                                                     lineHeight = tableLineHeightSp.sp,
                                                                     fontWeight = if (cell.isHeader) FontWeight.Bold else FontWeight.Normal,
@@ -1212,6 +1232,7 @@ private fun HtmlBlockRenderer(
                                                             imagePlaceholderAspectRatioFor = imagePlaceholderAspectRatioFor,
                                                             onImageHeightChanged = onImageHeightChanged,
                                                             onImageAspectRatioChanged = onImageAspectRatioChanged,
+                                                            fontFamily = fontFamily,
                                                         )
                                                     }
                                                 }

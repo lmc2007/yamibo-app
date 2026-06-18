@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components
+package me.thenano.yamibo.yamibo_app.thread.reader.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import io.github.littlesurvival.dto.value.PostId
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
+import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
 
 /** Catalog drawer panel showing pages and post-entries */
@@ -39,6 +40,7 @@ internal fun ReaderCatalogPanel(
     currentPid: PostId?,
     bookmarkedPostIds: Set<Long> = emptySet(),
     readPostIds: Set<Long> = emptySet(),
+    chapterStates: Map<Long, LocalChapterStateRepository.Entry> = emptyMap(),
     onPageOrPostClick: (Int, Post?) -> Unit,
     onPostLongPress: (Post) -> Unit = {},
 ) {
@@ -124,7 +126,7 @@ internal fun ReaderCatalogPanel(
                             ) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(24.dp),
-                                    color = colors.brownDeep,
+                                    color = colors.brownPrimary,
                                     strokeWidth = 2.dp
                                 )
                             }
@@ -134,7 +136,9 @@ internal fun ReaderCatalogPanel(
                                 pagePosts.forEach { post ->
                                     val isCurrentPost = post.pid == currentPid
                                     val isBookmarked = post.pid.value.toLong() in bookmarkedPostIds
-                                    val isRead = post.pid.value.toLong() in readPostIds
+                                    val chapterState = chapterStates[post.pid.value.toLong()]
+                                    val isRead = post.pid.value.toLong() in readPostIds || chapterState?.read == true
+                                    val progressText = chapterState?.progressLabel()
                                     val displayTitle = rememberConvertedText(post.title.ifEmpty { "..." })
                                     Surface(
                                         color = if (isCurrentPost) colors.brownLight.copy(alpha = 0.15f) else colors.creamSurface,
@@ -168,7 +172,7 @@ internal fun ReaderCatalogPanel(
                                         ) {
                                             Text(
                                                 text = "${post.floor}#",
-                                                color = if (isCurrentPost) colors.brownDeep else colors.brownPrimary,
+                                                color = if (isCurrentPost) colors.textStrong else colors.brownPrimary,
                                                 fontWeight = if (isCurrentPost) FontWeight.ExtraBold else FontWeight.Bold,
                                                 fontSize = if (isCurrentPost) 16.sp else 14.sp,
                                                 modifier = Modifier.width(if (isCurrentPost) 48.dp else 40.dp)
@@ -184,12 +188,22 @@ internal fun ReaderCatalogPanel(
                                             }
                                             Text(
                                                 text = displayTitle,
-                                                color = if (isCurrentPost) colors.brownDeep else colors.textDark,
+                                                modifier = Modifier.weight(1f),
+                                                color = if (isCurrentPost) colors.textStrong else colors.textDark,
                                                 fontWeight = if (isCurrentPost) FontWeight.ExtraBold else FontWeight.Normal,
                                                 fontSize = if (isCurrentPost) 16.sp else 14.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
+                                            if (!isRead && progressText != null) {
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    text = progressText,
+                                                    color = colors.orangeAccent,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                )
+                                            }
                                         }
                                     }
                                     HorizontalDivider(
@@ -207,3 +221,8 @@ internal fun ReaderCatalogPanel(
     }
 }
 
+private fun LocalChapterStateRepository.Entry.progressLabel(): String? {
+    if (read) return null
+    if (progressPercent <= 0) return null
+    return i18n("已讀 {}%", progressPercent)
+}

@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
+package me.thenano.yamibo.yamibo_app.userspace
 
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
@@ -175,7 +175,6 @@ fun UserSpaceScreen(
                 UserSpaceTopBar(
                     title = topBarTitle(profile, titleHint, group, selectedTab, isSelf),
                     showEdit = isSelf && group == UserSpaceSection.Blogs,
-                    applyStatusPadding = true,
                     onBack = { navigator.pop() },
                     onEdit = {
                         navigator.navigate(userSpaceEditActionWebView(group))
@@ -518,13 +517,12 @@ private fun UserSpaceViewAllBlogFilterRow(
 private fun UserSpaceTopBar(
     title: String,
     showEdit: Boolean,
-    applyStatusPadding: Boolean,
     onBack: () -> Unit,
     onEdit: () -> Unit,
 ) {
     YamiboTopBar(
         title = title,
-        applyStatusPadding = applyStatusPadding,
+        applyStatusPadding = true,
         onBack = onBack,
     ) {
         if (showEdit) {
@@ -552,7 +550,7 @@ private fun UserSpaceMainTopBar(
                 UserAvatar(profile?.avatarUrl, size = 28)
                 Text(
                     text = i18n("我的空間"),
-                    color = colors.brownDeep,
+                    color = colors.textOnBackground,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -580,7 +578,7 @@ private fun UserSpaceSubPageRow(
                 text = {
                     Text(
                         text = tab.title(isSelf),
-                        color = colors.brownDeep,
+                        color = colors.textOnSurface,
                         fontSize = 14.sp,
                         maxLines = 1,
                     )
@@ -606,7 +604,7 @@ private fun ScrollableYamiboTabRow(
             if (selectedIndex < tabPositions.size) {
                 TabRowDefaults.SecondaryIndicator(
                     modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                    color = colors.brownDeep,
+                    color = colors.textStrong,
                     height = 2.dp,
                 )
             }

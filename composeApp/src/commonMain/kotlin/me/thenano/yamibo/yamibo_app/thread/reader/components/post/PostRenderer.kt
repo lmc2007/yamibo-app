@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader.components.post
+package me.thenano.yamibo.yamibo_app.thread.reader.components.post
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -686,7 +686,7 @@ private fun RateOptionListRow(
             if (selected) {
                 Text(
                     text = i18n("已選擇"),
-                    color = colors.brownDeep,
+                    color = colors.textStrong,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -706,14 +706,14 @@ private fun ThreadReaderStatBadge(icon: ImageVector, value: String) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = colors.brownDeep,
+                tint = colors.textOnSurface,
                 modifier = Modifier.size(14.dp)
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = value,
                 fontSize = 11.sp,
-                color = colors.brownDeep,
+                color = colors.textOnSurface,
                 fontWeight = FontWeight.Medium
             )
         }

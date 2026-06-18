@@ -43,10 +43,13 @@ object YamiboTheme {
             val schemeEnum = LocalAppSettingsRepository.current.themeScheme.state()
             val scheme = schemeEnum.toScheme()
             val brownDeep = Color(scheme.brownDeep)
-            val brownPrimary = Color(scheme.brownPrimary)
             val creamBackground = Color(scheme.creamBackground)
             val creamSurface = Color(scheme.creamSurface)
+            val brownPrimary = Color(scheme.brownPrimary).ensureContrastOn(creamSurface, 3.0)
             val textDark = Color(scheme.textDark)
+                .ensureContrastOn(creamBackground, 4.5)
+                .ensureContrastOn(creamSurface, 4.5)
+            val navBarBg = Color(scheme.navBarBg)
             val isDefault = scheme === YamiboColorScheme.Default
             
             return YamiboColors(
@@ -97,12 +100,12 @@ object YamiboTheme {
                 } else {
                     textDark.bestReadableOn(Color(scheme.orangeAccent))
                 },
-                htmlTextDark = Color(scheme.htmlTextDark),
-                redAccent = Color(scheme.redAccent),
+                htmlTextDark = Color(scheme.htmlTextDark).ensureContrastOn(creamBackground, 4.5),
+                redAccent = Color(scheme.redAccent).ensureContrastOn(creamSurface, 3.0),
                 pinnedBg = Color(scheme.pinnedBg),
                 announceBg = Color(scheme.announceBg),
-                navBarBg = Color(scheme.navBarBg),
-                navBarIconSelected = Color(scheme.navBarIconSelected),
+                navBarBg = navBarBg,
+                navBarIconSelected = Color(scheme.navBarIconSelected).ensureContrastOn(navBarBg, 3.0),
                 navBarIconUnselected = Color(scheme.navBarIconUnselected),
             )
         }
@@ -112,6 +115,9 @@ private fun Color.bestReadableOn(background: Color): Color {
     val candidates = listOf(this, Color.White, Color.Black, Color(0xFFF8F4EE), Color(0xFF111111))
     return candidates.maxBy { it.contrastAgainst(background) }
 }
+
+private fun Color.ensureContrastOn(background: Color, minimumRatio: Double): Color =
+    if (contrastAgainst(background) >= minimumRatio) this else bestReadableOn(background)
 
 private fun Color.contrastAgainst(other: Color): Double {
     val lighter = maxOf(relativeLuminance(), other.relativeLuminance())

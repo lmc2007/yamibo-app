@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.userspace
+package me.thenano.yamibo.yamibo_app.userspace
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -165,7 +165,7 @@ private fun ActionGrid(
                             Text(
                                 text = action.label,
                                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                                color = colors.brownDeep,
+                                color = colors.textOnBackground,
                                 fontSize = 14.sp,
                             )
                         }

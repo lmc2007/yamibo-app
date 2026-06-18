@@ -74,6 +74,7 @@ fun TagThreadCard(
         ) {
             // Author + Time (Top)
             Row(verticalAlignment = Alignment.CenterVertically) {
+                var hasLeadingMetadata = false
                 if (thread.author != null) {
                     Text(
                         text = thread.author!!.name,
@@ -85,13 +86,23 @@ fun TagThreadCard(
                             navigator.navigate(IUserSpaceScreen(author.uid, author.name))
                         }
                     )
+                    hasLeadingMetadata = true
                 }
                 val lastUpdate = thread.lastUpdate
                 if (lastUpdate != null) {
                     Text(
-                        text = " · ${lastUpdate.text}",
+                        text = "${if (hasLeadingMetadata) " · " else ""}${lastUpdate.text}",
                         fontSize = 12.sp,
                         color = colors.textDark.copy(alpha = 0.4f)
+                    )
+                    hasLeadingMetadata = true
+                }
+                if (readingProgressText != null) {
+                    Text(
+                        text = "${if (hasLeadingMetadata) " · " else ""}$readingProgressText",
+                        fontSize = 12.sp,
+                        color = colors.orangeAccent,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
             }
@@ -164,17 +175,6 @@ fun TagThreadCard(
                 
                 Spacer(Modifier.weight(1f))
                 
-                // Reading progress text in middle/right
-                if (readingProgressText != null) {
-                    Text(
-                        text = readingProgressText,
-                        fontSize = 11.sp,
-                        color = colors.orangeAccent,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(Modifier.width(12.dp))
-                }
-                
                 // Forum Name (Right)
                 val forumName = thread.fid?.let { YamiboForum.toForumName(it) }
                 if (forumName != null) {
@@ -187,7 +187,7 @@ fun TagThreadCard(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = colors.brownDeep
+                            color = colors.textOnSurface
                         )
                     }
                 }

@@ -209,7 +209,7 @@ private fun RootBlogCard(
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 14.dp)) {
         Text(
             text = page.blogInfo.title.ifBlank { titleHint ?: i18n("日志") },
-            color = colors.brownDeep,
+            color = colors.textOnBackground,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold,
             lineHeight = 28.sp,
@@ -251,7 +251,7 @@ private fun BlogCommentSectionTitle(count: Int) {
         Text(
             text = if (count > 0) i18n("日志評論") else i18n("日志評論"),
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
-            color = colors.brownDeep,
+            color = colors.textOnBackground,
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -277,7 +277,7 @@ private fun BlogCommentCard(
                 Text(
                     text = comment.author.name,
                     modifier = Modifier.clickable { onUserClick(comment.author) },
-                    color = colors.brownDeep,
+                    color = colors.textOnBackground,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                 )

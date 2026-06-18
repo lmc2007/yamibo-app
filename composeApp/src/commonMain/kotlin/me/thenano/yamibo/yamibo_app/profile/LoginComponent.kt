@@ -208,7 +208,7 @@ private fun UserInfoContent(
                 label = i18n("刷新"),
                 onClick = { onRefresh() },
                 containerColor = YamiboTheme.colors.brownPrimary.copy(alpha = 0.1f),
-                contentColor = YamiboTheme.colors.brownDeep
+                contentColor = YamiboTheme.colors.textOnSurface
             )
             Spacer(Modifier.width(12.dp))
             AnimatedYamiboChip(
@@ -384,7 +384,7 @@ private fun InfoChip(
             text = label,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             fontSize = 12.sp,
-            color = YamiboTheme.colors.brownDeep,
+            color = YamiboTheme.colors.textOnSurface,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis

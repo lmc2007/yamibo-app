@@ -157,7 +157,7 @@ fun ReadHistoryCard(
                     ) {
                         Text(
                             text = history.threadName,
-                            color = colors.brownDeep.copy(alpha = 0.75f),
+                            color = colors.textOnSurface.copy(alpha = 0.85f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             lineHeight = 14.sp,
