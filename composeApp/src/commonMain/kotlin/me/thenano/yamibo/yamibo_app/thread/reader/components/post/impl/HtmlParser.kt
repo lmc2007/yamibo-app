@@ -46,6 +46,10 @@ object HtmlParser {
         val cleanHtml = html.replace("\r", "")
         val document: Document = Ksoup.parseBodyFragment(cleanHtml)
         
+        // Filter out Discuz jammer (interference) elements to avoid garbage text in reader
+        document.select("font.jammer").forEach { it.remove() }
+        document.select(".jammer").forEach { it.remove() }
+        
         val blocks = mutableListOf<HtmlBlock>()
         val globalBuilder = AnnotatedString.Builder()
         var lastCommitIndex = 0
