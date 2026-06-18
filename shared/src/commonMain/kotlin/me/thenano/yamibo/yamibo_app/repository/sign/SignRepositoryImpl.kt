@@ -134,7 +134,7 @@ class SignRepositoryImpl(
     }
 
     override suspend fun getTodayRecord(): SignRepository.DailyRecord? {
-        return signStatusStore.getToday()?.let { record ->
+        return signStatusStore.getToday(currentUid())?.let { record ->
             SignRepository.DailyRecord(
                 dateKey = record.dateKey,
                 isSigned = record.isSigned,
@@ -145,7 +145,7 @@ class SignRepositoryImpl(
     }
 
     override fun getKnownSignedToday(): Boolean? =
-        signStatusStore.getToday()?.isSigned
+        signStatusStore.getToday(currentUid())?.isSigned
 
     override suspend fun isSignedToday(): Boolean {
         getKnownSignedToday()?.let { return it }
@@ -311,11 +311,14 @@ class SignRepositoryImpl(
             this == SignRepository.ActionStatus.REPAIR_SUCCESS
     }
 
+    private fun currentUid(): String =
+        authRepository.currentUser()?.uid?.value?.toString() ?: "guest"
+
     private fun updateTodayRecord(
         info: SignRepository.SignPageInfo,
         message: String? = null,
     ) {
-        signStatusStore.updateToday(isSigned = info.hasSignedToday, message = message)
+        signStatusStore.updateToday(uid = currentUid(), isSigned = info.hasSignedToday, message = message)
     }
 
     private data class ParsedActionResult(

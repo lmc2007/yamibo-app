@@ -987,8 +987,7 @@ fun ImagesReaderScreen(
                     },
                     modifier = Modifier.fillMaxSize()
                 ) { pageTarget ->
-                    val page = pageTarget.page
-                    when (page) {
+                    when (val page = pageTarget.page) {
                         -1 -> InterstitialCard(
                             item = ReaderItem.InterstitialItem(
                                 prevTitle = prevThreadTitle,

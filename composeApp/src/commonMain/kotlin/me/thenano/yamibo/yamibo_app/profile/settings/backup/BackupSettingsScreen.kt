@@ -30,6 +30,7 @@ import me.thenano.yamibo.yamibo_app.repository.BackupRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.BackupInterval
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.formatStorageSize
 import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
 
@@ -447,13 +448,5 @@ private fun BackupActionButton(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
         )
-    }
-}
-
-private fun formatStorageSize(size: Long): String {
-    return when {
-        size >= 1024L * 1024L * 1024L -> "${(size / (1024f * 1024f * 1024f) * 100).roundToInt() / 100f} GB"
-        size >= 1024L * 1024L -> "${(size / (1024f * 1024f) * 100).roundToInt() / 100f} MB"
-        else -> "${(size / 1024f * 100).roundToInt() / 100f} kB"
     }
 }

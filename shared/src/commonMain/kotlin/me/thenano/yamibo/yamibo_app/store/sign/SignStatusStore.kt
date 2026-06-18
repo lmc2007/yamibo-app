@@ -12,15 +12,18 @@ data class SignStatusRecord(
 )
 
 interface SignStatusStore {
-    fun getToday(): SignStatusRecord?
-    fun updateToday(isSigned: Boolean, message: String? = null)
+    fun getToday(uid: String): SignStatusRecord?
+    fun updateToday(uid: String, isSigned: Boolean, message: String? = null)
 }
 
 class DatabaseSignStatusStore(db: Database) : SignStatusStore {
     private val queries = db.signDailyRecordQueries
 
-    override fun getToday(): SignStatusRecord? =
-        queries.getByDateKey(currentLocalDateKey()).executeAsOneOrNull()?.let { record ->
+    private fun scopedKey(uid: String): String =
+        "${uid}_${currentLocalDateKey()}"
+
+    override fun getToday(uid: String): SignStatusRecord? =
+        queries.getByDateKey(scopedKey(uid)).executeAsOneOrNull()?.let { record ->
             SignStatusRecord(
                 dateKey = record.dateKey,
                 isSigned = record.isSigned != 0L,
@@ -29,9 +32,9 @@ class DatabaseSignStatusStore(db: Database) : SignStatusStore {
             )
         }
 
-    override fun updateToday(isSigned: Boolean, message: String?) {
+    override fun updateToday(uid: String, isSigned: Boolean, message: String?) {
         queries.upsert(
-            dateKey = currentLocalDateKey(),
+            dateKey = scopedKey(uid),
             isSigned = if (isSigned) 1L else 0L,
             updatedAt = currentTimeMillis(),
             lastMessage = message,

@@ -31,6 +31,7 @@ import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepos
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.BackupScheduler
+import me.thenano.yamibo.yamibo_app.profile.settings.sign.SignReminderScheduler
 
 val LocalAuthRepository =
     compositionLocalOf<AuthRepository> { error("LocalAuthRepository not provided") }
@@ -58,6 +59,9 @@ val LocalBackupRepository =
 
 val LocalBackupScheduler =
     compositionLocalOf<BackupScheduler> { error("LocalBackupScheduler not provided") }
+
+val LocalSignReminderScheduler =
+    compositionLocalOf<SignReminderScheduler> { error("LocalSignReminderScheduler not provided") }
 
 val LocalChineseConversionRepository =
     compositionLocalOf<ChineseConversionRepository> { error("LocalChineseConversionRepository not provided") }

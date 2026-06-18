@@ -85,8 +85,7 @@ internal fun calculateReaderProgress(
 
     if (postHeight <= viewportHeight) {
         return if (
-            geometry.bottom > viewportTop &&
-            geometry.bottom <= viewportBottom &&
+            geometry.bottom in (viewportTop + 1)..viewportBottom &&
             (geometry.top >= viewportTop || allowPassedShortPost)
         ) {
             ReaderProgressResult(progressPercent = 100, read = true)

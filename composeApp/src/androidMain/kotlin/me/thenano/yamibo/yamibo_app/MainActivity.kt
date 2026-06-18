@@ -31,6 +31,9 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
+import me.thenano.yamibo.yamibo_app.profile.settings.sign.AndroidSignReminderScheduler
+import me.thenano.yamibo.yamibo_app.profile.settings.sign.SignReminderScheduler
+import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
@@ -60,12 +63,26 @@ class MainActivity : ComponentActivity() {
         AndroidAppForegroundTracker.markForeground(true)
     }
 
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_FROM_NOTIFICATION_SIGN_IN, false) == true) {
+            SignReminderTrigger.showSignWebViewTrigger.value = true
+            intent.putExtra(EXTRA_FROM_NOTIFICATION_SIGN_IN, false)
+        }
+    }
+
     override fun onStop() {
         AndroidAppForegroundTracker.markForeground(false)
         super.onStop()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        handleIntent(intent)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContent {
@@ -171,6 +188,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val backupScheduler = remember { AndroidBackupScheduler(context) }
+            val signReminderScheduler = remember { AndroidSignReminderScheduler(context) }
             LaunchedEffect(backupRepository) {
                 diskCacheFactory.backupStorageUsageProvider = { backupRepository.getBackupStorageBytes() }
             }
@@ -229,9 +247,11 @@ class MainActivity : ComponentActivity() {
                 LocalDiskCacheFactory provides diskCacheFactory,
                 LocalNovelReaderSettingsRepository provides novelReaderSettingsRepository,
                 LocalMangaReaderSettingsRepository provides mangaReaderSettingsRepository,
+                LocalSignReminderScheduler provides signReminderScheduler,
             ) {
                 val favoriteUpdateInterval = appSettingsRepository.favoriteUpdateInterval.state()
                 val backupInterval = appSettingsRepository.backupInterval.state()
+                val signReminderFrequency = appSettingsRepository.signInReminderFrequency.state()
                 
                 LaunchedEffect(Unit) {
                     if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
@@ -246,6 +266,10 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(backupInterval) {
                     delay(1_200)
                     backupScheduler.schedule(backupInterval)
+                }
+                LaunchedEffect(signReminderFrequency) {
+                    delay(1_200)
+                    signReminderScheduler.schedule(signReminderFrequency)
                 }
                 LaunchedEffect(Unit) {
                     delay(1_200)
@@ -263,5 +287,9 @@ class MainActivity : ComponentActivity() {
                 App()
             }
         }
+    }
+
+    companion object {
+        const val EXTRA_FROM_NOTIFICATION_SIGN_IN = "extra_from_notification_sign_in"
     }
 }

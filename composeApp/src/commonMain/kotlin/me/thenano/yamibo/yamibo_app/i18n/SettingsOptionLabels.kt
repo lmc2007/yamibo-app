@@ -68,3 +68,14 @@ fun ReaderChineseConversionOption.localizedLabel(): String = when (this) {
     ReaderChineseConversionOption.SIMPLIFIED -> i18n("簡體")
     ReaderChineseConversionOption.TRADITIONAL -> i18n("繁體")
 }
+
+fun SignReminderFrequency.localizedLabel(): String = when (this) {
+    SignReminderFrequency.OFF -> i18n("關閉")
+    SignReminderFrequency.ONCE_A_DAY -> i18n("每天 1 次")
+    SignReminderFrequency.TWICE_A_DAY -> i18n("每天 2 次")
+    SignReminderFrequency.THRICE_A_DAY -> i18n("每天 3 次")
+    SignReminderFrequency.FOUR_TIMES_A_DAY -> i18n("每天 4 次")
+    SignReminderFrequency.FIVE_TIMES_A_DAY -> i18n("每天 5 次")
+    SignReminderFrequency.SIX_TIMES_A_DAY -> i18n("每天 6 次")
+}
+

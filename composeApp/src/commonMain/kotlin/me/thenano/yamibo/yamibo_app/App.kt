@@ -24,6 +24,18 @@ import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+
+import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
+import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
+import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
+import androidx.compose.material3.SnackbarHostState
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
+import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.SignRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import io.github.littlesurvival.core.YamiboResult
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
@@ -81,6 +93,7 @@ fun App() {
     val appFontFamily = remember(appFontId) { fontRepository.getFontFamily(appFontId) }
     val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
     val holder = rememberSaveableStateHolder()
+    val snackbarHostState = remember { SnackbarHostState() }
     navigator.stateHolder = holder
     ChineseConversionModeSync()
 
@@ -184,6 +197,7 @@ fun App() {
                     }
                 }
             }
+            YamiboSnackbarHost(snackbarHostState)
             LaunchSignReminderDialog(
                 visible = showSignReminder,
                 onDismiss = {
@@ -192,8 +206,14 @@ fun App() {
                 },
                 onGoSign = {
                     showSignReminder = false
-                    navigator.popToRoot()
-                    navigator.replace(IMainScreen(MainTab.Profile))
+                    navigateToSignWebViewOrProfile(
+                        navigator = navigator,
+                        appSettingsRepository = appSettingsRepository,
+                        authRepository = authRepository,
+                        signRepository = signRepository,
+                        coroutineScope = coroutineScope,
+                        snackbarHostState = snackbarHostState,
+                    )
                 },
             )
             LaunchUpdateAvailableDialog(
@@ -224,6 +244,20 @@ fun App() {
         if (authRepository.currentUser() == null) return@LaunchedEffect
         if (!signRepository.isSignedToday()) {
             showSignReminder = true
+        }
+    }
+
+    LaunchedEffect(SignReminderTrigger.showSignWebViewTrigger.value) {
+        if (SignReminderTrigger.showSignWebViewTrigger.value) {
+            SignReminderTrigger.showSignWebViewTrigger.value = false
+            navigateToSignWebViewOrProfile(
+                navigator = navigator,
+                appSettingsRepository = appSettingsRepository,
+                authRepository = authRepository,
+                signRepository = signRepository,
+                coroutineScope = coroutineScope,
+                snackbarHostState = snackbarHostState,
+            )
         }
     }
 }
@@ -459,5 +493,95 @@ private fun ChineseConversionModeSync() {
                 ReaderChineseConversionOption.TRADITIONAL -> ChineseConversionMode.Traditional
             }
         )
+    }
+}
+
+private fun navigateToSignWebViewOrProfile(
+    navigator: ComposableNavigator,
+    appSettingsRepository: AppSettingsRepository,
+    authRepository: AuthRepository,
+    signRepository: SignRepository,
+    coroutineScope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+) {
+    if (authRepository.currentUser() == null) return
+    val isDirect = appSettingsRepository.signInDirectWebView.getValue()
+    if (isDirect) {
+        val mode = appSettingsRepository.signInMode.getValue()
+        val allowRepair = appSettingsRepository.signInAllowRepair.getValue()
+        when (mode) {
+            SignInMode.FULL_MANUAL -> {
+                navigator.navigate(
+                    ISignWebView(
+                        semiAutomatic = false,
+                        onResultObserved = {
+                            coroutineScope.launch {
+                                authRepository.syncCookieFromWebView()
+                                signRepository.markTodaySigned()
+                                signRepository.fetchPageInfo()
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到成功"))
+                            }
+                        },
+                        onLoadFailed = { reason ->
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到頁載入失敗：{}", reason))
+                            }
+                        }
+                    )
+                )
+            }
+            SignInMode.SEMI_AUTOMATIC -> {
+                navigator.navigate(
+                    ISignWebView(
+                        semiAutomatic = true,
+                        onCfCleared = {
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("開始自動簽到..."))
+                                when (val result = signRepository.runAutoSign(allowRepair)) {
+                                    is YamiboResult.Success -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(result.value.message)
+                                    }
+                                    is YamiboResult.Failure -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                    is YamiboResult.NotLoggedIn -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                    is YamiboResult.NoPermission -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n("目前無法自動簽到，請改用手動模式"))
+                                    }
+                                    is YamiboResult.Maintenance -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                }
+                            }
+                        },
+                        onMaintenanceObserved = {
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("百合會維護中...現在不是簽到的好時機呢"))
+                            }
+                        },
+                        onLoadFailed = { reason ->
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到頁載入失敗：{}", reason))
+                            }
+                        }
+                    )
+                )
+            }
+        }
+    } else {
+        navigator.popToRoot()
+        navigator.replace(IMainScreen(MainTab.Profile))
     }
 }

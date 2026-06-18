@@ -97,6 +97,16 @@ enum class SignInMode(val label: String) {
     FULL_MANUAL("full_manual"),
 }
 
+enum class SignReminderFrequency(val label: String, val timesPerDay: Int) {
+    OFF("off", 0),
+    ONCE_A_DAY("1x_day", 1),
+    TWICE_A_DAY("2x_day", 2),
+    THRICE_A_DAY("3x_day", 3),
+    FOUR_TIMES_A_DAY("4x_day", 4),
+    FIVE_TIMES_A_DAY("5x_day", 5),
+    SIX_TIMES_A_DAY("6x_day", 6),
+}
+
 enum class AppLanguage(val label: String, val languageTag: String) {
     TRADITIONAL_CHINESE("zh-TW", "zh-TW"),
     SIMPLIFIED_CHINESE("zh-CN", "zh-CN"),
@@ -287,6 +297,18 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = false,
     )
 
+    /** 簽到提醒頻率 */
+    val signInReminderFrequency by enumSetting(
+        name = "sign_in_reminder_frequency",
+        default = SignReminderFrequency.ONCE_A_DAY,
+    )
+
+    /** 簽到提醒直接進入網頁 */
+    val signInDirectWebView by boolSetting(
+        name = "sign_in_direct_web_view",
+        default = true,
+    )
+
     /** 簽到 */
     val signPageHtmlCache by stringSetting(
         name = "sign_page_html_cache",
@@ -309,6 +331,7 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val appUpdateLaunchCheckThresholdOptions = AppUpdateLaunchCheckThreshold.entries.map { it to it.label }
         val backupIntervalOptions = BackupInterval.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
+        val signInReminderFrequencyOptions = SignReminderFrequency.entries.map { it to it.label }
         val languageOptions = AppLanguage.entries.map { it to it.label }
     }
 }

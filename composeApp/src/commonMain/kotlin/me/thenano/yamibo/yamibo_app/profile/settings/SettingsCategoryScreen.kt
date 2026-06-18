@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
+import me.thenano.yamibo.yamibo_app.LocalSignReminderScheduler
 import me.thenano.yamibo.yamibo_app.LocalDiskCacheFactory
 import me.thenano.yamibo.yamibo_app.LocalFavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.LocalFavoriteUpdateRunner
@@ -39,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSy
 import me.thenano.yamibo.yamibo_app.repository.settings.*
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.util.formatStorageSize
 import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
 
@@ -682,15 +684,6 @@ private fun StorageUsageOverview(breakdown: CacheStorageBreakdown) {
         }
     }
 }
-
-private fun formatStorageSize(size: Long): String {
-    return when {
-        size >= 1024L * 1024L * 1024L -> "${(size / (1024f * 1024f * 1024f) * 100).roundToInt() / 100f} GB"
-        size >= 1024L * 1024L -> "${(size / (1024f * 1024f) * 100).roundToInt() / 100f} MB"
-        else -> "${(size / 1024f * 100).roundToInt() / 100f} kB"
-    }
-}
-
 @Composable
 private fun SignSettingsContent() {
     val colors = YamiboTheme.colors
@@ -698,6 +691,10 @@ private fun SignSettingsContent() {
     val signMode = appSettingsRepository.signInMode.state()
     val launchReminder = appSettingsRepository.signInLaunchReminderEnabled.state()
     val allowRepair = appSettingsRepository.signInAllowRepair.state()
+    val directWebView = appSettingsRepository.signInDirectWebView.state()
+    val reminderFrequency = appSettingsRepository.signInReminderFrequency.state()
+    val signReminderScheduler = LocalSignReminderScheduler.current
+    val coroutineScope = rememberCoroutineScope()
 
     SectionLabel(i18n("啟動時簽到提醒"))
     SettingsToggleRow(
@@ -706,9 +703,36 @@ private fun SignSettingsContent() {
         checked = launchReminder,
         onCheckedChange = { appSettingsRepository.signInLaunchReminderEnabled.setValue(it) },
     )
+    SettingsToggleRow(
+        title = i18n("提醒點擊直接進入簽到頁面"),
+        subtitle = i18n("點擊開屏簽到提醒後，跳過個人中心，直接打開簽到網頁。"),
+        checked = directWebView,
+        onCheckedChange = { appSettingsRepository.signInDirectWebView.setValue(it) },
+    )
 
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("背景簽到提醒排程"))
+    Text(
+        text = i18n("提醒頻率"),
+        fontSize = 16.sp,
+        fontWeight = FontWeight.Medium,
+        color = colors.textDark,
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(6.dp))
+    SettingsChipRow(
+        options = SignReminderFrequency.entries.map { it to it.localizedLabel() },
+        selectedValue = reminderFrequency,
+        onSelect = { freq ->
+            appSettingsRepository.signInReminderFrequency.setValue(freq)
+            coroutineScope.launch {
+                signReminderScheduler.schedule(freq)
+            }
+        },
+        modifier = Modifier.padding(horizontal = 4.dp),
+    )
+    Spacer(Modifier.height(24.dp))
     SectionLabel(i18n("簽到模式"))
     Text(
         text = i18n("簽到行為"),
