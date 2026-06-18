@@ -44,7 +44,7 @@ class DefaultAppUpdateRepository(
         ),
         AppUpdateSource(
             name = "Gitea",
-            manifestUrl = "https://gitea.com/LittleSurvival/ymb-apk-release/raw/branch/main/update/stable.json",
+            manifestUrl = "https://gitea.com/api/v1/repos/LittleSurvival/ymb-apk-release/raw/update/stable.json?ref=main",
         ),
     )
 
