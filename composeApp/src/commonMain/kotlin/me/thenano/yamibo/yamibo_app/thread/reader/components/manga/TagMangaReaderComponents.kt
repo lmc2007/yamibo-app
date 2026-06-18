@@ -26,7 +26,7 @@ import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.value.ThreadId
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Item types in the reader list */
 internal sealed class ReaderItem {

@@ -24,8 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /**
  * Standard Yamibo nested-page top bar.

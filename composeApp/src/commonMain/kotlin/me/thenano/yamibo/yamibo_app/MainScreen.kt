@@ -1,10 +1,13 @@
-﻿package me.thenano.yamibo.yamibo_app
+package me.thenano.yamibo.yamibo_app
 
 import YamiboIcons
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,8 +33,9 @@ import me.thenano.yamibo.yamibo_app.message.MessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.profile.ProfilePage
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.updates.UpdatesPage
+import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 enum class MainTab(val icon: ImageVector) {
     Home(YamiboIcons.Home),
@@ -41,8 +45,6 @@ enum class MainTab(val icon: ImageVector) {
     Favorite(YamiboIcons.Explore),
     Profile(YamiboIcons.Profile)
 }
-
-private const val MainTabFadeDurationMillis = 220
 
 @Serializable
 private data class MainScreenRestorePayload(
@@ -154,9 +156,23 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
-            Crossfade(
+            AnimatedContent(
                 targetState = currentTab,
-                animationSpec = tween(durationMillis = MainTabFadeDurationMillis),
+                transitionSpec = {
+                    fadeIn(
+                        animationSpec = tween(
+                            durationMillis = 130,
+                            delayMillis = 70,
+                            easing = LinearOutSlowInEasing,
+                        )
+                    ) togetherWith fadeOut(
+                        animationSpec = tween(
+                            durationMillis = 70,
+                            delayMillis = 0,
+                            easing = FastOutLinearInEasing,
+                        )
+                    )
+                },
                 label = "MainTabFade",
             ) { tab ->
                 tabStateHolder.SaveableStateProvider(tab.name) {
@@ -166,11 +182,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                                 onNewMessageStatusChange = { hasNewMessage = it },
                             )
                             MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                            MainTab.Updates -> MessageCenterScreen(
-                                initialTab = MessageCenterTab.Updates,
-                                mainTabTopBar = true,
-                                updatesOnly = true,
-                            )
+                            MainTab.Updates -> UpdatesPage()
                             MainTab.Message -> MessageCenterScreen(
                                 initialTab = MessageCenterTab.PrivateMessages,
                                 mainTabTopBar = true,
@@ -221,7 +233,7 @@ fun MainScreenBottomBar(
             val color by
             animateColorAsState(
                 targetValue = if (selected) colors.navBarIconSelected else colors.navBarIconUnselected,
-                animationSpec = spring(stiffness = Spring.StiffnessLow)
+                animationSpec = tween(durationMillis = 120),
             )
 
             Column(

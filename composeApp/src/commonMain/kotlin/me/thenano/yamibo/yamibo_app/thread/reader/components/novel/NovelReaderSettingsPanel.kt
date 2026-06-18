@@ -31,7 +31,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonJump
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelScrollButtonThresholdSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.NovelSystemBarsBackgroundSetting
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.ReaderFontSelectorSetting
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 
 @Composable

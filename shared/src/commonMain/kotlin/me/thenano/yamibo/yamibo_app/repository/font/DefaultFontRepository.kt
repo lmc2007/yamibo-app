@@ -1,6 +1,5 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.font
+package me.thenano.yamibo.yamibo_app.repository.font
 
-import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.SerializationException
@@ -22,7 +21,6 @@ class DefaultFontRepository(
         encodeDefaults = true
     }
     private val metadataKey = "font_repository.loaded_fonts"
-    private val fontFamilyCache = mutableMapOf<String, FontFamily?>()
     private val _fonts = MutableStateFlow(loadFonts())
 
     override val fonts: StateFlow<List<LoadedFont>> = _fonts
@@ -46,7 +44,6 @@ class DefaultFontRepository(
                 saveFonts(_fonts.value)
                 FontLoadResult.Success(font)
             }
-
             is FontImportResult.Unsupported -> FontLoadResult.Unsupported(result.message)
             is FontImportResult.Failure -> FontLoadResult.Failure(result.message)
         }
@@ -58,7 +55,6 @@ class DefaultFontRepository(
         val font = _fonts.value.firstOrNull { it.id == id } ?: return false
         val deleted = platform.deleteFont(font)
         _fonts.value = _fonts.value.filterNot { it.id == id }
-        fontFamilyCache.remove(id)
         if (getAppFontId() == id) setAppFontId("")
         if (getReaderFontId() == id) setReaderFontId("")
         saveFonts(_fonts.value)
@@ -66,21 +62,9 @@ class DefaultFontRepository(
     }
 
     override fun getAppFontId(): String = appSettingsRepository.appFontId.getValue()
-
     override fun setAppFontId(id: String): Boolean = appSettingsRepository.appFontId.setValue(id)
-
     override fun getReaderFontId(): String = novelReaderSettingsRepository.readerFontId.getValue()
-
     override fun setReaderFontId(id: String): Boolean = novelReaderSettingsRepository.readerFontId.setValue(id)
-
-    override fun getFontFamily(id: String): FontFamily? {
-        if (id.isBlank()) return null
-        val font = _fonts.value.firstOrNull { it.id == id } ?: return null
-        if (fontFamilyCache.containsKey(id)) return fontFamilyCache[id]
-        val family = platform.fontFamily(font)
-        fontFamilyCache[id] = family
-        return family
-    }
 
     private fun loadFonts(): List<LoadedFont> {
         val raw = settingsStore.getString(metadataKey, "")

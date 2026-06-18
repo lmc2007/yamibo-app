@@ -1,6 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.font
-
-import androidx.compose.ui.text.font.FontFamily
+package me.thenano.yamibo.yamibo_app.repository.font
 
 class IOSFontPlatform : FontPlatform {
     override val supportsFontLoading: Boolean = false
@@ -10,6 +8,4 @@ class IOSFontPlatform : FontPlatform {
         FontImportResult.Unsupported(unavailableMessage)
 
     override fun deleteFont(font: LoadedFont): Boolean = false
-
-    override fun fontFamily(font: LoadedFont): FontFamily? = null
 }

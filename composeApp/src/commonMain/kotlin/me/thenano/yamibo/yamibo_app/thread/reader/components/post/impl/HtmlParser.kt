@@ -49,6 +49,12 @@ object HtmlParser {
         // Filter out Discuz jammer (interference) elements to avoid garbage text in reader
         document.select("font.jammer").forEach { it.remove() }
         document.select(".jammer").forEach { it.remove() }
+        document.select("[style]").forEach { element ->
+            val style = element.attr("style").lowercase().replace(" ", "")
+            if (style.contains("display:none")) {
+                element.remove()
+            }
+        }
         
         val blocks = mutableListOf<HtmlBlock>()
         val globalBuilder = AnnotatedString.Builder()

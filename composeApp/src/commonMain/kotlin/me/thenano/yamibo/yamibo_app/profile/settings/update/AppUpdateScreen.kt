@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.profile.settings.update
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-import YamiboIcons
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -16,10 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -38,7 +35,7 @@ import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateSource
 import me.thenano.yamibo.yamibo_app.repository.appupdate.changelogContent
 import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
 import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.state
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res

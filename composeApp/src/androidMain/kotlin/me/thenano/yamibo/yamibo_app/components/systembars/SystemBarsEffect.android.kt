@@ -1,4 +1,4 @@
-package me.thenano.yamibo.yamibo_app.systembars
+package me.thenano.yamibo.yamibo_app.components.systembars
 
 import android.app.Activity
 import android.content.Context
@@ -136,3 +136,4 @@ private object SystemBarRequestRegistry {
         }
     }
 }
+

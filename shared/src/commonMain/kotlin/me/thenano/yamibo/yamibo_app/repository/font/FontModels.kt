@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.font
+package me.thenano.yamibo.yamibo_app.repository.font
 
 import kotlinx.serialization.Serializable
 

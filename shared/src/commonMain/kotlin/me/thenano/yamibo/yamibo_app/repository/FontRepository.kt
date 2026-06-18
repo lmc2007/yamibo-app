@@ -1,6 +1,5 @@
-﻿package me.thenano.yamibo.yamibo_app.repository
+package me.thenano.yamibo.yamibo_app.repository
 
-import androidx.compose.ui.text.font.FontFamily
 import kotlinx.coroutines.flow.StateFlow
 import me.thenano.yamibo.yamibo_app.repository.font.FontLoadResult
 import me.thenano.yamibo.yamibo_app.repository.font.LoadedFont
@@ -18,8 +17,4 @@ interface FontRepository {
     fun setAppFontId(id: String): Boolean
     fun getReaderFontId(): String
     fun setReaderFontId(id: String): Boolean
-
-    fun getFontFamily(id: String): FontFamily?
-    fun getAppFontFamily(): FontFamily? = getFontFamily(getAppFontId())
-    fun getReaderFontFamily(): FontFamily? = getFontFamily(getReaderFontId())
 }

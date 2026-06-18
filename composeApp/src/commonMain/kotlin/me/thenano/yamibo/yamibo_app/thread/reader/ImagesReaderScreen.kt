@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -56,8 +56,8 @@ import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
 import me.thenano.yamibo.yamibo_app.thread.image.ImageViewer
 import me.thenano.yamibo.yamibo_app.thread.reader.components.manga.*
@@ -72,7 +72,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 import coil3.compose.LocalPlatformContext
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
+import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -1108,7 +1108,7 @@ fun ImagesReaderScreen(
                             tid = activeTid,
                             title = activeTitle,
                             threadType = ReadHistoryRepository.ThreadEntryType.Normal,
-                            authorId = activeAuthorId
+                            authorId = null
                         )
                     )
                 }

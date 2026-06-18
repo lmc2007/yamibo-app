@@ -24,7 +24,7 @@ import io.github.littlesurvival.dto.model.AttachmentType
 import io.github.littlesurvival.dto.model.ThreadSummary
 import me.thenano.yamibo.yamibo_app.forum.components.StatBadge
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 
 /** Thread card for the Tag Detail page */

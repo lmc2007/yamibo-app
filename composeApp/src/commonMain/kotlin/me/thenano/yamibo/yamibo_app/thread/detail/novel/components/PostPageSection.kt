@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.dto.page.Post
 import me.thenano.yamibo.yamibo_app.components.text.rememberConvertedText
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Expandable page section with post titles */
 @Composable

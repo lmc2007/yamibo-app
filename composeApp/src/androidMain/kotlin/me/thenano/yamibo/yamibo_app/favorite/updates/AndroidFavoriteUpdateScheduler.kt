@@ -25,7 +25,7 @@ class AndroidFavoriteUpdateScheduler(
             .setConstraints(defaultConstraints())
             .addTag(WORK_TAG)
             .build()
-        workManager.enqueueUniqueWork(UNIQUE_MANUAL_WORK, ExistingWorkPolicy.KEEP, request)
+        workManager.enqueueUniqueWork(UNIQUE_MANUAL_WORK, ExistingWorkPolicy.REPLACE, request)
         return FavoriteUpdateScheduler.StartResult.Started
     }
 

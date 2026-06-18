@@ -1,6 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.repository.font
-
-import androidx.compose.ui.text.font.FontFamily
+package me.thenano.yamibo.yamibo_app.repository.font
 
 interface FontPlatform {
     val supportsFontLoading: Boolean
@@ -8,7 +6,6 @@ interface FontPlatform {
 
     suspend fun importFont(sourceUri: String, displayName: String?, id: String): FontImportResult
     fun deleteFont(font: LoadedFont): Boolean
-    fun fontFamily(font: LoadedFont): FontFamily?
 }
 
 sealed interface FontImportResult {

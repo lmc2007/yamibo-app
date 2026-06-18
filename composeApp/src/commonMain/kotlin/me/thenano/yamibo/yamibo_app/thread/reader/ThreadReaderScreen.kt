@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.thread.reader
+package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -46,9 +46,9 @@ import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMa
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
-import me.thenano.yamibo.yamibo_app.systembars.SystemBarsEffect
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
@@ -1603,6 +1603,7 @@ internal fun ThreadReaderScreen(
                             }
                         },
                         onPostLongPress = { post -> catalogActionPost = post },
+                        drawerOpen = drawerState.isOpen,
                     )
                 }
             }
@@ -2378,6 +2379,7 @@ private fun ReaderCatalogPanelWithPosition(
     chapterStates: kotlinx.coroutines.flow.StateFlow<Map<Long, ChapterStateRepository.Entry>>,
     onPageOrPostClick: (Int, Post?) -> Unit,
     onPostLongPress: (Post) -> Unit,
+    drawerOpen: Boolean,
 ) {
     val currentChapterStates by chapterStates.collectAsState()
     val currentPosition by remember(listState, readerEntries, pageByPid, initialPage) {
@@ -2401,6 +2403,7 @@ private fun ReaderCatalogPanelWithPosition(
         chapterStates = currentChapterStates,
         onPageOrPostClick = onPageOrPostClick,
         onPostLongPress = onPostLongPress,
+        drawerOpen = drawerOpen,
     )
 }
 

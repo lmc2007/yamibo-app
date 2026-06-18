@@ -28,7 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil3.compose.LocalPlatformContext
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /**
  * Long-press context menu for images.

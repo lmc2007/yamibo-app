@@ -31,7 +31,7 @@ import io.github.littlesurvival.dto.page.PollStatus
 import io.github.littlesurvival.dto.page.PollType
 import io.github.littlesurvival.dto.value.PollOptionId
 import kotlinx.coroutines.launch
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 @Composable
 fun PollRenderer(

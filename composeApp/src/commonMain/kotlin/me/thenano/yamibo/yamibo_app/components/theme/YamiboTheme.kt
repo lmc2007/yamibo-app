@@ -101,7 +101,11 @@ object YamiboTheme {
                     textDark.bestReadableOn(Color(scheme.orangeAccent))
                 },
                 htmlTextDark = Color(scheme.htmlTextDark).ensureContrastOn(creamBackground, 4.5),
-                redAccent = Color(scheme.redAccent).ensureContrastOn(creamSurface, 3.0),
+                redAccent = if (isDefault) {
+                    Color(scheme.redAccent)
+                } else {
+                    Color(scheme.redAccent).ensureContrastOn(creamSurface, 3.0)
+                },
                 pinnedBg = Color(scheme.pinnedBg),
                 announceBg = Color(scheme.announceBg),
                 navBarBg = navBarBg,

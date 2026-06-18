@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabIconAction
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
-import me.thenano.yamibo.yamibo_app.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 @Composable
 internal fun NormalTopBar(
