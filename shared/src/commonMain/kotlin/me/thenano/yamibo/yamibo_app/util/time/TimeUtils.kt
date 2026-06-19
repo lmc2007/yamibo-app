@@ -1,6 +1,80 @@
 package me.thenano.yamibo.yamibo_app.util.time
 
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
 expect fun currentTimeMillis(): Long
+
+
+fun formatRelativeTime(timestamp: Long): String {
+    val elapsed = (currentTimeMillis() - timestamp).coerceAtLeast(0L)
+    val minutes = elapsed / 1000L / 60L
+    val hours = minutes / 60L
+    val days = hours / 24L
+    return when {
+        days > 0L -> i18n("{}天前", days)
+        hours > 0L -> i18n("{}小時前", hours)
+        minutes > 0L -> i18n("{}分鐘前", minutes)
+        else -> i18n("剛剛")
+    }
+}
+
+fun isLeapYear(year: Int): Boolean {
+    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+}
+
+fun formatDate(timestamp: Long): String {
+    val totalDays = timestamp / (24 * 60 * 60 * 1000L)
+    var year = 1970
+    var remainingDays = totalDays + (8 * 60 * 60 * 1000L / (24 * 60 * 60 * 1000L))
+    while (true) {
+        val daysInYear = if (isLeapYear(year)) 366L else 365L
+        if (remainingDays < daysInYear) break
+        remainingDays -= daysInYear
+        year++
+    }
+    val monthDays = intArrayOf(31, if (isLeapYear(year)) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    var month = 1
+    for (days in monthDays) {
+        if (remainingDays < days) break
+        remainingDays -= days
+        month++
+    }
+    val day = remainingDays.toInt() + 1
+    return "$year/$month/$day"
+}
+
+fun formatTime(timestamp: Long): String {
+    val adjustedMs = timestamp + 8 * 60 * 60 * 1000L
+    val totalMinutes = (adjustedMs / (60 * 1000L)) % (24 * 60)
+    val hours = (totalMinutes / 60).toInt()
+    val minutes = (totalMinutes % 60).toInt()
+    return "${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
+}
+
+fun formatDateTime(timestamp: Long): String {
+    val totalDays = timestamp / (24 * 60 * 60 * 1000L)
+    var year = 1970
+    var remainingDays = totalDays + (8 * 60 * 60 * 1000L / (24 * 60 * 60 * 1000L))
+    while (true) {
+        val daysInYear = if (isLeapYear(year)) 366L else 365L
+        if (remainingDays < daysInYear) break
+        remainingDays -= daysInYear
+        year++
+    }
+    val monthDays = intArrayOf(31, if (isLeapYear(year)) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+    var month = 1
+    for (days in monthDays) {
+        if (remainingDays < days) break
+        remainingDays -= days
+        month++
+    }
+    val day = remainingDays.toInt() + 1
+    val adjustedMs = timestamp + 8 * 60 * 60 * 1000L
+    val totalMinutes = (adjustedMs / (60 * 1000L)) % (24 * 60)
+    val hours = (totalMinutes / 60).toInt()
+    val minutes = (totalMinutes % 60).toInt()
+    return "$year/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
+}
 
 fun currentLocalDateKey(): String {
     return currentLocalDateKeyAt(currentTimeMillis())

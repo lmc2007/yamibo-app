@@ -37,6 +37,7 @@ import me.thenano.yamibo.yamibo_app.navigation.restoreSnapshot
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.*
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.time.formatDateTime
 import kotlin.time.Duration.Companion.milliseconds
 
 @Serializable
@@ -426,28 +427,7 @@ private fun SyncMessageBlock(
 }
 
 private fun formatSyncDateTime(timestamp: Long): String {
-    val totalDays = timestamp / (24 * 60 * 60 * 1000L)
-    var year = 1970
-    var remainingDays = totalDays + (8 * 60 * 60 * 1000L / (24 * 60 * 60 * 1000L))
-    while (true) {
-        val daysInYear = if (isLeapYear(year)) 366L else 365L
-        if (remainingDays < daysInYear) break
-        remainingDays -= daysInYear
-        year++
-    }
-    val monthDays = intArrayOf(31, if (isLeapYear(year)) 29 else 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
-    var month = 1
-    for (days in monthDays) {
-        if (remainingDays < days) break
-        remainingDays -= days
-        month++
-    }
-    val day = remainingDays.toInt() + 1
-    val adjustedMs = timestamp + 8 * 60 * 60 * 1000L
-    val totalMinutes = (adjustedMs / (60 * 1000L)) % (24 * 60)
-    val hours = (totalMinutes / 60).toInt()
-    val minutes = (totalMinutes % 60).toInt()
-    return "$year/${month.toString().padStart(2, '0')}/${day.toString().padStart(2, '0')} ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}"
+    return formatDateTime(timestamp)
 }
 
 private fun formatSyncDuration(durationMs: Long): String {
@@ -464,6 +444,3 @@ private fun formatSyncDuration(durationMs: Long): String {
     }
 }
 
-private fun isLeapYear(year: Int): Boolean {
-    return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
-}

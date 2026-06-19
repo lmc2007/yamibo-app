@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.favorite.components
+package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
@@ -45,8 +45,10 @@ import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteC
 import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteItem
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteGridMode
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.time.formatRelativeTime
 
 @Composable
 internal fun FavoriteGridEntryCard(
@@ -117,7 +119,9 @@ internal fun PreviewGrid(items: List<FavoriteItem>, colorKey: String) {
                 repeat(2) { columnIndex ->
                     val item = previewItems.getOrNull(rowIndex * 2 + columnIndex)
                     Box(Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(collectionColor(colorKey).copy(alpha = 0.18f))) {
-                        val coverUrl = item?.coverUrl
+                        val coverUrl = item?.let {
+                            resolvedContentCoverUrl(it.targetType, it.targetId, it.coverUrl)
+                        }
                         if (coverUrl != null) {
                             AsyncImage(model = rememberImageRequest(coverUrl), contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         } else if (item != null) {
@@ -145,7 +149,7 @@ internal fun ItemCardUi(item: FavoriteItem, selected: Boolean, selecting: Boolea
     ) {
         Column(Modifier.padding(6.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(0.72f).clip(RoundedCornerShape(12.dp)).background(colors.brownPrimary.copy(alpha = 0.12f))) {
-                val coverUrl = item.coverUrl
+                val coverUrl = resolvedContentCoverUrl(item.targetType, item.targetId, item.coverUrl)
                 if (coverUrl != null) {
                     AsyncImage(model = rememberImageRequest(coverUrl), contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
@@ -165,15 +169,7 @@ internal fun ItemCardUi(item: FavoriteItem, selected: Boolean, selecting: Boolea
                 Spacer(Modifier.height(4.dp))
             }
             Text(item.title, color = colors.textDark, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            val timingSummary = buildString {
-                if (effectiveLastReadAt != null) {
-                    append(i18n("最近閱讀 {}", formatFavoriteTime(effectiveLastReadAt)))
-                }
-                if (effectiveLastUpdatedAt != null) {
-                    if (isNotEmpty()) append(" / ")
-                    append(i18n("最後更新 {}", formatFavoriteTime(effectiveLastUpdatedAt)))
-                }
-            }.takeIf { it.isNotBlank() }
+            val timingSummary = buildTimingSummary(effectiveLastReadAt, effectiveLastUpdatedAt)
             if (timingSummary != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -224,15 +220,7 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
     val colors = YamiboTheme.colors
     val effectiveLastReadAt = lastReadAt?.takeIf { it > 0L }
     val effectiveLastUpdatedAt = item.lastUpdatedTime?.takeIf { it > 0L }
-    val timingSummary = buildString {
-        if (effectiveLastReadAt != null) {
-            append(i18n("最近閱讀 {}", formatFavoriteTime(effectiveLastReadAt)))
-        }
-        if (effectiveLastUpdatedAt != null) {
-            if (isNotEmpty()) append(" / ")
-            append(i18n("最後更新 {}", formatFavoriteTime(effectiveLastUpdatedAt)))
-        }
-    }.takeIf { it.isNotBlank() }
+    val timingSummary = buildTimingSummary(effectiveLastReadAt, effectiveLastUpdatedAt)
     Surface(
         modifier = Modifier.fillMaxWidth().pointerInput(selecting, selected, item.id) {
             detectTapGestures(onTap = { if (selecting) onToggle() else onOpen() }, onLongPress = { if (selecting) onToggle() else onEnterSelect() })
@@ -244,7 +232,7 @@ internal fun ItemRowCardUi(item: FavoriteItem, showCover: Boolean, selected: Boo
         Row(Modifier.padding(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (showCover) {
                 Box(Modifier.width(92.dp).aspectRatio(0.72f).clip(RoundedCornerShape(14.dp)).background(colors.brownPrimary.copy(alpha = 0.12f))) {
-                    val coverUrl = item.coverUrl
+                    val coverUrl = resolvedContentCoverUrl(item.targetType, item.targetId, item.coverUrl)
                     if (coverUrl != null) {
                         AsyncImage(model = rememberImageRequest(coverUrl), contentDescription = item.title, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     } else {
@@ -336,18 +324,21 @@ internal fun CoverTextFallback(title: String, color: Color) {
     )
 }
 
+private fun buildTimingSummary(effectiveLastReadAt: Long?, effectiveLastUpdatedAt: Long?): String? {
+    return buildString {
+        if (effectiveLastReadAt != null) {
+            append(i18n("最近閱讀 {}", formatFavoriteTime(effectiveLastReadAt)))
+        }
+        if (effectiveLastUpdatedAt != null) {
+            if (isNotEmpty()) append(" / ")
+            append(i18n("最後更新 {}", formatFavoriteTime(effectiveLastUpdatedAt)))
+        }
+    }.takeIf { it.isNotBlank() }
+}
+
 internal fun formatFavoriteTime(timestamp: Long): String {
     if (timestamp <= 0L) return "-"
-    val elapsed = (currentTimeMillis() - timestamp).coerceAtLeast(0L)
-    val minutes = elapsed / 1000L / 60L
-    val hours = minutes / 60L
-    val days = hours / 24L
-    return when {
-        days > 0L -> i18n("{}天前", days)
-        hours > 0L -> i18n("{}小時前", hours)
-        minutes > 0L -> i18n("{}分鐘前", minutes)
-        else -> i18n("剛剛")
-    }
+    return formatRelativeTime(timestamp)
 }
 
 fun collectionColor(colorKey: String): Color = when (colorKey) {
@@ -357,4 +348,3 @@ fun collectionColor(colorKey: String): Color = when (colorKey) {
     "gold" -> Color(0xFFD6B46F)
     else -> Color(0xFFB4977A)
 }
-

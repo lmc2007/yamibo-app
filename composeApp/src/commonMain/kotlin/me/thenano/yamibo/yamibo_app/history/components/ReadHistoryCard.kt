@@ -1,7 +1,5 @@
 package me.thenano.yamibo.yamibo_app.history.components
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import YamiboIcons
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -9,24 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -41,11 +24,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.SubcomposeAsyncImage
-import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
-import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
+import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
-import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.util.time.formatRelativeTime
 
 @Composable
 fun ReadHistoryCard(
@@ -61,6 +48,16 @@ fun ReadHistoryCard(
     onFavoriteLongPress: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
+    val resolvedCoverUrl = resolvedContentCoverUrl(
+        targetType = when (history.threadType) {
+            ReadHistoryRepository.ThreadEntryType.Normal ->
+                LocalFavoriteRepository.FavoriteTargetType.ThreadNormal
+            ReadHistoryRepository.ThreadEntryType.Novel ->
+                LocalFavoriteRepository.FavoriteTargetType.ThreadNovel
+        },
+        targetId = history.threadId.value.toLong(),
+        fallback = history.threadCover,
+    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val timingSummary = buildString {
@@ -120,9 +117,9 @@ fun ReadHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                if (!history.threadCover.isNullOrEmpty()) {
+                if (!resolvedCoverUrl.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
-                        model = rememberImageRequest(url = history.threadCover!!),
+                        model = rememberImageRequest(url = resolvedCoverUrl),
                         contentDescription = "thread cover",
                         modifier = Modifier
                             .fillMaxSize()
@@ -247,15 +244,5 @@ fun ReadHistoryCard(
 }
 
 private fun formatHistoryRelativeTime(timestamp: Long): String {
-    val elapsed = (currentTimeMillis() - timestamp).coerceAtLeast(0L)
-    val minutes = elapsed / 1000L / 60L
-    val hours = minutes / 60L
-    val days = hours / 24L
-    return when {
-        days > 0L -> i18n("{}天前", days)
-        hours > 0L -> i18n("{}小時前", hours)
-        minutes > 0L -> i18n("{}分鐘前", minutes)
-        else -> i18n("剛剛")
-    }
+    return formatRelativeTime(timestamp)
 }
-
