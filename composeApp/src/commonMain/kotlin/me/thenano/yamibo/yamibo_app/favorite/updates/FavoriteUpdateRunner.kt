@@ -42,23 +42,22 @@ class FavoriteUpdateRunner(
     }
 
     suspend fun startManualUpdate(): LaunchResult {
-        val running = repository.state.value as? FavoriteUpdateRepository.RunState.Running
-        if (running != null) return LaunchResult.Started(running.snapshot.runId)
+        val latest = repository.getLatestSnapshot()
+        if (latest != null && latest.status == FavoriteUpdateRepository.RunStatus.RUNNING) {
+            startSnapshotSync(latest.runId)
+            return LaunchResult.Started(latest.runId)
+        }
 
         val runId = repository.startRun()
-        startSnapshotSync(runId)
-        return when (val result = scheduler.startFavoriteUpdate(runId)) {
-            FavoriteUpdateScheduler.StartResult.Started -> LaunchResult.Started(runId)
-            is FavoriteUpdateScheduler.StartResult.Rejected -> {
-                repository.markRunInterrupted(runId, result.reason)
-                syncRunSnapshot(runId)
-                LaunchResult.Rejected(i18n(result.reason), runId)
-            }
-        }
+        return startFavoriteUpdateTask(runId)
     }
 
     suspend fun resumeInterruptedUpdate(): LaunchResult? {
         val runId = repository.resumeInterruptedRun() ?: return null
+        return startFavoriteUpdateTask(runId)
+    }
+
+    private suspend fun startFavoriteUpdateTask(runId: String): LaunchResult {
         startSnapshotSync(runId)
         return when (val result = scheduler.startFavoriteUpdate(runId)) {
             FavoriteUpdateScheduler.StartResult.Started -> LaunchResult.Started(runId)
@@ -89,13 +88,23 @@ class FavoriteUpdateRunner(
         scheduler.schedulePeriodicFavoriteUpdate(interval)
     }
 
+    private var currentSyncRunId: String? = null
+
     private fun startSnapshotSync(runId: String) {
-        if (syncJob?.isActive == true) return
+        if (currentSyncRunId == runId && syncJob?.isActive == true) return
+        syncJob?.cancel()
+        currentSyncRunId = runId
         syncJob = scope.launch {
-            while (true) {
-                val state = syncRunSnapshot(runId)
-                if (state !is FavoriteUpdateRepository.RunState.Running) break
-                delay(RUN_SYNC_INTERVAL_MS.milliseconds)
+            try {
+                while (true) {
+                    val state = syncRunSnapshot(runId)
+                    if (state !is FavoriteUpdateRepository.RunState.Running) break
+                    delay(RUN_SYNC_INTERVAL_MS.milliseconds)
+                }
+            } finally {
+                if (currentSyncRunId == runId) {
+                    currentSyncRunId = null
+                }
             }
         }
     }
