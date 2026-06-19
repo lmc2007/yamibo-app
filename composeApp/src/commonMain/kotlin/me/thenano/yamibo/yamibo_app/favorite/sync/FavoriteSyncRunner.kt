@@ -48,51 +48,38 @@ class FavoriteSyncRunner(
         }
 
         val runId = repository.startRemoteImport(targetCategoryId)
-        dismissedFavoritePageRuns.value -= runId
-        pendingActivationStartedAt[runId] = currentTimeMillis()
-        when (val result = backgroundTaskRepository.startFavoriteSync(runId)) {
-            BackgroundTaskRepository.StartResult.Started -> {
-                refreshStateFromRepository()
-                return LaunchResult.Started(runId)
-            }
-            is BackgroundTaskRepository.StartResult.Rejected -> {
-                pendingActivationStartedAt.remove(runId)
-                repository.markRunInterrupted(runId, result.reason)
-                refreshStateFromRepository()
-                return LaunchResult.Rejected(
-                    reason = i18n(result.reason),
-                    runId = runId,
-                    requiresBackgroundAccessSetup = result.requiresBackgroundAccessSetup,
-                )
-            }
-        }
+        return startSyncTask(runId)
     }
 
     suspend fun resumeInterruptedImport(): LaunchResult? {
         val previousRunningRunId = (state.value as? FavoriteSyncState.Running)?.snapshot?.runId
         val runId = repository.resumeInterruptedRun() ?: return null
         if (previousRunningRunId != runId) {
-            dismissedFavoritePageRuns.value -= runId
-            pendingActivationStartedAt[runId] = currentTimeMillis()
-            when (val result = backgroundTaskRepository.startFavoriteSync(runId)) {
-                BackgroundTaskRepository.StartResult.Started -> {
-                    refreshStateFromRepository()
-                    return LaunchResult.Started(runId)
-                }
-                is BackgroundTaskRepository.StartResult.Rejected -> {
-                    pendingActivationStartedAt.remove(runId)
-                    repository.markRunInterrupted(runId, result.reason)
-                    refreshStateFromRepository()
-                    return LaunchResult.Rejected(
-                        reason = i18n(result.reason),
-                        runId = runId,
-                        requiresBackgroundAccessSetup = result.requiresBackgroundAccessSetup,
-                    )
-                }
-            }
+            return startSyncTask(runId)
         }
         refreshStateFromRepository()
         return LaunchResult.Started(runId)
+    }
+
+    private suspend fun startSyncTask(runId: String): LaunchResult {
+        dismissedFavoritePageRuns.value -= runId
+        pendingActivationStartedAt[runId] = currentTimeMillis()
+        return when (val result = backgroundTaskRepository.startFavoriteSync(runId)) {
+            BackgroundTaskRepository.StartResult.Started -> {
+                refreshStateFromRepository()
+                LaunchResult.Started(runId)
+            }
+            is BackgroundTaskRepository.StartResult.Rejected -> {
+                pendingActivationStartedAt.remove(runId)
+                repository.markRunInterrupted(runId, result.reason)
+                refreshStateFromRepository()
+                LaunchResult.Rejected(
+                    reason = i18n(result.reason),
+                    runId = runId,
+                    requiresBackgroundAccessSetup = result.requiresBackgroundAccessSetup,
+                )
+            }
+        }
     }
 
     suspend fun interruptImport(runId: String) {

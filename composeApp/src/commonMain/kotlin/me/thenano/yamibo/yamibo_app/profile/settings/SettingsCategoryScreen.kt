@@ -470,20 +470,7 @@ private fun SettingsToggleRow(
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.textDark,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 13.sp,
-                color = colors.textDark.copy(alpha = 0.6f),
-            )
-        }
+        SettingsRowDescription(title = title, subtitle = subtitle, colors = colors)
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
@@ -515,25 +502,34 @@ private fun SettingsActionRow(
             .padding(vertical = 16.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = colors.textDark,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = subtitle,
-                fontSize = 13.sp,
-                color = colors.textDark.copy(alpha = 0.6f),
-            )
-        }
+        SettingsRowDescription(title = title, subtitle = subtitle, colors = colors)
         Text(
             text = ">",
             color = colors.textDark.copy(alpha = 0.35f),
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
+@Composable
+private fun RowScope.SettingsRowDescription(
+    title: String,
+    subtitle: String,
+    colors: me.thenano.yamibo.yamibo_app.components.theme.YamiboColors,
+) {
+    Column(modifier = Modifier.weight(1f)) {
+        Text(
+            text = title,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Medium,
+            color = colors.textDark,
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = subtitle,
+            fontSize = 13.sp,
+            color = colors.textDark.copy(alpha = 0.6f),
         )
     }
 }
@@ -702,6 +698,13 @@ private fun SignSettingsContent() {
         subtitle = i18n("今天尚未簽到時，在 app 啟動後提醒你前往簽到。"),
         checked = launchReminder,
         onCheckedChange = { appSettingsRepository.signInLaunchReminderEnabled.setValue(it) },
+    )
+    val dismissToday = appSettingsRepository.signInLaunchReminderDismissToday.state()
+    SettingsToggleRow(
+        title = i18n("今日不再提醒"),
+        subtitle = i18n("關閉彈窗後，今天內不會再次彈出提醒。關閉此設定後，每次開啟 app 都會提醒。"),
+        checked = dismissToday,
+        onCheckedChange = { appSettingsRepository.signInLaunchReminderDismissToday.setValue(it) },
     )
     SettingsToggleRow(
         title = i18n("提醒點擊直接進入簽到頁面"),

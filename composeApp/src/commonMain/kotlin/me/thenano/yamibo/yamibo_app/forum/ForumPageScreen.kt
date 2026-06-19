@@ -1,6 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.forum
-
-import me.thenano.yamibo.yamibo_app.i18n.i18n
+package me.thenano.yamibo.yamibo_app.forum
 
 
 import YamiboIcons
@@ -13,7 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -21,9 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
@@ -40,13 +35,15 @@ import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalForumRepository
 import me.thenano.yamibo.yamibo_app.MainTab
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboDetailedErrorContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
-import me.thenano.yamibo.yamibo_app.forum.components.*
-import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.forum.components.*
+import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
@@ -329,6 +326,26 @@ fun ForumPageScreen(fid: ForumId, name: String) {
         }
     }
 
+    fun selectFilterOrOrder(
+        newFilterType: FilterType? = selectedFilterType,
+        newOrderType: OrderType? = selectedOrderType,
+    ) {
+        pageHistory.clear()
+        loadGeneration += 1
+        val requestGeneration = loadGeneration
+        selectedFilterType = newFilterType
+        selectedOrderType = newOrderType
+        state = ForumState.Loading
+        scope.launch {
+            loadPage(
+                currentPage,
+                newFilterType,
+                newOrderType,
+                requestGeneration = requestGeneration,
+            )
+        }
+    }
+
     val currentForumPage = (state as? ForumState.Success)?.page
     if (showOrderDialog && currentForumPage != null) {
         ForumOrderDialog(
@@ -337,19 +354,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             onDismiss = { showOrderDialog = false },
             onSelect = { orderType ->
                 showOrderDialog = false
-                pageHistory.clear()
-                loadGeneration += 1
-                val requestGeneration = loadGeneration
-                selectedOrderType = orderType
-                state = ForumState.Loading
-                scope.launch {
-                    loadPage(
-                        currentPage,
-                        selectedFilterType,
-                        orderType,
-                        requestGeneration = requestGeneration,
-                    )
-                }
+                selectFilterOrOrder(newOrderType = orderType)
             },
         )
     }
@@ -360,19 +365,7 @@ fun ForumPageScreen(fid: ForumId, name: String) {
             onDismiss = { showFilterDialog = false },
             onSelect = { filterType ->
                 showFilterDialog = false
-                pageHistory.clear()
-                loadGeneration += 1
-                val requestGeneration = loadGeneration
-                selectedFilterType = filterType
-                state = ForumState.Loading
-                scope.launch {
-                    loadPage(
-                        currentPage,
-                        filterType,
-                        selectedOrderType,
-                        requestGeneration = requestGeneration,
-                    )
-                }
+                selectFilterOrOrder(newFilterType = filterType)
             },
         )
     }
@@ -654,47 +647,11 @@ private fun Modifier.shimmer(translateX: Float, baseColor: Color): Modifier =
 @Composable
 private fun ForumErrorContent(message: String, onRetry: () -> Unit) {
     val colors = YamiboTheme.colors
-    Box(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground).padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(6.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
-        ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = i18n("載入失敗"),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textOnSurface
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = message,
-                    fontSize = 13.sp,
-                    color = colors.brownPrimary.copy(alpha = 0.75f),
-                    lineHeight = 18.sp
-                )
-                Spacer(Modifier.height(20.dp))
-                Surface(
-                    onClick = onRetry,
-                    shape = RoundedCornerShape(50),
-                    color = colors.brownDeep,
-                    contentColor = colors.textOnDeepHigh
-                ) {
-                    Text(
-                        text = i18n("重試"),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-            }
-        }
-    }
+    YamiboDetailedErrorContent(
+        message = message,
+        onRetry = onRetry,
+        titleColor = colors.textOnSurface,
+        retryContentColor = colors.textOnDeepHigh,
+        retryHorizontalPadding = 24.dp,
+    )
 }
