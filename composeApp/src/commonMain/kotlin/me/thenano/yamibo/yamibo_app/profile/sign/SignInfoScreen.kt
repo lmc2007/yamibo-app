@@ -101,6 +101,31 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
         }
     }
 
+    @Composable
+    fun SignInfoActions() {
+        ElevatedButton(
+            onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.brownPrimary,
+                contentColor = colors.creamSurface,
+            ),
+        ) {
+            Text(i18n("打開簽到頁 WebView"))
+        }
+        OutlinedButton(
+            onClick = ::refreshInfo,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = colors.creamBackground,
+                contentColor = colors.brownPrimary,
+            ),
+            border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
+        ) {
+            Text(i18n("手動刷新資訊"))
+        }
+    }
+
     Scaffold(
         topBar = {
             YamiboTopBar(
@@ -193,27 +218,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                         pageInfo.extraSections.forEach { section ->
                             SectionCard(title = section.title, items = section.items)
                         }
-                        ElevatedButton(
-                            onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.brownPrimary,
-                                contentColor = colors.creamSurface,
-                            ),
-                        ) {
-                            Text(i18n("打開簽到頁 WebView"))
-                        }
-                        OutlinedButton(
-                            onClick = ::refreshInfo,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = colors.creamBackground,
-                                contentColor = colors.brownPrimary,
-                            ),
-                            border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
-                        ) {
-                            Text(i18n("手動刷新資訊"))
-                        }
+                        SignInfoActions()
                     }
                 }
 
@@ -228,27 +233,7 @@ private fun SignInfoScreen(onInfoLoaded: () -> Unit) {
                             title = i18n("尚未取得簽到資訊"),
                             items = listOf(i18n("請先打開簽到頁 WebView 讓程式抓到頁面內容，或使用下方按鈕手動刷新。")),
                         )
-                        ElevatedButton(
-                            onClick = { navigator.navigate(IPlatformWebView(YamiboRoute.Sign.build())) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.brownPrimary,
-                                contentColor = colors.creamSurface,
-                            ),
-                        ) {
-                            Text(i18n("打開簽到頁 WebView"))
-                        }
-                        OutlinedButton(
-                            onClick = ::refreshInfo,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = colors.creamBackground,
-                                contentColor = colors.brownPrimary,
-                            ),
-                            border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.65f)),
-                        ) {
-                            Text(i18n("手動刷新資訊"))
-                        }
+                        SignInfoActions()
                     }
                 }
             }

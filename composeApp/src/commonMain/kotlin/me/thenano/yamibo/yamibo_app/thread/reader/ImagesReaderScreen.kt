@@ -48,6 +48,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalChapterStateRepository
+import me.thenano.yamibo.yamibo_app.LocalContentCoverRepository
 import me.thenano.yamibo.yamibo_app.LocalReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.LocalMangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalTagRepository
@@ -56,6 +57,7 @@ import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.thread.image.ImageContextMenu
@@ -113,6 +115,7 @@ fun ImagesReaderScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val historyRepo = LocalReadHistoryRepository.current
+    val contentCoverRepository = LocalContentCoverRepository.current
     val threadRepository = LocalThreadRepository.current
     val chapterStateRepository = LocalChapterStateRepository.current
     val platformContext = LocalPlatformContext.current
@@ -406,6 +409,16 @@ fun ImagesReaderScreen(
                         historyRepo.getTagMangaReaderModeHistoryPosition(tagId)?.coverUrl
                     } else {
                         currentCoverSnap
+                    }
+
+                    finalCover?.let {
+                        contentCoverRepository.setAutomaticCover(
+                            ContentCoverRepository.Key(
+                                ContentCoverRepository.TargetType.TagManga,
+                                tagId.value.toLong(),
+                            ),
+                            it,
+                        )
                     }
 
                     historyRepo.saveTagMangaReaderModeHistory(
@@ -1218,6 +1231,20 @@ fun ImagesReaderScreen(
         ImageContextMenu(
             visible = showContextMenu,
             imageUrl = contextMenuImageUrl,
+            onSetAsCover = if (tagId != null) {
+                { imageUrl ->
+                    scope.launch {
+                        val saved = contentCoverRepository.setManualCover(
+                            ContentCoverRepository.Key(
+                                ContentCoverRepository.TargetType.TagManga,
+                                tagId.value.toLong(),
+                            ),
+                            imageUrl,
+                        )
+                        if (saved) snackbarHostState.showSnackbar(i18n("已設為封面"))
+                    }
+                }
+            } else null,
             onDismiss = { showContextMenu = false },
             isBottomSheet = true
         )

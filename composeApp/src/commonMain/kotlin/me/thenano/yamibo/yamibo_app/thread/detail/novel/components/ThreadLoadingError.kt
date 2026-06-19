@@ -1,19 +1,12 @@
 package me.thenano.yamibo.yamibo_app.thread.detail.novel.components
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -21,9 +14,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboDetailedErrorContent
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 
 /** Loading skeleton with shimmer */
@@ -105,48 +97,11 @@ private fun Modifier.shimmer(translateX: Float, baseColor: Color): Modifier =
 @Composable
 internal fun ThreadErrorContent(message: String, onRetry: () -> Unit) {
     val colors = YamiboTheme.colors
-    Box(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground).padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(6.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
-        ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = i18n("載入失敗"),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.brownDeep
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = message,
-                    fontSize = 13.sp,
-                    color = colors.brownPrimary.copy(alpha = 0.75f),
-                    lineHeight = 18.sp
-                )
-                Spacer(Modifier.height(20.dp))
-                Surface(
-                    onClick = onRetry,
-                    shape = RoundedCornerShape(50),
-                    color = colors.brownDeep,
-                    contentColor = Color.White
-                ) {
-                    Text(
-                        text = i18n("重試"),
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-            }
-        }
-    }
+    YamiboDetailedErrorContent(
+        message = message,
+        onRetry = onRetry,
+        titleColor = colors.brownDeep,
+        retryContentColor = Color.White,
+        retryHorizontalPadding = 24.dp,
+    )
 }
-

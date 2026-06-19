@@ -24,6 +24,7 @@ import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.ThreadReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
@@ -57,6 +58,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     val bookMarkRepository = LocalBookMarkRepository.current
     val chapterStateRepository = LocalChapterStateRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
+    val contentCoverRepository = LocalContentCoverRepository.current
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -91,6 +93,10 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
     var postChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var actionPost by remember { mutableStateOf<Post?>(null) }
     val noteAuthorId = authorId?.value?.toLong() ?: 0L
+    val coverKey = remember(tid) {
+        ContentCoverRepository.Key(ContentCoverRepository.TargetType.ThreadNovel, tid.value.toLong())
+    }
+    val canonicalCover by contentCoverRepository.observeCover(coverKey).collectAsState(null)
 
     suspend fun reloadReadingHistory() {
         readHistory = try {
@@ -138,6 +144,16 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         }
     }
 
+    LaunchedEffect((state as? ThreadState.Success)?.page?.posts) {
+        val firstImage = (state as? ThreadState.Success)?.page?.posts
+            ?.firstOrNull { it.floor == 1 }
+            ?.images
+            ?.firstOrNull()
+            ?.url
+        firstImage?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
+        readHistory?.threadCover?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
+    }
+
     fun favoriteTarget(): FavoriteTargetPayload.Thread {
         val currentTitle = (state as? ThreadState.Success)?.page?.thread?.title ?: title
         val currentForumId = (state as? ThreadState.Success)?.page?.thread?.forum?.fid
@@ -148,7 +164,7 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
             title = currentTitle,
             threadType = ReadHistoryRepository.ThreadEntryType.Novel,
             authorId = authorId,
-            coverUrl = readHistory?.threadCover,
+            coverUrl = canonicalCover?.resolvedUrl ?: readHistory?.threadCover,
             lastUpdatedTime = firstPost?.lastEditedTime?.epochMillisOrNull() ?: firstPost?.timeCreate?.epochMillisOrNull(),
             forumId = currentForumId,
             forumName = currentForumName
@@ -246,7 +262,13 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
         }
     }
 
-    LaunchedEffect(tid, authorId, favoriteRefreshToken, (state as? ThreadState.Success)?.page?.thread?.title) {
+    LaunchedEffect(
+        tid,
+        authorId,
+        favoriteRefreshToken,
+        canonicalCover?.resolvedUrl,
+        (state as? ThreadState.Success)?.page?.thread?.title,
+    ) {
         refreshFavoriteState()
     }
 
@@ -349,8 +371,9 @@ internal fun NovelThreadDetailScreen(tid: ThreadId, title: String, authorId: Use
                         },
                         modifier = Modifier.fillMaxSize()
                     ) {
-                        ThreadContent(
-                            threadPage = current.page,
+                    ThreadContent(
+                        threadPage = current.page,
+                        coverUrl = canonicalCover?.resolvedUrl ?: readHistory?.threadCover,
                             pagePostsCache = pagePostsCache,
                             expandedPages = expandedPages,
                             onTogglePage = { page ->
@@ -711,6 +734,7 @@ actionPost?.let { post ->
 @Composable
 private fun ThreadContent(
     threadPage: ThreadPage,
+    coverUrl: String?,
     pagePostsCache: Map<Int, List<Post>>,
     expandedPages: Set<Int>,
     onTogglePage: (Int) -> Unit,
@@ -741,6 +765,7 @@ private fun ThreadContent(
         item {
             ThreadHeader(
                 threadPage = threadPage,
+                coverUrlOverride = coverUrl,
                 isFavorited = isFavorited,
                 onFavorite = onFavorite,
                 onFavoriteLongPress = onFavoriteLongPress,

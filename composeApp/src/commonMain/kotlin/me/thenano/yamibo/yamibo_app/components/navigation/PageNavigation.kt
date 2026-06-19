@@ -51,7 +51,6 @@ fun YamiboPageNavigation(
         return
     }
 
-    val colors = YamiboTheme.colors
     val prevPage = pageNav.prevPageIndex ?: (currentPage - 1).takeIf { pageNav.prevUrl != null && it >= 1 }
     val nextPage = pageNav.nextPageIndex ?: (currentPage + 1).takeIf { pageNav.nextUrl != null }
 

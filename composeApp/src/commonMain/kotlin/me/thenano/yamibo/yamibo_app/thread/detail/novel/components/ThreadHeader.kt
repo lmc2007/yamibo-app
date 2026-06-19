@@ -60,6 +60,7 @@ import yamibo_app.composeapp.generated.resources.book
 @Composable
 internal fun ThreadHeader(
     threadPage: ThreadPage,
+    coverUrlOverride: String? = null,
     isFavorited: Boolean,
     onFavorite: () -> Unit,
     onFavoriteLongPress: (() -> Unit)? = null,
@@ -78,7 +79,7 @@ internal fun ThreadHeader(
     val firstPost = threadPage.posts.firstOrNull { it.floor == 1 } ?: threadPage.posts.firstOrNull()
     val convertedThreadTitle = rememberConvertedText(thread.title)
 
-    val coverUrl = remember(firstPost) {
+    val coverUrl = coverUrlOverride ?: remember(firstPost) {
         val attachedImage = firstPost?.images?.firstOrNull()?.url ?: return@remember null
         if (
             attachedImage.contains("none.gif") ||
@@ -381,4 +382,3 @@ private fun CopyableLabel(
             )
     )
 }
-

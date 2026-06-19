@@ -1,7 +1,5 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
@@ -23,8 +21,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 
 /**
  * Manga reader overlay with TopBar, BottomBar (page navigator + settings button).

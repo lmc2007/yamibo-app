@@ -291,6 +291,12 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = "",
     )
 
+    /** 關閉後今日不再提醒 (default true) */
+    val signInLaunchReminderDismissToday by boolSetting(
+        name = "sign_in_launch_reminder_dismiss_today",
+        default = true,
+    )
+
     /** 自動進行補簽 */
     val signInAllowRepair by boolSetting(
         name = "sign_in_allow_repair",

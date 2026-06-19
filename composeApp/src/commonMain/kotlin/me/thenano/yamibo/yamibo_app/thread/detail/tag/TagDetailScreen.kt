@@ -24,6 +24,7 @@ import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -63,6 +64,7 @@ internal fun TagDetailScreen(
     val bookMarkRepository = LocalBookMarkRepository.current
     val chapterStateRepository = LocalChapterStateRepository.current
     val historyRepo = LocalReadHistoryRepository.current
+    val contentCoverRepository = LocalContentCoverRepository.current
     val platformContext = LocalPlatformContext.current
 
     val scope = rememberCoroutineScope()
@@ -129,7 +131,14 @@ internal fun TagDetailScreen(
     var mangaTagHistory by remember {
         mutableStateOf<ReadHistoryRepository.TagMangaReadingHistory?>(null)
     }
-    val coverUrl: () -> String? = { mangaTagHistory?.coverUrl }
+    val coverKey = remember(tagId) {
+        ContentCoverRepository.Key(
+            ContentCoverRepository.TargetType.TagManga,
+            tagId.value.toLong(),
+        )
+    }
+    val canonicalCover by contentCoverRepository.observeCover(coverKey).collectAsState(null)
+    val coverUrl: () -> String? = { canonicalCover?.resolvedUrl ?: mangaTagHistory?.coverUrl }
 
     suspend fun loadPage(page: Int) {
         val cached = tagRepository.getCachedTagPage(tagId, page)
@@ -177,6 +186,7 @@ internal fun TagDetailScreen(
     // Load reading history for manga tags (hot reload on resume/back navigation)
     LaunchedEffect(tagId, stackSize) {
         mangaTagHistory = historyRepo.getTagMangaReaderModeHistoryPosition(tagId)
+        mangaTagHistory?.coverUrl?.let { contentCoverRepository.setAutomaticCover(coverKey, it) }
     }
 
     fun favoriteTarget(): FavoriteTargetPayload.TagManga {
@@ -218,7 +228,7 @@ internal fun TagDetailScreen(
         snackbarHostState.showSnackbar(i18n("已加入收藏"))
     }
 
-    LaunchedEffect(tagId, currentTagName, favoriteRefreshToken) {
+    LaunchedEffect(tagId, currentTagName, favoriteRefreshToken, canonicalCover?.resolvedUrl) {
         refreshFavoriteState()
     }
     
@@ -386,6 +396,10 @@ internal fun TagDetailScreen(
                             coverUrl = coverUrl(),
                             isMangaMode = isMangaMode,
                             onMangaModeChange = { appSettingsRepo.isMangaMode.setValue(it) },
+                            dynamicCoverEnabled = canonicalCover?.dynamicEnabled ?: true,
+                            onDynamicCoverEnabledChange = { enabled ->
+                                scope.launch { contentCoverRepository.setDynamicEnabled(coverKey, enabled) }
+                            },
                             hasReadingHistory = mangaTagHistory != null,
                             readingProgressText = readingProgressText,
                             onContinueRead = {

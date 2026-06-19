@@ -42,6 +42,9 @@ import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
+import me.thenano.yamibo.yamibo_app.repository.toCoverTargetType
+import me.thenano.yamibo.yamibo_app.repository.contentcover.ThreadCoverResolver
 import me.thenano.yamibo.yamibo_app.repository.LocalBookMarkRepository as BookMarkRepository
 import me.thenano.yamibo.yamibo_app.repository.LocalChapterStateRepository as ChapterStateRepository
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
@@ -185,6 +188,7 @@ internal fun ThreadReaderScreen(
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
+    val contentCoverRepository = LocalContentCoverRepository.current
     val bookMarkRepository = LocalBookMarkRepository.current
     val chapterStateRepository = LocalChapterStateRepository.current
     ReadingTimeTracker()
@@ -255,6 +259,11 @@ internal fun ThreadReaderScreen(
     /** Extract image URL for thread avatar based on forum type */
     var coverUrl by remember { mutableStateOf<String?>(null) }
     var manualCoverUrlOverride by remember(tid) { mutableStateOf<String?>(null) }
+    val coverKey = remember(tid, threadType) {
+        ContentCoverRepository.Key(threadType.toCoverTargetType(), tid.value.toLong())
+    }
+    val canonicalCover by contentCoverRepository.observeCover(coverKey).collectAsState(null)
+    val threadCoverResolver = remember(threadRepository) { ThreadCoverResolver(threadRepository) }
     var showFavoriteDialog by remember { mutableStateOf(false) }
     var favoriteDialogCategories by remember {
         mutableStateOf<List<me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteCategory>>(emptyList())
@@ -297,19 +306,17 @@ internal fun ThreadReaderScreen(
         return if (rawUrl.startsWith("http")) rawUrl else "${YamiboRoute.Domain.build()}$rawUrl"
     }
 
-    LaunchedEffect(loadedPostsByPage[1], manualCoverUrlOverride) {
-        if (manualCoverUrlOverride != null) {
-            coverUrl = manualCoverUrlOverride
+    LaunchedEffect(canonicalCover?.resolvedUrl) {
+        canonicalCover?.resolvedUrl?.let { coverUrl = it }
+    }
+
+    LaunchedEffect(tid, threadType, loadedPostsByPage[1]) {
+        if (threadType != ReadHistoryRepository.ThreadEntryType.Normal || loadedPostsByPage[1] == null) {
             return@LaunchedEffect
         }
-
-        val firstPagePosts = loadedPostsByPage[1]
-        if (firstPagePosts == null) {
-            coverUrl = null
-            return@LaunchedEffect
+        threadCoverResolver.resolve(tid)?.let { resolved ->
+            contentCoverRepository.setAutomaticCover(coverKey, resolved)
         }
-
-        coverUrl = resolveValidCoverUrl(firstPagePosts.firstOrNull()?.images?.firstOrNull()?.url)
     }
 
     fun favoriteTarget(coverOverride: String? = coverUrl): FavoriteTargetPayload.Thread {
@@ -1116,6 +1123,7 @@ internal fun ThreadReaderScreen(
         manualCoverUrlOverride = resolvedCoverUrl
         coverUrl = resolvedCoverUrl
         scope.launch {
+            contentCoverRepository.setManualCover(coverKey, resolvedCoverUrl)
             if (canPersistReadingState) {
                 buildHistory()?.copy(threadCover = resolvedCoverUrl)?.let { history ->
                     try {
@@ -1287,8 +1295,8 @@ internal fun ThreadReaderScreen(
                 val savedPosition = readHistoryRepo.getPosition(tid, threadType, authorId)
                 if (savedPosition != null) {
                     savedPosition.threadCover?.let { savedCover ->
-                        manualCoverUrlOverride = savedCover
                         coverUrl = savedCover
+                        contentCoverRepository.setAutomaticCover(coverKey, savedCover)
                     }
                     // Ensure the saved page is loaded
                     if (savedPosition.page != initialPage) {

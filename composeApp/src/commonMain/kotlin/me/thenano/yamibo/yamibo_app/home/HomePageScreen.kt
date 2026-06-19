@@ -46,6 +46,7 @@ import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
 import me.thenano.yamibo.yamibo_app.forum.IForumScreen
 import me.thenano.yamibo.yamibo_app.forum.search.ISearchScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboDetailedErrorContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboHomeTopBar
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
@@ -570,47 +571,11 @@ private fun Modifier.shimmer(translateX: Float, baseColor: Color): Modifier =
 @Composable
 private fun ErrorContent(message: String, onRetry: () -> Unit) {
     val colors = YamiboTheme.colors
-    Box(
-        modifier = Modifier.fillMaxSize().background(colors.creamBackground).padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(6.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface)
-        ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = i18n("載入失敗"),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.brownDeep
-                )
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = message,
-                    fontSize = 13.sp,
-                    color = colors.brownPrimary.copy(alpha = 0.75f),
-                    lineHeight = 18.sp
-                )
-                Spacer(Modifier.height(20.dp))
-                Surface(
-                    onClick = onRetry,
-                    shape = RoundedCornerShape(50),
-                    color = colors.brownDeep,
-                    contentColor = Color.White
-                ) {
-                    Text(
-                        text = i18n("重試"),
-                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
-            }
-        }
-    }
+    YamiboDetailedErrorContent(
+        message = message,
+        onRetry = onRetry,
+        titleColor = colors.brownDeep,
+        retryContentColor = Color.White,
+        retryHorizontalPadding = 32.dp,
+    )
 }

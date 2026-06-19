@@ -29,6 +29,8 @@ fun TagDetailHeaderCard(
     coverUrl: String?,
     isMangaMode: Boolean,
     onMangaModeChange: (Boolean) -> Unit,
+    dynamicCoverEnabled: Boolean,
+    onDynamicCoverEnabledChange: (Boolean) -> Unit,
     hasReadingHistory: Boolean,
     readingProgressText: String?,
     onContinueRead: () -> Unit,
@@ -114,16 +116,42 @@ fun TagDetailHeaderCard(
 
                     Spacer(Modifier.height(10.dp))
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
                         Text(
                             text = i18n("漫畫模式"),
                             fontSize = 13.sp,
                             color = colors.brownPrimary.copy(alpha = 0.85f)
                         )
-                        Spacer(Modifier.width(8.dp))
+                        Spacer(Modifier.weight(1f))
                         Switch(
                             checked = isMangaMode,
                             onCheckedChange = onMangaModeChange,
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = colors.brownDeep,
+                                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.45f)
+                            ),
+                            modifier = Modifier.height(24.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = i18n("動態抓取封面"),
+                            fontSize = 13.sp,
+                            color = colors.brownPrimary.copy(alpha = 0.85f)
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Switch(
+                            checked = dynamicCoverEnabled,
+                            onCheckedChange = onDynamicCoverEnabledChange,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = colors.brownDeep,
                                 checkedTrackColor = colors.brownPrimary.copy(alpha = 0.45f)
@@ -218,4 +246,3 @@ fun TagDetailHeaderCard(
         }
     }
 }
-

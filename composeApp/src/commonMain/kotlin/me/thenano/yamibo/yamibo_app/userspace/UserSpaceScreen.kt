@@ -9,7 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +30,7 @@ import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboScrollableTabRow
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
@@ -568,7 +568,7 @@ private fun UserSpaceSubPageRow(
 ) {
     val colors = YamiboTheme.colors
     val selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0)
-    ScrollableYamiboTabRow(
+    YamiboScrollableTabRow(
         selectedIndex = selectedIndex,
     ) {
         tabs.forEach { tab ->
@@ -585,35 +585,6 @@ private fun UserSpaceSubPageRow(
                 }
             )
         }
-    }
-}
-
-@Composable
-private fun ScrollableYamiboTabRow(
-    selectedIndex: Int,
-    content: @Composable () -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    @Suppress("DEPRECATION")
-    ScrollableTabRow(
-        selectedTabIndex = selectedIndex,
-        containerColor = colors.creamSurface,
-        contentColor = colors.textStrong,
-        edgePadding = 0.dp,
-        indicator = { tabPositions ->
-            if (selectedIndex < tabPositions.size) {
-                TabRowDefaults.SecondaryIndicator(
-                    modifier = Modifier.tabIndicatorOffset(tabPositions[selectedIndex]),
-                    color = colors.textStrong,
-                    height = 2.dp,
-                )
-            }
-        },
-        divider = {
-            HorizontalDivider(color = colors.brownLight.copy(alpha = 0.45f))
-        },
-    ) {
-        content()
     }
 }
 

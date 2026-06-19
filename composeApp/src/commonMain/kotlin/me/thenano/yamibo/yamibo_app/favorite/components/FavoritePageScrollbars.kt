@@ -42,19 +42,13 @@ fun FavoriteListScrollbar(
     totalItems: Int,
     modifier: Modifier = Modifier,
 ) {
-    val firstVisibleIndex by remember(state) {
-        derivedStateOf { state.firstVisibleItemIndex }
-    }
-    val visibleCount by remember(state) {
-        derivedStateOf { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) }
-    }
-
-    FavoriteScrollbar(
+    FavoriteScrollbarState(
+        stateKey = state,
         modifier = modifier,
         totalItems = totalItems,
-        firstVisibleIndex = firstVisibleIndex,
-        visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
+        firstVisibleIndex = { state.firstVisibleItemIndex },
+        visibleCount = { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) },
+        isScrollInProgress = { state.isScrollInProgress },
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -65,19 +59,13 @@ fun FavoriteGridScrollbar(
     totalItems: Int,
     modifier: Modifier = Modifier,
 ) {
-    val firstVisibleIndex by remember(state) {
-        derivedStateOf { state.firstVisibleItemIndex }
-    }
-    val visibleCount by remember(state) {
-        derivedStateOf { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) }
-    }
-
-    FavoriteScrollbar(
+    FavoriteScrollbarState(
+        stateKey = state,
         modifier = modifier,
         totalItems = totalItems,
-        firstVisibleIndex = firstVisibleIndex,
-        visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
+        firstVisibleIndex = { state.firstVisibleItemIndex },
+        visibleCount = { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) },
+        isScrollInProgress = { state.isScrollInProgress },
         onScrollToIndex = { index -> state.scrollToItem(index) },
     )
 }
@@ -88,20 +76,41 @@ fun FavoriteStaggeredScrollbar(
     totalItems: Int,
     modifier: Modifier = Modifier,
 ) {
-    val firstVisibleIndex by remember(state) {
-        derivedStateOf { state.firstVisibleItemIndex }
+    FavoriteScrollbarState(
+        stateKey = state,
+        modifier = modifier,
+        totalItems = totalItems,
+        firstVisibleIndex = { state.firstVisibleItemIndex },
+        visibleCount = { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) },
+        isScrollInProgress = { state.isScrollInProgress },
+        onScrollToIndex = { index -> state.scrollToItem(index) },
+    )
+}
+
+@Composable
+private fun FavoriteScrollbarState(
+    stateKey: Any,
+    totalItems: Int,
+    firstVisibleIndex: () -> Int,
+    visibleCount: () -> Int,
+    isScrollInProgress: () -> Boolean,
+    onScrollToIndex: suspend (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val currentFirstVisibleIndex by remember(stateKey) {
+        derivedStateOf(firstVisibleIndex)
     }
-    val visibleCount by remember(state) {
-        derivedStateOf { state.layoutInfo.visibleItemsInfo.size.coerceAtLeast(1) }
+    val currentVisibleCount by remember(stateKey) {
+        derivedStateOf(visibleCount)
     }
 
     FavoriteScrollbar(
         modifier = modifier,
         totalItems = totalItems,
-        firstVisibleIndex = firstVisibleIndex,
-        visibleCount = visibleCount,
-        isScrollInProgress = state.isScrollInProgress,
-        onScrollToIndex = { index -> state.scrollToItem(index) },
+        firstVisibleIndex = currentFirstVisibleIndex,
+        visibleCount = currentVisibleCount,
+        isScrollInProgress = isScrollInProgress(),
+        onScrollToIndex = onScrollToIndex,
     )
 }
 

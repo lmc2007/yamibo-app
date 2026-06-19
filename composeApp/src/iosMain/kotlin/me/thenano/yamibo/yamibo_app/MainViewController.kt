@@ -19,6 +19,7 @@ import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
 import me.thenano.yamibo.yamibo_app.repository.font.IOSFontPlatform
@@ -121,6 +122,9 @@ fun MainViewController() = ComposeUIViewController {
         DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
     }
     val readHistoryRepository = remember { IOSReadHistoryRepository(dbFactory) }
+    val contentCoverRepository = remember {
+        ContentCoverRepositoryImpl(Database(dbFactory.createDriver()))
+    }
     val signRepository = remember {
         IOSSignRepository(
             dbFactory = dbFactory,
@@ -162,6 +166,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalBackgroundAccessRepository provides backgroundAccessRepository,
         LocalNovelThreadCacheRepository provides novelCacheRepository,
         LocalReadHistoryRepository provides readHistoryRepository,
+        LocalContentCoverRepository provides contentCoverRepository,
         LocalSignRepository provides signRepository,
         LocalThemeRepository provides themeRepository,
         LocalTagRepository provides tagRepository,

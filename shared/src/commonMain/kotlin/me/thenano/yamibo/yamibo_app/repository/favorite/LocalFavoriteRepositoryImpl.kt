@@ -18,6 +18,7 @@ import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository.FavoriteT
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import me.thenano.yamibo.yamibo_app.repository.contentcover.normalizeCoverUrl
 import me.thenano.yamibo.yamiboapp.LocalFavoriteCategory
 import me.thenano.yamibo.yamiboapp.LocalFavoriteCollection
 import me.thenano.yamibo.yamiboapp.LocalFavoriteItem
@@ -30,6 +31,7 @@ class LocalFavoriteRepositoryImpl(
     private val itemQueries = db.localFavoriteItemQueries
     private val itemCategoryCrossRefQueries = db.localFavoriteItemCategoryCrossRefQueries
     private val crossRefQueries = db.localFavoriteItemCollectionCrossRefQueries
+    private val contentCoverQueries = db.contentCoverQueries
 
     override suspend fun ensureDefaults() {
         if (categoryQueries.getDefaultByName(DEFAULT_CATEGORY_NAME).executeAsOneOrNull() == null) {
@@ -366,11 +368,12 @@ class LocalFavoriteRepositoryImpl(
             targetId = tagId.value.toLong(),
             authorId = 0L
         ).executeAsOneOrNull()
+        upsertCanonicalCover(FavoriteTargetType.TagManga, tagId.value.toLong(), coverUrl, now)
 
         val itemId = if (existing != null) {
             itemQueries.updateFavoriteItem(
                 title = tagName,
-                coverUrl = coverUrl,
+                coverUrl = coverUrl ?: existing.coverUrl,
                 lastUpdatedTime = null,
                 forumId = null,
                 forumName = null,
@@ -626,11 +629,13 @@ class LocalFavoriteRepositoryImpl(
             authorId = storedAuthorId
         ).executeAsOneOrNull()
         val effectiveLastUpdatedTime = lastUpdatedTime ?: existing?.lastUpdatedTime
+        val effectiveCoverUrl = coverUrl ?: existing?.coverUrl
+        upsertCanonicalCover(targetType, tid.value.toLong(), effectiveCoverUrl, now)
 
         val itemId = if (existing != null) {
             itemQueries.updateFavoriteItem(
                 title = title,
-                coverUrl = coverUrl,
+                coverUrl = effectiveCoverUrl,
                 lastUpdatedTime = effectiveLastUpdatedTime,
                 forumId = forumId?.value?.toLong(),
                 forumName = forumName,
@@ -644,7 +649,7 @@ class LocalFavoriteRepositoryImpl(
                 targetType = targetType.name,
                 targetId = tid.value.toLong(),
                 title = title,
-                coverUrl = coverUrl,
+                coverUrl = effectiveCoverUrl,
                 lastUpdatedTime = effectiveLastUpdatedTime,
                 forumId = forumId?.value?.toLong(),
                 forumName = forumName,
@@ -734,6 +739,24 @@ class LocalFavoriteRepositoryImpl(
         return categoryQueries.getById(categoryId).executeAsOneOrNull()?.name == DEFAULT_CATEGORY_NAME
     }
 
+    private fun upsertCanonicalCover(
+        targetType: FavoriteTargetType,
+        targetId: Long,
+        coverUrl: String?,
+        updatedAt: Long,
+    ) {
+        val normalized = coverUrl?.let(::normalizeCoverUrl) ?: return
+        val existing = contentCoverQueries.getByTarget(targetType.name, targetId).executeAsOneOrNull()
+        contentCoverQueries.upsert(
+            targetType = targetType.name,
+            targetId = targetId,
+            automaticCoverUrl = normalized,
+            manualCoverUrl = existing?.manualCoverUrl,
+            dynamicEnabled = existing?.dynamicEnabled ?: 1L,
+            updatedAt = updatedAt,
+        )
+    }
+
     private fun swapCategoryOrder(
         first: FavoriteCategory,
         second: FavoriteCategory
@@ -790,4 +813,3 @@ class LocalFavoriteRepositoryImpl(
         )
     }
 }
-

@@ -190,35 +190,13 @@ private fun AboutActionRow(
     onClick: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .background(colors.creamBackground, RoundedCornerShape(8.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = title,
-                tint = colors.brownPrimary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Text(
-            text = title,
-            color = colors.textDark,
-            fontSize = 15.sp,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 14.dp),
+    AboutActionRowLayout(title = title, onClick = onClick) {
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = colors.brownPrimary,
+            modifier = Modifier.size(20.dp),
         )
-        Text(">", color = colors.textDark.copy(alpha = 0.32f), fontSize = 14.sp)
     }
 }
 
@@ -227,6 +205,23 @@ private fun AboutResourceActionRow(
     icon: Painter,
     title: String,
     onClick: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    AboutActionRowLayout(title = title, onClick = onClick) {
+        Icon(
+            painter = icon,
+            contentDescription = title,
+            tint = colors.brownPrimary,
+            modifier = Modifier.size(20.dp),
+        )
+    }
+}
+
+@Composable
+private fun AboutActionRowLayout(
+    title: String,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
 ) {
     val colors = YamiboTheme.colors
     Row(
@@ -242,12 +237,7 @@ private fun AboutResourceActionRow(
                 .background(colors.creamBackground, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                painter = icon,
-                contentDescription = title,
-                tint = colors.brownPrimary,
-                modifier = Modifier.size(20.dp),
-            )
+            icon()
         }
         Text(
             text = title,

@@ -128,7 +128,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
         state = InAppLinkResolvingState.Loading
         progressText = i18n("準備定位")
         when (
-            val result = repository.resolve(url, context) { progressText = (it).orEmpty() }
+            val result = repository.resolve(url, context) { progressText = it }
         ) {
             is InAppLinkResolveResult.Resolved -> {
                 val opened = navigator.navigateInAppLinkTarget(result.target, replaceCurrent = true)
@@ -197,7 +197,7 @@ private fun InAppLinkResolvingScreen(url: String, context: InAppLinkContext) {
                             verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
                             Text(i18n("定位失敗"), color = colors.textStrong, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            Text((current.message).orEmpty(), color = colors.brownPrimary, fontSize = 14.sp)
+                            Text(current.message, color = colors.brownPrimary, fontSize = 14.sp)
                             Text(
                                 text = url,
                                 color = colors.textDark.copy(alpha = 0.55f),

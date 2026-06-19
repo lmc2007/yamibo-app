@@ -26,6 +26,8 @@ import me.thenano.yamibo.yamibo_app.favorite.FavoriteActionButton
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository.TagMangaReadingHistory
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
+import me.thenano.yamibo.yamibo_app.repository.LocalFavoriteRepository
 import me.thenano.yamibo.yamibo_app.util.rememberImageRequest
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -45,6 +47,11 @@ fun TagMangaHistoryCard(
     onFavoriteLongPress: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
+    val resolvedCoverUrl = resolvedContentCoverUrl(
+        targetType = LocalFavoriteRepository.FavoriteTargetType.TagManga,
+        targetId = history.tagId.value.toLong(),
+        fallback = history.coverUrl,
+    )
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val timingSummary = i18n("最近閱讀 {}", timeLabel)
@@ -97,9 +104,9 @@ fun TagMangaHistoryCard(
                     ),
                 colors = CardDefaults.cardColors(containerColor = colors.brownLight.copy(alpha = 0.2f))
             ) {
-                if (!history.coverUrl.isNullOrEmpty()) {
+                if (!resolvedCoverUrl.isNullOrEmpty()) {
                     SubcomposeAsyncImage(
-                        model = rememberImageRequest(url = history.coverUrl!!),
+                        model = rememberImageRequest(url = resolvedCoverUrl),
                         contentDescription = "Cover Image",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -185,4 +192,3 @@ fun TagMangaHistoryCard(
         }
     }
 }
-

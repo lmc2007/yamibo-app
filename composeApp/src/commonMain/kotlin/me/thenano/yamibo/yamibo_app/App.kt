@@ -200,8 +200,12 @@ fun App() {
             YamiboSnackbarHost(snackbarHostState)
             LaunchSignReminderDialog(
                 visible = showSignReminder,
+                dismissTodayChecked = appSettingsRepository.signInLaunchReminderDismissToday.state(),
+                onDismissTodayChange = { appSettingsRepository.signInLaunchReminderDismissToday.setValue(it) },
                 onDismiss = {
-                    appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
+                    if (appSettingsRepository.signInLaunchReminderDismissToday.getValue()) {
+                        appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
+                    }
                     showSignReminder = false
                 },
                 onGoSign = {
@@ -240,7 +244,8 @@ fun App() {
             return@LaunchedEffect
         }
         val today = currentLocalDateKey()
-        if (appSettingsRepository.signInLaunchReminderDismissedDate.getValue() == today) return@LaunchedEffect
+        val dismissToday = appSettingsRepository.signInLaunchReminderDismissToday.getValue()
+        if (dismissToday && appSettingsRepository.signInLaunchReminderDismissedDate.getValue() == today) return@LaunchedEffect
         if (authRepository.currentUser() == null) return@LaunchedEffect
         if (!signRepository.isSignedToday()) {
             showSignReminder = true
@@ -421,6 +426,8 @@ private fun LaunchUpdateAvailableContent(
 @Composable
 private fun LaunchSignReminderDialog(
     visible: Boolean,
+    dismissTodayChecked: Boolean,
+    onDismissTodayChange: (Boolean) -> Unit,
     onDismiss: () -> Unit,
     onGoSign: () -> Unit,
 ) {
@@ -451,6 +458,29 @@ private fun LaunchSignReminderDialog(
                     fontSize = 14.sp,
                     lineHeight = 20.sp,
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismissTodayChange(!dismissTodayChecked) }
+                        .padding(vertical = 2.dp),
+                ) {
+                    Checkbox(
+                        checked = dismissTodayChecked,
+                        onCheckedChange = onDismissTodayChange,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = colors.brownDeep,
+                            uncheckedColor = colors.brownPrimary.copy(alpha = 0.6f),
+                            checkmarkColor = colors.textOnDeep,
+                        ),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = i18n("今日不再提醒"),
+                        fontSize = 14.sp,
+                        color = colors.textDark,
+                    )
+                }
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),

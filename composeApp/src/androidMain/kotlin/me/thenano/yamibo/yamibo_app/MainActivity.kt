@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import io.github.littlesurvival.YamiboClient
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
+import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidAppForegroundTracker
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
@@ -198,6 +199,9 @@ class MainActivity : ComponentActivity() {
                 DefaultInAppLinkNavigationRepository(threadRepository, novelCacheRepository)
             }
             val readHistoryRepository = remember { AndroidReadHistoryRepository(dbFactory) }
+            val contentCoverRepository = remember {
+                ContentCoverRepositoryImpl(Database(dbFactory.createDriver()))
+            }
             val signRepository = remember {
                 AndroidSignRepository(
                     dbFactory = dbFactory,
@@ -240,6 +244,7 @@ class MainActivity : ComponentActivity() {
                 LocalBackgroundAccessRepository provides backgroundAccessRepository,
                 LocalNovelThreadCacheRepository provides novelCacheRepository,
                 LocalReadHistoryRepository provides readHistoryRepository,
+                LocalContentCoverRepository provides contentCoverRepository,
                 LocalSignRepository provides signRepository,
                 LocalThemeRepository provides themeRepository,
                 LocalTagRepository provides tagRepository,

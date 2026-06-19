@@ -123,6 +123,7 @@ fun YamiboHomeTopBar(
                         colors = listOf(
                             colors.brownDeep,
                             colors.brownPrimary,
+                            colors.creamBackground,
                         )
                     )
                 )

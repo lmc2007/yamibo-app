@@ -1,4 +1,4 @@
-﻿source,en,zh-tw,zh-cn
+source,en,zh-tw,zh-cn
  / 最後更新 ,/Last updated, / 最後更新 , / 最后更新 
 #標籤漫畫,#hashtagcomics,#標籤漫畫,#标签漫画
 - 沒有更多內容了 -,- No more content -,- 沒有更多內容了 -,- 没有更多内容了 -
@@ -32,8 +32,11 @@ tip：長按可詳細編輯收藏路徑,Tip: Long press to edit the favorite pat
 今天狀態：未簽到,Today's status: Not signed in,今天狀態：未簽到,今天状态：未签到
 今日已簽,Signed today,今日已簽,今日已签
 今日已簽到,Signed in today,今日已簽到,今日已签到
+今日不再提醒,Don't remind today,今日不再提醒,今日不再提醒
+今天尚未完成每日簽到。,You haven't completed today's daily check-in.,今天尚未完成每日簽到。,今天尚未完成每日签到。
 作品與章節,Works and Chapters,作品與章節,作品与章节
 你確定要將百合會收藏同步到本地嗎,Are you sure you want to synchronize Yamibo favorites to your local computer?,你確定要將百合會收藏同步到本地嗎,你确定要将百合会收藏同步到本地吗
+你今天還沒簽到,You haven't checked in today,你今天還沒簽到,你今天还没签到
 使用外部瀏覽器開啟,Open using an external browser,使用外部瀏覽器開啟,使用外部浏览器开启
 更新,Updates,更新,更新
 收藏更新,Favorite updates,收藏更新,收藏更新
@@ -449,3 +452,5 @@ tip：長按可詳細編輯收藏路徑,Tip: Long press to edit the favorite pat
 已加入集合,Added to collection,已加入集合,已加入集合
 帖子詳情為空，已保留收藏列表標題：{},"Thread details are empty, kept the favorite list title: {}",帖子詳情為空，已保留收藏列表標題：{},帖子详情为空，已保留收藏列表标题：{}
 載入中...,Loading...,載入中...,载入中...
+前往簽到,Go to check-in,前往簽到,前往签到
+關閉彈窗後，今天內不會再次彈出提醒。關閉此設定後，每次開啟 app 都會提醒。,"After dismissing the popup, it won't appear again today. If disabled, the reminder will show every time you open the app.",關閉彈窗後，今天內不會再次彈出提醒。關閉此設定後，每次開啟 app 都會提醒。,关闭弹窗后，今天内不会再次弹出提醒。关闭此设定后，每次开启 app 都会提醒。

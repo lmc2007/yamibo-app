@@ -112,7 +112,7 @@ private fun ContextMenuContainer(
     imageUrl: String,
     onSetAsCover: ((String) -> Unit)?,
     onDismiss: () -> Unit,
-    isBottomSheet: Boolean
+    isBottomSheet: Boolean = true
 ) {
     val colors = YamiboTheme.colors
     val context = LocalPlatformContext.current
@@ -121,6 +121,50 @@ private fun ContextMenuContainer(
     
     val cookie = authRepo.cookieStore.load() ?: ""
     val referer = "https://bbs.yamibo.com/"
+
+    @Composable
+    fun ContextMenuActions() {
+        ContextMenuItem(
+            icon = YamiboIcons.Copy,
+            label = i18n("複製"),
+            onClick = {
+                scope.launch {
+                    copyImageToClipboard(context, imageUrl, cookie, referer)
+                    onDismiss()
+                }
+            },
+        )
+        ContextMenuItem(
+            icon = YamiboIcons.Share,
+            label = i18n("分享"),
+            onClick = {
+                scope.launch {
+                    shareImageToApp(context, imageUrl, cookie, referer)
+                    onDismiss()
+                }
+            },
+        )
+        ContextMenuItem(
+            icon = YamiboIcons.Save,
+            label = i18n("儲存"),
+            onClick = {
+                scope.launch {
+                    saveImageToGallery(context, imageUrl, cookie, referer)
+                    onDismiss()
+                }
+            },
+        )
+        if (onSetAsCover != null) {
+            ContextMenuItem(
+                icon = YamiboIcons.StarOutline,
+                label = i18n("設為封面"),
+                onClick = {
+                    onSetAsCover(imageUrl)
+                    onDismiss()
+                },
+            )
+        }
+    }
 
     Surface(
         color = colors.brownDeep,
@@ -151,46 +195,7 @@ private fun ContextMenuContainer(
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ContextMenuItem(
-                        icon = YamiboIcons.Copy,
-                        label = i18n("複製"),
-                        onClick = {
-                            scope.launch {
-                                copyImageToClipboard(context, imageUrl, cookie, referer)
-                                onDismiss()
-                            }
-                        }
-                    )
-                    ContextMenuItem(
-                        icon = YamiboIcons.Share,
-                        label = i18n("分享"),
-                        onClick = {
-                            scope.launch {
-                                shareImageToApp(context, imageUrl, cookie, referer)
-                                onDismiss()
-                            }
-                        }
-                    )
-                    ContextMenuItem(
-                        icon = YamiboIcons.Save,
-                        label = i18n("儲存"),
-                        onClick = {
-                            scope.launch {
-                                saveImageToGallery(context, imageUrl, cookie, referer)
-                                onDismiss()
-                            }
-                        }
-                    )
-                    if (onSetAsCover != null) {
-                        ContextMenuItem(
-                            icon = YamiboIcons.StarOutline,
-                            label = i18n("設為封面"),
-                            onClick = {
-                                onSetAsCover(imageUrl)
-                                onDismiss()
-                            }
-                        )
-                    }
+                    ContextMenuActions()
                 }
                 Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom)))
             }
@@ -200,46 +205,7 @@ private fun ContextMenuContainer(
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ContextMenuItem(
-                    icon = YamiboIcons.Copy,
-                    label = i18n("複製"),
-                    onClick = {
-                        scope.launch {
-                            copyImageToClipboard(context, imageUrl, cookie, referer)
-                            onDismiss()
-                        }
-                    }
-                )
-                ContextMenuItem(
-                    icon = YamiboIcons.Share,
-                    label = i18n("分享"),
-                    onClick = {
-                        scope.launch {
-                            shareImageToApp(context, imageUrl, cookie, referer)
-                            onDismiss()
-                        }
-                    }
-                )
-                ContextMenuItem(
-                    icon = YamiboIcons.Save,
-                    label = i18n("儲存"),
-                    onClick = {
-                        scope.launch {
-                            saveImageToGallery(context, imageUrl, cookie, referer)
-                            onDismiss()
-                        }
-                    }
-                )
-                if (onSetAsCover != null) {
-                    ContextMenuItem(
-                        icon = YamiboIcons.StarOutline,
-                        label = i18n("設為封面"),
-                        onClick = {
-                            onSetAsCover(imageUrl)
-                            onDismiss()
-                        }
-                    )
-                }
+                ContextMenuActions()
             }
         }
     }
@@ -272,4 +238,3 @@ private fun ContextMenuItem(
         )
     }
 }
-

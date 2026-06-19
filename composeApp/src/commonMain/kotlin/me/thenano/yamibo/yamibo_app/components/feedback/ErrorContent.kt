@@ -2,6 +2,7 @@
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
@@ -51,6 +54,60 @@ fun YamiboErrorContent(
                 Spacer(Modifier.height(16.dp))
                 Surface(onClick = onRetry, shape = RoundedCornerShape(50), color = colors.brownDeep) {
                     Text(i18n("重試"), modifier = Modifier.padding(horizontal = 22.dp, vertical = 10.dp), color = colors.textOnDeepHigh)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun YamiboDetailedErrorContent(
+    message: String,
+    onRetry: () -> Unit,
+    titleColor: Color,
+    retryContentColor: Color,
+    retryHorizontalPadding: Dp,
+) {
+    val colors = YamiboTheme.colors
+    Box(
+        modifier = Modifier.fillMaxSize().background(colors.creamBackground).padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(6.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = i18n("載入失敗"),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = titleColor,
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = message,
+                    fontSize = 13.sp,
+                    color = colors.brownPrimary.copy(alpha = 0.75f),
+                    lineHeight = 18.sp,
+                )
+                Spacer(Modifier.height(20.dp))
+                Surface(
+                    onClick = onRetry,
+                    shape = RoundedCornerShape(50),
+                    color = colors.brownDeep,
+                    contentColor = retryContentColor,
+                ) {
+                    Text(
+                        text = i18n("重試"),
+                        modifier = Modifier.padding(horizontal = retryHorizontalPadding, vertical = 12.dp),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                    )
                 }
             }
         }
