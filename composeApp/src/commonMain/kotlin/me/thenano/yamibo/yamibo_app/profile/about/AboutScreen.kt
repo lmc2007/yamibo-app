@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import kotlinx.coroutines.flow.collect
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
@@ -274,9 +275,14 @@ private fun ChangelogDialog(onDismiss: () -> Unit) {
     }
 
     val scrollState = rememberScrollState()
-    LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
-        if (scrollState.viewportSize > 0) {
-            if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+    LaunchedEffect(scrollState) {
+        snapshotFlow {
+            val v = scrollState.value
+            val max = scrollState.maxValue
+            val vp = scrollState.viewportSize
+            vp > 0 && (max == 0 || v >= max)
+        }.collect { reached ->
+            if (reached) {
                 hasScrolledToBottom = true
             }
         }

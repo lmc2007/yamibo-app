@@ -1,16 +1,8 @@
 package me.thenano.yamibo.yamibo_app.profile.settings.update
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.*
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,26 +12,21 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
-import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
-import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateAsset
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateSource
-import me.thenano.yamibo.yamibo_app.repository.appupdate.changelogContent
-import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
-import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.repository.appupdate.*
+import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
 import me.thenano.yamibo.yamibo_app.util.state
 import org.jetbrains.compose.resources.painterResource
 import yamibo_app.composeapp.generated.resources.Res
@@ -194,9 +181,14 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
     )
     var hasScrolledToBottom by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
-        if (scrollState.viewportSize > 0) {
-            if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+    LaunchedEffect(scrollState) {
+        snapshotFlow {
+            val v = scrollState.value
+            val max = scrollState.maxValue
+            val vp = scrollState.viewportSize
+            vp > 0 && (max == 0 || v >= max)
+        }.collect { reached ->
+            if (reached) {
                 hasScrolledToBottom = true
             }
         }

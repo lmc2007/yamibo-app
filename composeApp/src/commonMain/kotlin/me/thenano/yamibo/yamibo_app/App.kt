@@ -17,46 +17,40 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.Lifecycle
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
-
-import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
-import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
-import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
-import androidx.compose.material3.SnackbarHostState
-import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
-import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
-import me.thenano.yamibo.yamibo_app.repository.AuthRepository
-import me.thenano.yamibo.yamibo_app.repository.SignRepository
-import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import io.github.littlesurvival.core.YamiboResult
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
+import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
+import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.home.HomePageScreen
 import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.NavAction
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateCheckResult
-import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
-import me.thenano.yamibo.yamibo_app.repository.appupdate.changelogContent
-import me.thenano.yamibo.yamibo_app.repository.appupdate.fullVersionName
+import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
+import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.SignRepository
+import me.thenano.yamibo.yamibo_app.repository.appupdate.*
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
-import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
-import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
-import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
+import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
+import me.thenano.yamibo.yamibo_app.util.SignReminderTrigger
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
@@ -384,9 +378,14 @@ private fun LaunchUpdateAvailableContent(
                 contentScale = ContentScale.Fit,
             )
             val scrollState = rememberScrollState()
-            LaunchedEffect(scrollState.value, scrollState.maxValue, scrollState.viewportSize) {
-                if (scrollState.viewportSize > 0) {
-                    if (scrollState.maxValue == 0 || scrollState.value >= scrollState.maxValue) {
+            LaunchedEffect(scrollState) {
+                snapshotFlow {
+                    val v = scrollState.value
+                    val max = scrollState.maxValue
+                    val vp = scrollState.viewportSize
+                    vp > 0 && (max == 0 || v >= max)
+                }.collect { reached ->
+                    if (reached) {
                         onScrolledToBottomChange(true)
                     }
                 }
