@@ -91,7 +91,18 @@ class DefaultAppUpdateRepository(
                 continue
             }
 
-            val release = manifest.toRelease(source, platform)
+            // Fetch remote changelog if possible
+            val changelogText = runCatching {
+                val changelogUrl = resolveChangelogUrl(source.manifestUrl, manifest.versionCode)
+                val response = httpClient.get(changelogUrl)
+                if (response.status.isSuccess()) {
+                    response.bodyAsText()
+                } else {
+                    null
+                }
+            }.getOrNull()
+
+            val release = manifest.toRelease(source, platform, changelogText)
             appSettingsRepository.appUpdatePreferredSourceIndex.setValue(sources.indexOf(source).coerceAtLeast(0))
 
             return when {
@@ -164,6 +175,7 @@ private data class AppUpdateAssetDto(
 private fun AppUpdateManifestDto.toRelease(
     source: AppUpdateSource,
     platform: AppUpdatePlatform,
+    remoteChangelog: String? = null,
 ): AppUpdateRelease {
     val selectedAsset = assets.firstOrNull { asset ->
         val platformMatches = asset.platform == null || asset.platform.equals(platform.platformKey, ignoreCase = true)
@@ -186,6 +198,18 @@ private fun AppUpdateManifestDto.toRelease(
                 size = it.size,
             )
         },
-        changelogText = releaseNotes.orEmpty(),
+        changelogText = remoteChangelog?.takeIf { it.isNotBlank() } ?: releaseNotes.orEmpty(),
     )
+}
+
+internal fun resolveChangelogUrl(manifestUrl: String, versionCode: Long): String {
+    val parts = manifestUrl.split("?", limit = 2)
+    val baseUrl = parts[0]
+    val query = parts.getOrNull(1)
+
+    val lastSlashIndex = baseUrl.lastIndexOf('/')
+    val parentUrl = if (lastSlashIndex != -1) baseUrl.substring(0, lastSlashIndex) else baseUrl
+    val newBase = "$parentUrl/changelogs/$versionCode.changelog"
+
+    return if (query != null) "$newBase?$query" else newBase
 }
