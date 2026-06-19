@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
