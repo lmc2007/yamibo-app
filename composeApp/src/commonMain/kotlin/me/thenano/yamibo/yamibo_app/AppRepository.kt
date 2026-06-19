@@ -7,6 +7,7 @@ import me.thenano.yamibo.yamibo_app.repository.AppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.BlogRepository
 import me.thenano.yamibo.yamibo_app.repository.BackupRepository
 import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
+import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
@@ -65,6 +66,9 @@ val LocalSignReminderScheduler =
 
 val LocalChineseConversionRepository =
     compositionLocalOf<ChineseConversionRepository> { error("LocalChineseConversionRepository not provided") }
+
+val LocalContentCoverRepository =
+    compositionLocalOf<ContentCoverRepository> { error("LocalContentCoverRepository not provided") }
 
 val LocalDetailNoteRepository =
     compositionLocalOf<DetailNoteRepository> { error("LocalDetailNoteRepository not provided") }

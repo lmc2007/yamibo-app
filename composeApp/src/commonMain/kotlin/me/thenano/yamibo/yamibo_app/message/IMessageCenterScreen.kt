@@ -1,4 +1,4 @@
-﻿package me.thenano.yamibo.yamibo_app.message
+package me.thenano.yamibo.yamibo_app.message
 
 import androidx.compose.runtime.Composable
 import kotlinx.serialization.Serializable
@@ -43,8 +43,13 @@ class IMessageCenterScreen(
     companion object Decoder : TypedRestorableNavigatableDecoder<IMessageCenterScreen>(IMessageCenterScreen::class) {
         override fun decode(payload: String): RestorableNavigatable {
             val data = decodeRestorePayload<MessageCenterRestorePayload>(payload)
+            val initialTab = try {
+                MessageCenterTab.valueOf(data.initialTabName)
+            } catch (_: Exception) {
+                MessageCenterTab.PrivateMessages
+            }
             return IMessageCenterScreen(
-                initialTab = MessageCenterTab.valueOf(data.initialTabName),
+                initialTab = initialTab,
                 mainTabTopBar = data.mainTabTopBar,
             )
         }
