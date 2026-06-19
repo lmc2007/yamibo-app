@@ -13,4 +13,6 @@ interface AppUpdatePlatform {
 
     fun cancelDownload()
     fun openReleasePage(url: String)
+
+    val isInstallPermissionGranted: Boolean get() = true
 }

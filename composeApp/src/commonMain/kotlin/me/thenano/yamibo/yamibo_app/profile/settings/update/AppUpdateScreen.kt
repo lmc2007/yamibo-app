@@ -109,6 +109,10 @@ internal fun AppUpdateScreen() {
                     Text(if (checking) i18n("檢查中...") else i18n("檢查更新"))
                 }
                 release?.let { available ->
+                    val buttonText = when (downloadState) {
+                        is AppUpdateDownloadState.PermissionRequired -> i18n("安裝更新")
+                        else -> i18n("下載更新")
+                    }
                     OutlinedButton(
                         onClick = {
                             coroutineScope.launch {
@@ -118,7 +122,7 @@ internal fun AppUpdateScreen() {
                         enabled = downloadState !is AppUpdateDownloadState.Running && available.asset != null,
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textStrong),
                     ) {
-                        Text(i18n("下載更新"))
+                        Text(buttonText)
                     }
                     OutlinedButton(
                         onClick = { repository.openReleasePage(available) },

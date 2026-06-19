@@ -32,6 +32,13 @@ class AndroidAppUpdatePlatform(
     override val platformKey: String = "android"
     override val supportedAssetTypes: Set<String> = setOf("universal-apk", "apk")
 
+    override val isInstallPermissionGranted: Boolean
+        get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.packageManager.canRequestPackageInstalls()
+        } else {
+            true
+        }
+
     override suspend fun downloadAndInstall(
         release: AppUpdateRelease,
         onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
@@ -40,6 +47,15 @@ class AndroidAppUpdatePlatform(
         canceled = false
         val updatesDir = File(context.cacheDir, "updates").apply { mkdirs() }
         val apkFile = File(updatesDir, "yamibo-${release.versionName}.apk")
+
+        val sha = asset.sha256
+        val fileIsValid = apkFile.exists() && apkFile.hasApkZipSignature() && runCatching {
+            sha.isNullOrBlank() || apkFile.sha256().equals(sha, ignoreCase = true)
+        }.getOrDefault(false)
+
+        if (fileIsValid) {
+            return@withContext requestInstall(apkFile, release)
+        }
 
         runCatching {
             if (apkFile.exists()) apkFile.delete()

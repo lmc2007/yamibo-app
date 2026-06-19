@@ -24,6 +24,10 @@ import coil3.PlatformContext
 import coil3.compose.setSingletonImageLoaderFactory
 import coil3.memory.MemoryCache
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.Lifecycle
+import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
 
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
 import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
@@ -115,6 +119,26 @@ fun App() {
             if (result is AppUpdateCheckResult.UpdateAvailable) {
                 launchUpdateRelease = result.release
             }
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val downloadState by appUpdateRepository.downloadState.collectAsState()
+
+    DisposableEffect(lifecycleOwner, downloadState) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val state = downloadState
+                if (state is AppUpdateDownloadState.PermissionRequired && appUpdateRepository.isInstallPermissionGranted) {
+                    coroutineScope.launch {
+                        appUpdateRepository.downloadAndInstall(state.release)
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

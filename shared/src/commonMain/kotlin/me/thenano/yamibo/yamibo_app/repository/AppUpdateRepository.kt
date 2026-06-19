@@ -15,4 +15,6 @@ interface AppUpdateRepository {
     fun ignoreRelease(release: AppUpdateRelease)
     fun cancelDownload()
     fun openReleasePage(release: AppUpdateRelease)
+
+    val isInstallPermissionGranted: Boolean get() = true
 }

@@ -147,6 +147,9 @@ class DefaultAppUpdateRepository(
     override fun openReleasePage(release: AppUpdateRelease) {
         platform.openReleasePage(release.releaseUrl)
     }
+
+    override val isInstallPermissionGranted: Boolean
+        get() = platform.isInstallPermissionGranted
 }
 
 @Serializable
