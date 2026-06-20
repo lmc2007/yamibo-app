@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.history.components
 
 import YamiboIcons
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -53,7 +54,7 @@ internal fun SearchTopBar(
             .padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onBack) { Text(YamiboIcons.Back, color = colors.textStrong, fontSize = 18.sp) }
+        IconButton(onClick = onBack) { Text(NavigationBackSymbol, color = colors.textStrong, fontSize = 18.sp) }
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,

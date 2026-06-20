@@ -1,6 +1,6 @@
 ﻿package me.thenano.yamibo.yamibo_app.favorite
 
-import YamiboIcons
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -180,7 +180,7 @@ internal fun FavoritePageContent(
 
         if (openedCollection != null) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                ActionChip(YamiboIcons.Back, onBackToTab)
+                            ActionChip(NavigationBackSymbol, onBackToTab)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(openedCollection.collection.name, color = colors.textStrong, fontSize = 16.sp, fontWeight = FontWeight.Bold)

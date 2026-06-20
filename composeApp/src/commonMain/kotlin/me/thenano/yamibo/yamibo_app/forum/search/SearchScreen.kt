@@ -1,6 +1,7 @@
 ﻿package me.thenano.yamibo.yamibo_app.forum.search
 
 import androidx.compose.animation.AnimatedContent
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -185,7 +186,7 @@ fun SearchScreen(fid: ForumId?) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { if (!restorePreviousSearchPage()) navigator.pop() }) {
-                    Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                    Text(NavigationBackSymbol, color = Color.White, fontSize = 20.sp)
                 }
                 OutlinedTextField(
                     value = query,

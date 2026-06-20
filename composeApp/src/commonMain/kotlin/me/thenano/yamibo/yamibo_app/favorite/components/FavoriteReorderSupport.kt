@@ -1,6 +1,6 @@
 package me.thenano.yamibo.yamibo_app.favorite.components
 
-import YamiboIcons
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -155,7 +155,7 @@ internal fun ReorderActionChip(
         Text(
             text = text,
             color = if (emphasized) colors.creamBackground else colors.brownDeep,
-            fontSize = if (text == YamiboIcons.Back) 18.sp else 14.sp,
+            fontSize = if (text == NavigationBackSymbol) 18.sp else 14.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
         )

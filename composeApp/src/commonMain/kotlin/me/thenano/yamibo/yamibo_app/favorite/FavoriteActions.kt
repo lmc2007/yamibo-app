@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.favorite
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 
 
 import YamiboIcons
@@ -672,7 +673,7 @@ internal fun FavoriteDialogButton(
         Text(
             text = text,
             color = contentColor,
-            fontSize = if (text == YamiboIcons.Back) 18.sp else 13.sp,
+            fontSize = if (text == NavigationBackSymbol) 18.sp else 13.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
         )
@@ -953,4 +954,3 @@ fun FavoriteMultiPathRemoveDialog(
 private fun Set<Long>.toggle(id: Long): Set<Long> {
     return if (id in this) this - id else this + id
 }
-

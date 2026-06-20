@@ -51,10 +51,13 @@ kotlin {
         val generatedRestorableRegistryDir = layout.buildDirectory.dir("generated/restorableScreenRegistry/commonMain/kotlin")
         val generatedI18nKotlinDir = layout.buildDirectory.dir("generated/i18n/kotlin")
         val generatedAppVersionKotlinDir = layout.buildDirectory.dir("generated/appVersion/commonMain/kotlin")
+        val generatedYamiboIconsDir = layout.buildDirectory.dir("generated/yamiboIcons/commonMain/kotlin")
         commonMain {
             kotlin.srcDir(generatedRestorableRegistryDir)
             kotlin.srcDir(generatedI18nKotlinDir)
             kotlin.srcDir(generatedAppVersionKotlinDir)
+            kotlin.srcDir(generatedYamiboIconsDir)
+            resources.exclude("assets/icons/**")
         }
 
         androidMain.dependencies {
@@ -118,6 +121,17 @@ val generateAppVersion by tasks.registering(GenerateAppVersionTask::class) {
     outputFile.set(layout.buildDirectory.file("generated/appVersion/commonMain/kotlin/me/thenano/yamibo/yamibo_app/AppVersion.kt"))
 }
 
+val yamiboIconsSourcePath = providers.gradleProperty("yamibo.icons.sourceDir")
+    .orElse("composeApp/src/commonMain/resources/assets/icons")
+    .get()
+val yamiboIconsSourceDirectory = rootProject.file(yamiboIconsSourcePath)
+
+val generateYamiboIcons by tasks.registering(GenerateYamiboIconsTask::class) {
+    description = "Generates YamiboIcons.kt from SVG source files."
+    sourceDir.set(yamiboIconsSourceDirectory)
+    outputFile.set(layout.buildDirectory.file("generated/yamiboIcons/commonMain/kotlin/YamiboIcons.kt"))
+}
+
 val copyChangelogs by tasks.registering(Copy::class) {
     description = "Copies changelogs from update/changelogs to composeResources."
     from(rootProject.layout.projectDirectory.dir("update/changelogs"))
@@ -129,6 +143,7 @@ tasks.matching { task ->
 }.configureEach {
     dependsOn(generateRestorableScreenRegistry)
     dependsOn(generateAppVersion)
+    dependsOn(generateYamiboIcons)
     dependsOn(copyChangelogs)
 }
 

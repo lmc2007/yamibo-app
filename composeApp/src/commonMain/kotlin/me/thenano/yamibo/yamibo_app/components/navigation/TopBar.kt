@@ -1,6 +1,5 @@
 package me.thenano.yamibo.yamibo_app.components.navigation
 
-import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -88,7 +87,7 @@ fun YamiboTopBar(
             ) {
                 if (onBack != null) {
                     IconButton(onClick = onBack, modifier = Modifier.size(36.dp)) {
-                        Text(YamiboIcons.Back, color = Color.White, fontSize = 20.sp)
+                        Text(NavigationBackSymbol, color = Color.White, fontSize = 20.sp)
                     }
                 }
                 if (subtitle == null) {

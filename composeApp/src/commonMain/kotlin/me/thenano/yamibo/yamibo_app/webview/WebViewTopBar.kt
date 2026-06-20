@@ -1,8 +1,8 @@
 package me.thenano.yamibo.yamibo_app.webview
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 
-import YamiboIcons
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,7 +54,7 @@ fun WebViewTopBar(
             ) {
                 // Exit button (X or Back Arrow)
                 Text(
-                text = if (useBackIcon) YamiboIcons.Back else "✖",
+                    text = if (useBackIcon) NavigationBackSymbol else "✖",
                     modifier = Modifier
                         .padding(end = 12.dp)
                         .clickable { onCloseClick() },
@@ -147,4 +147,3 @@ fun WebViewTopBar(
         }
     }
 }
-

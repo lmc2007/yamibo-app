@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.thread.reader.components.manga
 
 import YamiboIcons
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -115,7 +116,7 @@ fun MangaReaderOverlay(
                                     onClick = { onPageChange(0) },
                                     modifier = Modifier.size(32.dp)
                                 ) {
-                    Text(YamiboIcons.Back, color = Color.White, fontSize = 14.sp)
+                Text(NavigationBackSymbol, color = Color.White, fontSize = 14.sp)
                                 }
 
                                 // Current page

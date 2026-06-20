@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.favorite.components
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
 
 
 import YamiboIcons
@@ -181,7 +182,7 @@ fun FavoriteSearchTopBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
-            Text(YamiboIcons.Back, color = colors.textStrong, fontSize = 18.sp)
+            Text(NavigationBackSymbol, color = colors.textStrong, fontSize = 18.sp)
         }
         OutlinedTextField(
             value = query,
