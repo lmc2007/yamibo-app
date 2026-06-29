@@ -7,15 +7,14 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import android.graphics.Bitmap
 import coil3.imageLoader
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
+import coil3.request.ErrorResult
 import coil3.request.SuccessResult
 import coil3.BitmapImage
 import coil3.PlatformContext
@@ -23,19 +22,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
+import me.thenano.yamibo.yamibo_app.util.buildImageRequest
+
+private const val ImageActionLogTag = "YamiboImageAction"
+
+private fun logImageRequestFailure(result: Any) {
+    if (result is ErrorResult) {
+        Log.e(ImageActionLogTag, "Image request failed", result.throwable)
+    } else {
+        Log.e(ImageActionLogTag, "Image request returned ${result::class.simpleName}")
+    }
+}
 
 private suspend fun downloadImage(context: Context, url: String, cookie: String, referer: String, fileName: String): File? {
     return withContext(Dispatchers.IO) {
         try {
-            val request = ImageRequest.Builder(context)
-                .data(url)
-                .httpHeaders(
-                    NetworkHeaders.Builder()
-                        .add("Cookie", cookie)
-                        .add("Referer", referer)
-                        .build()
-                )
-                .build()
+            val request = buildImageRequest(
+                context = context,
+                url = url,
+                cookie = cookie,
+                referer = referer,
+                enableCrossfade = false,
+            )
 
             val result = context.imageLoader.execute(request)
             if (result is SuccessResult) {
@@ -67,10 +75,11 @@ private suspend fun downloadImage(context: Context, url: String, cookie: String,
                     return@withContext file
                 }
             }
+            logImageRequestFailure(result)
             withContext(Dispatchers.Main) { Toast.makeText(context, i18n("下載圖片失敗"), Toast.LENGTH_SHORT).show() }
             null
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(ImageActionLogTag, "Image download failed", e)
             withContext(Dispatchers.Main) { Toast.makeText(context, i18n("下載圖片失敗"), Toast.LENGTH_SHORT).show() }
             null
         }
@@ -105,15 +114,13 @@ actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie
 actual suspend fun saveImageToGallery(context: PlatformContext, url: String, cookie: String, referer: String) {
     withContext(Dispatchers.IO) {
         try {
-            val request = ImageRequest.Builder(context)
-                .data(url)
-                .httpHeaders(
-                    NetworkHeaders.Builder()
-                        .add("Cookie", cookie)
-                        .add("Referer", referer)
-                        .build()
-                )
-                .build()
+            val request = buildImageRequest(
+                context = context,
+                url = url,
+                cookie = cookie,
+                referer = referer,
+                enableCrossfade = false,
+            )
 
             val result = context.imageLoader.execute(request)
             if (result is SuccessResult) {
@@ -165,16 +172,16 @@ actual suspend fun saveImageToGallery(context: PlatformContext, url: String, coo
                     }
                 }
             } else {
+                logImageRequestFailure(result)
                 withContext(Dispatchers.Main) { 
                     Toast.makeText(context, i18n("下載失敗"), Toast.LENGTH_SHORT).show()
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(ImageActionLogTag, "Saving image failed", e)
             withContext(Dispatchers.Main) { 
                 Toast.makeText(context, i18n("下載失敗"), Toast.LENGTH_SHORT).show()
             }
         }
     }
 }
-

@@ -14,7 +14,7 @@ import io.github.littlesurvival.YamiboRoute
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 
 fun normalizeImageUrl(url: String): String {
-    return if (url.startsWith("http")) {
+    return if (url.contains("://")) {
         url
     } else {
         "${YamiboRoute.Domain.build()}${url.removePrefix("/")}"
@@ -25,6 +25,7 @@ fun buildImageRequest(
     context: PlatformContext,
     url: String,
     cookie: String = "",
+    referer: String = YamiboRoute.Domain.build(),
     retryKey: Int = 0,
     enableCrossfade: Boolean = true,
 ): ImageRequest {
@@ -40,7 +41,7 @@ fun buildImageRequest(
             NetworkHeaders.Builder().apply {
                 if (isYamiboDomain) {
                     add("Cookie", cookie)
-                    add("Referer", YamiboRoute.Domain.build())
+                    add("Referer", referer)
                 }
             }.build()
         )

@@ -2,9 +2,6 @@ package me.thenano.yamibo.yamibo_app.thread.image
 
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import coil3.toBitmap
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -17,6 +14,7 @@ import org.jetbrains.skia.Image
 import platform.Foundation.NSData
 import platform.Foundation.dataWithBytes
 import platform.UIKit.*
+import me.thenano.yamibo.yamibo_app.util.buildImageRequest
 
 private suspend fun downloadImageBytes(
     context: PlatformContext,
@@ -28,15 +26,13 @@ private suspend fun downloadImageBytes(
         try {
             val imageLoader = SingletonImageLoader.get(context)
 
-            val request = ImageRequest.Builder(context)
-                .data(url)
-                .httpHeaders(
-                    NetworkHeaders.Builder()
-                        .add("Cookie", cookie)
-                        .add("Referer", referer)
-                        .build()
-                )
-                .build()
+            val request = buildImageRequest(
+                context = context,
+                url = url,
+                cookie = cookie,
+                referer = referer,
+                enableCrossfade = false,
+            )
 
             val result = imageLoader.execute(request) as? SuccessResult ?: return@withContext null
 
