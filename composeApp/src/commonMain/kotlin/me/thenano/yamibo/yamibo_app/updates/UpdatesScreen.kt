@@ -11,6 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import io.github.littlesurvival.dto.value.ThreadId
@@ -47,12 +50,27 @@ private sealed interface UpdatesScreenState {
     data object Loading : UpdatesScreenState
     data class Success(
         val events: List<FavoriteUpdateRepository.UpdateEvent>,
-        val filters: List<FavoriteUpdateRepository.FidFilter>,
-        val categoryFilters: List<FavoriteUpdateRepository.CategoryFilter>,
-        val scopeTargets: List<FavoriteUpdateRepository.ScopeTarget>,
+        val filters: List<FavoriteUpdateRepository.FidFilter> = emptyList(),
+        val categoryFilters: List<FavoriteUpdateRepository.CategoryFilter> = emptyList(),
+        val filtersLoaded: Boolean = false,
+        val filtersLoading: Boolean = false,
+        val scopeTargets: List<FavoriteUpdateRepository.ScopeTarget> = emptyList(),
+        val scopeTargetsLoaded: Boolean = false,
+        val scopeTargetsLoading: Boolean = false,
     ) : UpdatesScreenState
     data class Error(val message: String) : UpdatesScreenState
 }
+
+private data class UpdateDownloadTargetKey(
+    val targetId: Long,
+    val authorId: Long?,
+)
+
+private data class UpdateDownloadHintState(
+    val hasFailedDownload: Boolean = false,
+    val hasUpdateAvailable: Boolean = false,
+    val hasDownloaded: Boolean = false,
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,7 +79,6 @@ fun UpdatesScreen() {
     val favoriteUpdateRepository = LocalFavoriteUpdateRepository.current
     val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
     val downloadRepository = LocalDownloadRepository.current
-    val downloadQueue by downloadRepository.queue.collectAsState()
     val favoriteUpdateRunState by favoriteUpdateRunner.state.collectAsState()
     val favoriteUpdateRefreshKey = favoriteUpdateRunState.refreshKey()
     val appSettingsRepository = LocalAppSettingsRepository.current
@@ -81,6 +98,42 @@ fun UpdatesScreen() {
     var selectedResultFilterKeys by remember { mutableStateOf(setOf(UPDATE_RESULT_FILTER_ALL)) }
 
     val updateContent = state as? UpdatesScreenState.Success
+    val updateDownloadTargetKeys = remember(updateContent?.events) {
+        updateContent?.events
+            ?.filter { it.targetType != LocalFavoriteRepository.FavoriteTargetType.TagManga }
+            ?.map { UpdateDownloadTargetKey(it.targetId, it.authorId) }
+            ?.toSet()
+            .orEmpty()
+    }
+    val updateDownloadHints by remember(downloadRepository, updateDownloadTargetKeys) {
+        downloadRepository.queue
+            .map { queue ->
+                if (updateDownloadTargetKeys.isEmpty()) {
+                    emptyMap()
+                } else {
+                    queue
+                        .asSequence()
+                        .mapNotNull { entry ->
+                            val key = entry.key as? ThreadPageDownloadKey ?: return@mapNotNull null
+                            val targetKey = UpdateDownloadTargetKey(
+                                targetId = key.tid.toLong(),
+                                authorId = key.authorId?.toLong(),
+                            )
+                            if (targetKey !in updateDownloadTargetKeys) return@mapNotNull null
+                            targetKey to entry.status
+                        }
+                        .groupBy({ it.first }, { it.second })
+                        .mapValues { (_, statuses) ->
+                            UpdateDownloadHintState(
+                                hasFailedDownload = statuses.any { it == DownloadStatus.Failed },
+                                hasUpdateAvailable = statuses.any { it == DownloadStatus.UpdateAvailable },
+                                hasDownloaded = statuses.any { it == DownloadStatus.Downloaded },
+                            )
+                        }
+                }
+            }
+            .distinctUntilChanged()
+    }.collectAsState(emptyMap())
     val updateScopeFilterActive = updateContent?.let {
         it.filters.isUpdateScopeFilterRestricted { filter -> filter.enabled } ||
             it.categoryFilters.isUpdateScopeFilterRestricted { filter -> filter.enabled }
@@ -90,20 +143,45 @@ fun UpdatesScreen() {
         val updates = withContext(Dispatchers.Default) {
             UpdatesScreenState.Success(
                 events = favoriteUpdateRepository.getActiveEvents(),
-                filters = favoriteUpdateRepository.getFidFilters(),
-                categoryFilters = favoriteUpdateRepository.getCategoryFilters(),
-                scopeTargets = favoriteUpdateRepository.getScopeTargets(),
             )
         }
         state = updates
     }
 
-    LaunchedEffect(Unit) {
-        loadUpdates()
+    suspend fun loadUpdateFilters() {
+        val current = state as? UpdatesScreenState.Success ?: return
+        if (current.filtersLoaded || current.filtersLoading) return
+        state = current.copy(filtersLoading = true)
+        val filters = withContext(Dispatchers.Default) {
+            favoriteUpdateRepository.getFidFilters() to favoriteUpdateRepository.getCategoryFilters()
+        }
+        val latest = state as? UpdatesScreenState.Success ?: return
+        state = latest.copy(
+            filters = filters.first,
+            categoryFilters = filters.second,
+            filtersLoaded = true,
+            filtersLoading = false,
+        )
+    }
+
+    suspend fun loadScopeTargetsForDialog(current: UpdatesScreenState.Success) {
+        if (current.scopeTargetsLoaded || current.scopeTargetsLoading) return
+        state = current.copy(scopeTargetsLoading = true)
+        val targets = withContext(Dispatchers.Default) {
+            favoriteUpdateRepository.getScopeTargets()
+        }
+        val latest = state as? UpdatesScreenState.Success ?: return
+        state = latest.copy(scopeTargets = targets, scopeTargetsLoaded = true, scopeTargetsLoading = false)
     }
 
     LaunchedEffect(favoriteUpdateRefreshKey) {
         loadUpdates()
+    }
+
+    LaunchedEffect(updateContent?.events) {
+        updateContent ?: return@LaunchedEffect
+        delay(350)
+        loadUpdateFilters()
     }
 
     LaunchedEffect(updateContent?.events) {
@@ -177,7 +255,17 @@ fun UpdatesScreen() {
                     YamiboMainTabIconAction(
                         icon = YamiboIcons.FilterList,
                         contentDescription = i18n("範圍"),
-                        onClick = { showUpdateScopeDialog = true },
+                        onClick = {
+                            val current = state as? UpdatesScreenState.Success
+                            showUpdateScopeDialog = true
+                            if (current != null) {
+                                scope.launch {
+                                    loadUpdateFilters()
+                                    val latest = state as? UpdatesScreenState.Success ?: return@launch
+                                    loadScopeTargetsForDialog(latest)
+                                }
+                            }
+                        },
                         iconSize = 26,
                         tint = if (updateScopeFilterActive) colors.orangeAccent else colors.textOnBackground,
                     )
@@ -297,23 +385,19 @@ fun UpdatesScreen() {
                                 }
                             } else {
                                 items(filteredUpdateEvents, key = { it.id }) { event ->
-                                    val threadDownloadEntries = downloadQueue.filter {
-                                        val key = it.key as? ThreadPageDownloadKey ?: return@filter false
-                                        key.tid.toLong() == event.targetId && key.authorId?.toLong() == event.authorId
-                                    }
-                                    val hasFailedDownload = threadDownloadEntries.any { it.status == DownloadStatus.Failed }
-                                    val hasUpdateAvailable = threadDownloadEntries.any { it.status == DownloadStatus.UpdateAvailable }
-                                    val hasDownloaded = threadDownloadEntries.any { it.status == DownloadStatus.Downloaded }
+                                    val downloadHintState = updateDownloadHints[
+                                        UpdateDownloadTargetKey(event.targetId, event.authorId)
+                                    ]
                                     FavoriteUpdateCard(
                                         event = event,
                                         isSelected = selectedEventIds.contains(event.id),
                                         downloadHint = when {
-                                            hasFailedDownload -> i18n("下載狀態需處理")
-                                            hasUpdateAvailable -> i18n("離線頁可刷新")
-                                            hasDownloaded -> i18n("已下載")
+                                            downloadHintState?.hasFailedDownload == true -> i18n("下載狀態需處理")
+                                            downloadHintState?.hasUpdateAvailable == true -> i18n("離線頁可刷新")
+                                            downloadHintState?.hasDownloaded == true -> i18n("已下載")
                                             else -> null
                                         },
-                                        downloadHintIsError = hasFailedDownload,
+                                        downloadHintIsError = downloadHintState?.hasFailedDownload == true,
                                         onClick = {
                                             if (isSelectMode) {
                                                 selectedEventIds = if (event.id in selectedEventIds) {
@@ -382,34 +466,53 @@ fun UpdatesScreen() {
     }
 
     if (showUpdateScopeDialog && updateSuccess != null) {
-        FavoriteUpdateScopeDialog(
-            forumFilters = updateSuccess.filters,
-            categoryFilters = updateSuccess.categoryFilters,
-            scopeTargets = updateSuccess.scopeTargets,
-            onDismiss = { showUpdateScopeDialog = false },
-            onConfirm = { forumChanges, categoryChanges ->
-                val newFilters = updateSuccess.filters.map { filter ->
-                    forumChanges[filter.fid]?.let { filter.copy(enabled = it) } ?: filter
-                }
-                val newCategoryFilters = updateSuccess.categoryFilters.map { filter ->
-                    categoryChanges[filter.categoryId]?.let { filter.copy(enabled = it) } ?: filter
-                }
-                state = updateSuccess.copy(
-                    filters = newFilters,
-                    categoryFilters = newCategoryFilters,
-                )
-                scope.launch {
-                    forumChanges.forEach { (fid, enabled) ->
-                        favoriteUpdateRepository.setFidEnabled(fid, enabled)
+        if (!updateSuccess.filtersLoaded || updateSuccess.filtersLoading ||
+            !updateSuccess.scopeTargetsLoaded || updateSuccess.scopeTargetsLoading
+        ) {
+            LaunchedEffect(showUpdateScopeDialog, updateSuccess) {
+                loadUpdateFilters()
+                val latest = state as? UpdatesScreenState.Success ?: return@LaunchedEffect
+                loadScopeTargetsForDialog(latest)
+            }
+            AlertDialog(
+                onDismissRequest = { showUpdateScopeDialog = false },
+                title = { Text(i18n("範圍")) },
+                text = { Text(i18n("正在載入...")) },
+                confirmButton = { YamiboActionChip(text = i18n("取消"), onClick = { showUpdateScopeDialog = false }) },
+                containerColor = colors.creamSurface,
+                titleContentColor = colors.textStrong,
+                textContentColor = colors.textDark,
+            )
+        } else {
+            FavoriteUpdateScopeDialog(
+                forumFilters = updateSuccess.filters,
+                categoryFilters = updateSuccess.categoryFilters,
+                scopeTargets = updateSuccess.scopeTargets,
+                onDismiss = { showUpdateScopeDialog = false },
+                onConfirm = { forumChanges, categoryChanges ->
+                    val newFilters = updateSuccess.filters.map { filter ->
+                        forumChanges[filter.fid]?.let { filter.copy(enabled = it) } ?: filter
                     }
-                    categoryChanges.forEach { (categoryId, enabled) ->
-                        favoriteUpdateRepository.setCategoryEnabled(categoryId, enabled)
+                    val newCategoryFilters = updateSuccess.categoryFilters.map { filter ->
+                        categoryChanges[filter.categoryId]?.let { filter.copy(enabled = it) } ?: filter
                     }
-                    loadUpdates()
-                    showUpdateScopeDialog = false
-                }
-            },
-        )
+                    state = updateSuccess.copy(
+                        filters = newFilters,
+                        categoryFilters = newCategoryFilters,
+                    )
+                    scope.launch {
+                        forumChanges.forEach { (fid, enabled) ->
+                            favoriteUpdateRepository.setFidEnabled(fid, enabled)
+                        }
+                        categoryChanges.forEach { (categoryId, enabled) ->
+                            favoriteUpdateRepository.setCategoryEnabled(categoryId, enabled)
+                        }
+                        loadUpdates()
+                        showUpdateScopeDialog = false
+                    }
+                },
+            )
+        }
     }
 }
 

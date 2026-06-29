@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.core.YamiboResult
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
@@ -55,7 +57,16 @@ fun ProfilePage(
     val coroutineScope = rememberCoroutineScope()
     val colors = colors
     val snackbarHostState = remember { SnackbarHostState() }
-    val downloadQueue by downloadRepository.queue.collectAsState()
+    val hasDownloadBadge by remember(downloadRepository) {
+        downloadRepository.queue
+            .map { queue ->
+                queue.any {
+                    it.status == DownloadStatus.Failed ||
+                        it.status == DownloadStatus.UpdateAvailable
+                }
+            }
+            .distinctUntilChanged()
+    }.collectAsState(false)
 
     var userInfo by remember { mutableStateOf(authRepository.currentUser()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -307,7 +318,7 @@ fun ProfilePage(
             EntryCard(
                 title = i18n("下載管理"),
                 icon = YamiboIcons.Download,
-                showBadge = downloadQueue.any { it.status == DownloadStatus.Failed || it.status == DownloadStatus.UpdateAvailable },
+                showBadge = hasDownloadBadge,
                 onClick = { navigator.navigate(IDownloadQueueScreen()) }
             )
 

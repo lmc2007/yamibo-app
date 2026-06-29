@@ -240,13 +240,3 @@ private fun tagMangaDownloadLabel(entry: DownloadQueueEntry): String = when {
     entry.status == DownloadStatus.UpdateAvailable -> i18n("可刷新")
     else -> i18n("未下載")
 }
-
-private fun downloadStatusLabel(status: DownloadStatus): String = when (status) {
-    DownloadStatus.NotDownloaded -> i18n("未下載")
-    DownloadStatus.Queued -> i18n("等待中")
-    DownloadStatus.Downloading -> i18n("下載中")
-    DownloadStatus.Downloaded -> i18n("已下載")
-    DownloadStatus.Failed -> i18n("下載失敗")
-    DownloadStatus.Paused -> i18n("已暫停")
-    DownloadStatus.UpdateAvailable -> i18n("可刷新")
-}

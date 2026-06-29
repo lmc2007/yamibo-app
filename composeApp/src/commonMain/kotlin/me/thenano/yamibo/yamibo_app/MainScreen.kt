@@ -3,6 +3,7 @@ package me.thenano.yamibo.yamibo_app
 import YamiboIcons
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -22,9 +23,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.favorite.FavoritePage
 import me.thenano.yamibo.yamibo_app.history.ReadHistoryPage
@@ -36,6 +40,7 @@ import me.thenano.yamibo.yamibo_app.profile.ProfilePage
 import me.thenano.yamibo.yamibo_app.updates.UpdatesPage
 import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class MainTab(val icon: ImageVector) {
     Home(YamiboIcons.Home),
@@ -88,6 +93,9 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         if (initialTab == MainTab.Message) MainTab.Profile else initialTab
     }
     var currentTab by rememberSaveable { mutableStateOf(initialVisibleTab) }
+    var shouldKeepUpdatesTabAlive by rememberSaveable {
+        mutableStateOf(initialVisibleTab == MainTab.Updates)
+    }
     var reTapHistoryToken by remember { mutableIntStateOf(0) }
     var hasNewMessage by rememberSaveable { mutableStateOf(false) }
     val tabStateHolder = rememberSaveableStateHolder()
@@ -116,6 +124,29 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
         navigator.backHandlers.add(handler)
         onDispose { navigator.backHandlers.remove(handler) }
     }
+
+    LaunchedEffect(Unit) {
+        if (!shouldKeepUpdatesTabAlive) {
+            delay(1200.milliseconds)
+            shouldKeepUpdatesTabAlive = true
+        }
+    }
+
+    LaunchedEffect(currentTab) {
+        if (currentTab == MainTab.Updates) {
+            shouldKeepUpdatesTabAlive = true
+        }
+    }
+
+    val updatesTabAlpha by animateFloatAsState(
+        targetValue = if (currentTab == MainTab.Updates) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = if (currentTab == MainTab.Updates) 130 else 70,
+            delayMillis = if (currentTab == MainTab.Updates) 70 else 0,
+            easing = if (currentTab == MainTab.Updates) LinearOutSlowInEasing else FastOutLinearInEasing,
+        ),
+        label = "UpdatesTabFade",
+    )
 
     Scaffold(
         modifier = Modifier.fillMaxSize().navigationBarsPadding(),
@@ -156,8 +187,20 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                     .fillMaxSize()
                     .background(colors.creamBackground)
         ) {
+            if (shouldKeepUpdatesTabAlive) {
+                tabStateHolder.SaveableStateProvider(MainTab.Updates.name) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = updatesTabAlpha }
+                            .zIndex(if (currentTab == MainTab.Updates) 1f else -1f)
+                    ) {
+                        UpdatesPage()
+                    }
+                }
+            }
             AnimatedContent(
-                targetState = currentTab,
+                targetState = currentTab.takeIf { it != MainTab.Updates },
                 transitionSpec = {
                     fadeIn(
                         animationSpec = tween(
@@ -175,6 +218,10 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                 },
                 label = "MainTabFade",
             ) { tab ->
+                if (tab == null) {
+                    Box(modifier = Modifier.fillMaxSize())
+                    return@AnimatedContent
+                }
                 tabStateHolder.SaveableStateProvider(tab.name) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         when (tab) {
@@ -182,7 +229,7 @@ fun MainScreen(initialTab: MainTab = MainTab.Home) {
                                 onNewMessageStatusChange = { hasNewMessage = it },
                             )
                             MainTab.History -> ReadHistoryPage(reTapHistoryToken)
-                            MainTab.Updates -> UpdatesPage()
+                            MainTab.Updates -> Unit
                             MainTab.Message -> MessageCenterScreen(
                                 initialTab = MessageCenterTab.PrivateMessages,
                                 mainTabTopBar = true,

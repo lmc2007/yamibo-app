@@ -16,7 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.SubcomposeAsyncImage
+import coil3.compose.AsyncImage
 import me.thenano.yamibo.yamibo_app.components.feedback.resolvedContentCoverUrl
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
@@ -72,7 +72,7 @@ internal fun FavoriteUpdateCard(
             ) {
                 val coverUrl = resolvedContentCoverUrl(event.targetType, event.targetId, event.coverUrl)
                 if (!coverUrl.isNullOrBlank()) {
-                    SubcomposeAsyncImage(
+                    AsyncImage(
                         model = rememberImageRequest(url = coverUrl),
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)),
