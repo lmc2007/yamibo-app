@@ -446,130 +446,132 @@ fun ReadHistoryPage(reTapToken: Int = 0) {
                 is HistoryState.Error -> ErrorContent(current.message) { scope.launch { loadPage(currentPage) } }
                 is HistoryState.Success -> {
                     val totalPages = ceil(current.totalCount.toDouble() / PAGE_SIZE).toInt()
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
-                    ) {
-                        groupByDate(current.items).forEachIndexed { index, (dateLabel, entries) ->
-                            item(key = "header_$dateLabel") {
-                                Row(
-                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
-                                        .fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = dateLabel,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = colors.textDark.copy(alpha = 0.5f),
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                    if (index == 0 && mode == PageMode.Normal) {
-                                        val filterLabel = selectedHistoryFilterLabel(
-                                            selectedFilters = selectedFilters,
-                                            filterCounts = filterCounts,
-                                            allLabel = allLabel,
+                    key(current.currentPage) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 8.dp, bottom = 8.dp)
+                        ) {
+                            groupByDate(current.items).forEachIndexed { index, (dateLabel, entries) ->
+                                item(key = "header_$dateLabel") {
+                                    Row(
+                                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 4.dp)
+                                            .fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = dateLabel,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = colors.textDark.copy(alpha = 0.5f),
+                                            modifier = Modifier.weight(1f),
                                         )
-                                        YamiboActionChip("$filterPrefix: $filterLabel", onClick = { showFilterDialog = true })
-                                    }
-                                }
-                            }
-                            items(entries, key = { itemKey(it) }) { history ->
-                                when (history) {
-                                    is ThreadReadingHistory -> ThreadHistoryItem(
-                                        history = history,
-                                        pageMode = mode,
-                                        selectedItems = selectedItems,
-                                        onToggleSelection = {
-                                            selectedItems =
-                                                if (history in selectedItems) selectedItems - history else selectedItems + history
-                                        },
-                                        onDelete = {
-                                            scope.launch {
-                                                readHistoryRepo.deleteHistoryBatch(listOf(history))
-                                                loadPage(currentPage)
-                                                snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
-                                            }
-                                        },
-                                        onFavorite = {
-                                            scope.launch {
-                                                toggleFavoriteQuickWithFeedback(
-                                                    threadPayload(
-                                                        history
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        onFavoriteLongPress = {
-                                            scope.launch {
-                                                openFavoriteDialogWithSelection(
-                                                    threadPayload(history)
-                                                )
-                                            }
-                                        },
-                                        favoriteRefreshToken = favoriteRefreshToken,
-                                        navigator = navigator
-                                    )
-                                    is ReadHistoryRepository.TagMangaReadingHistory -> TagHistoryItem(
-                                        history = history,
-                                        pageMode = mode,
-                                        selectedItems = selectedItems,
-                                        onToggleSelection = {
-                                            selectedItems =
-                                                if (history in selectedItems) selectedItems - history else selectedItems + history
-                                        },
-                                        onDelete = {
-                                            scope.launch {
-                                                readHistoryRepo.deleteMangaTagHistory(history.tagId)
-                                                loadPage(currentPage)
-                                                snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
-                                            }
-                                        },
-                                        onFavorite = {
-                                            scope.launch {
-                                                toggleFavoriteQuickWithFeedback(
-                                                    FavoriteTargetPayload.TagManga(
-                                                        tagId = history.tagId,
-                                                        tagName = history.tagName,
-                                                        coverUrl = history.coverUrl
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        onFavoriteLongPress = {
-                                            scope.launch {
-                                                openFavoriteDialogWithSelection(
-                                                    FavoriteTargetPayload.TagManga(
-                                                        tagId = history.tagId,
-                                                        tagName = history.tagName,
-                                                        coverUrl = history.coverUrl
-                                                    )
-                                                )
-                                            }
-                                        },
-                                        favoriteRefreshToken = favoriteRefreshToken,
-                                        navigator = navigator
-                                    )
-                                    else -> {}
-                                }
-                            }
-                        }
-                        if (totalPages > 1) {
-                            item(key = "pagination") {
-                                PageNavigation(
-                                    pageNav = PageNav(
-                                        currentPage = current.currentPage,
-                                        totalPages = totalPages,
-                                        prevUrl = if (current.currentPage > 1) "prev" else null,
-                                        nextUrl = if (current.currentPage < totalPages) "next" else null
-                                    ),
-                                    onPageChange = { page ->
-                                        scope.launch {
-                                            if (mode == PageMode.Search && searchQuery.isNotBlank()) doSearch(searchQuery, page)
-                                            else loadPage(page)
+                                        if (index == 0 && mode == PageMode.Normal) {
+                                            val filterLabel = selectedHistoryFilterLabel(
+                                                selectedFilters = selectedFilters,
+                                                filterCounts = filterCounts,
+                                                allLabel = allLabel,
+                                            )
+                                            YamiboActionChip("$filterPrefix: $filterLabel", onClick = { showFilterDialog = true })
                                         }
                                     }
-                                )
+                                }
+                                items(entries, key = { itemKey(it) }) { history ->
+                                    when (history) {
+                                        is ThreadReadingHistory -> ThreadHistoryItem(
+                                            history = history,
+                                            pageMode = mode,
+                                            selectedItems = selectedItems,
+                                            onToggleSelection = {
+                                                selectedItems =
+                                                    if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            },
+                                            onDelete = {
+                                                scope.launch {
+                                                    readHistoryRepo.deleteHistoryBatch(listOf(history))
+                                                    loadPage(currentPage)
+                                                    snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
+                                                }
+                                            },
+                                            onFavorite = {
+                                                scope.launch {
+                                                    toggleFavoriteQuickWithFeedback(
+                                                        threadPayload(
+                                                            history
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onFavoriteLongPress = {
+                                                scope.launch {
+                                                    openFavoriteDialogWithSelection(
+                                                        threadPayload(history)
+                                                    )
+                                                }
+                                            },
+                                            favoriteRefreshToken = favoriteRefreshToken,
+                                            navigator = navigator
+                                        )
+                                        is ReadHistoryRepository.TagMangaReadingHistory -> TagHistoryItem(
+                                            history = history,
+                                            pageMode = mode,
+                                            selectedItems = selectedItems,
+                                            onToggleSelection = {
+                                                selectedItems =
+                                                    if (history in selectedItems) selectedItems - history else selectedItems + history
+                                            },
+                                            onDelete = {
+                                                scope.launch {
+                                                    readHistoryRepo.deleteMangaTagHistory(history.tagId)
+                                                    loadPage(currentPage)
+                                                    snackbarHostState.showSnackbar(i18n("已刪除這筆紀錄"))
+                                                }
+                                            },
+                                            onFavorite = {
+                                                scope.launch {
+                                                    toggleFavoriteQuickWithFeedback(
+                                                        FavoriteTargetPayload.TagManga(
+                                                            tagId = history.tagId,
+                                                            tagName = history.tagName,
+                                                            coverUrl = history.coverUrl
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            onFavoriteLongPress = {
+                                                scope.launch {
+                                                    openFavoriteDialogWithSelection(
+                                                        FavoriteTargetPayload.TagManga(
+                                                            tagId = history.tagId,
+                                                            tagName = history.tagName,
+                                                            coverUrl = history.coverUrl
+                                                        )
+                                                    )
+                                                }
+                                            },
+                                            favoriteRefreshToken = favoriteRefreshToken,
+                                            navigator = navigator
+                                        )
+                                        else -> {}
+                                    }
+                                }
+                            }
+                            if (totalPages > 1) {
+                                item(key = "pagination") {
+                                    PageNavigation(
+                                        pageNav = PageNav(
+                                            currentPage = current.currentPage,
+                                            totalPages = totalPages,
+                                            prevUrl = if (current.currentPage > 1) "prev" else null,
+                                            nextUrl = if (current.currentPage < totalPages) "next" else null
+                                        ),
+                                        onPageChange = { page ->
+                                            scope.launch {
+                                                if (mode == PageMode.Search && searchQuery.isNotBlank()) doSearch(searchQuery, page)
+                                                else loadPage(page)
+                                            }
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
