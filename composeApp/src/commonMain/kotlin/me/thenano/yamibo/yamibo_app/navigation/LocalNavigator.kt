@@ -51,12 +51,19 @@ class ComposableNavigator private constructor(
     fun navigate(navigatable: Navigatable) {
         if (stack.isNotEmpty() && stack.last().id == navigatable.id) return
 
+        removeExistingScreen(navigatable.id)
         lastAction = NavAction.Push
         stack.add(navigatable)
         snapshotStack.add(navigatable.toRestoreSnapshotOrNull())
     }
 
     fun replace(navigatable: Navigatable) {
+        val replaceIndex = stack.lastIndex
+        val existingIndex = stack.indexOfFirst { it.id == navigatable.id }
+        if (existingIndex >= 0 && existingIndex != replaceIndex) {
+            removeScreenAt(existingIndex)
+        }
+
         lastAction = NavAction.Replace
         stack[stack.lastIndex] = navigatable
         snapshotStack[snapshotStack.lastIndex] = navigatable.toRestoreSnapshotOrNull()
@@ -129,6 +136,25 @@ class ComposableNavigator private constructor(
         snapshotStack.add(screen.toRestoreSnapshot())
     }
 
+    private fun removeExistingScreen(screenId: String) {
+        val existingIndex = stack.indexOfFirst { it.id == screenId }
+        if (existingIndex < 0) return
+
+        removeScreenAt(existingIndex)
+    }
+
+    private fun removeScreenAt(index: Int) {
+        stack.removeAt(index)
+        snapshotStack.removeAt(index)
+
+        val currentPoppingIndex = poppingIndex.intValue
+        poppingIndex.intValue = when {
+            currentPoppingIndex == index -> -1
+            currentPoppingIndex > index -> currentPoppingIndex - 1
+            else -> currentPoppingIndex
+        }
+    }
+
     companion object {
         fun fromSnapshot(
             snapshot: NavigatorSnapshot,
@@ -146,7 +172,9 @@ class ComposableNavigator private constructor(
 
             val restoredScreens = snapshot.stack.mapNotNull { entry ->
                 RestorableScreenRegistry.decode(entry, logger)
-            }.ifEmpty { listOf(start) }
+            }
+                .dedupeByScreenId()
+                .ifEmpty { listOf(start) }
 
             restoredScreens.forEach(navigator::pushRestoredScreen)
             logger.onRestoreFinished(restoredScreens.size)
@@ -175,6 +203,15 @@ class ComposableNavigator private constructor(
             },
         )
     }
+}
+
+private fun List<RestorableNavigatable>.dedupeByScreenId(): List<RestorableNavigatable> {
+    val result = mutableListOf<RestorableNavigatable>()
+    for (screen in this) {
+        result.removeAll { it.id == screen.id }
+        result += screen
+    }
+    return result
 }
 
 @Composable
