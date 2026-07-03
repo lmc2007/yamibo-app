@@ -29,6 +29,8 @@ abstract class I18nAutoMergeExtension(project: Project) {
         .convention(true)
     val failOnMissingTranslation: Property<Boolean> = project.objects.property(Boolean::class.java)
         .convention(false)
+    val failOnMissingTerm: Property<Boolean> = project.objects.property(Boolean::class.java)
+        .convention(true)
     val apiFunctionName: Property<String> = project.objects.property(String::class.java)
         .convention("i18n")
     val runtimePackage: Property<String> = project.objects.property(String::class.java)

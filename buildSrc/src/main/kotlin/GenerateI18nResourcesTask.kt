@@ -63,6 +63,9 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
     abstract val failOnMissingTranslation: Property<Boolean>
 
     @get:Input
+    abstract val failOnMissingTerm: Property<Boolean>
+
+    @get:Input
     abstract val apiFunctionName: Property<String>
 
     @get:Input
@@ -77,10 +80,10 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         val apiName = settings.apiFunctionName
         require(apiName == "i18n") { "Only lowercase i18n is supported; configured apiFunctionName=$apiName" }
 
-        val calls = scanSources(settings.scanDirs, apiName)
-            .distinctBy { it.source }
-            .sortedBy { it.source }
+        val allCalls = scanSources(settings.scanDirs, apiName)
+        val calls = allCalls.distinctBy { it.source }.sortedBy { it.source }
         val glossaryRows = readGlossary(settings.glossaryFiles)
+        validateMissingTerms(allCalls, glossaryRows, settings.failOnMissingTerm)
 
         val entries = calls.map { call ->
             val key = keyFor(call.source)
@@ -129,6 +132,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
             fallbackToSource = boolProp("fallbackToSource", fallbackToSource.get()),
             failOnPlaceholderMismatch = boolProp("failOnPlaceholderMismatch", failOnPlaceholderMismatch.get()),
             failOnMissingTranslation = boolProp("failOnMissingTranslation", failOnMissingTranslation.get()),
+            failOnMissingTerm = boolProp("failOnMissingTerm", failOnMissingTerm.get()),
             apiFunctionName = prop("apiFunctionName") ?: apiFunctionName.get(),
             runtimePackage = prop("runtimePackage") ?: runtimePackage.get(),
             resImportPackage = prop("resImportPackage") ?: resImportPackage.get(),
@@ -390,6 +394,32 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         }
     }
 
+    private fun validateMissingTerms(calls: List<I18nCall>, glossaryRows: List<GlossaryRow>, failMissingTerm: Boolean) {
+        if (!failMissingTerm) return
+
+        val missing = calls
+            .groupBy { it.source }
+            .filterKeys { source -> glossaryRows.none { row -> row.matches(source) } }
+
+        if (missing.isEmpty()) return
+
+        val root = rootProjectDir.get().asFile
+        val message = buildString {
+            appendLine("Missing i18n terms for ${missing.size} source text(s).")
+            appendLine("Every i18n(\"...\") source text must have a matching row in the configured glossary/base translation files.")
+            missing.toSortedMap().forEach { (source, locations) ->
+                appendLine()
+                appendLine("i18n(\"${escapeKotlin(source)}\")")
+                locations.sortedWith(compareBy<I18nCall> { it.file.invariantSeparatorsPath }.thenBy { it.line }.thenBy { it.column })
+                    .forEach { call ->
+                        val path = call.file.relativeTo(root).invariantSeparatorsPath
+                        appendLine("  - $path:${call.line}:${call.column}")
+                    }
+            }
+        }
+        throw GradleException(message)
+    }
+
     private fun parseCsv(text: String): List<List<String>> {
         val rows = mutableListOf<List<String>>()
         val row = mutableListOf<String>()
@@ -464,6 +494,7 @@ abstract class GenerateI18nResourcesTask : DefaultTask() {
         val fallbackToSource: Boolean,
         val failOnPlaceholderMismatch: Boolean,
         val failOnMissingTranslation: Boolean,
+        val failOnMissingTerm: Boolean,
         val apiFunctionName: String,
         val runtimePackage: String,
         val resImportPackage: String,

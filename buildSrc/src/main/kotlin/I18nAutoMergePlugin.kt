@@ -22,6 +22,7 @@ class I18nAutoMergePlugin : Plugin<Project> {
             fallbackToSource.set(extension.fallbackToSource)
             failOnPlaceholderMismatch.set(extension.failOnPlaceholderMismatch)
             failOnMissingTranslation.set(extension.failOnMissingTranslation)
+            failOnMissingTerm.set(extension.failOnMissingTerm)
             apiFunctionName.set(extension.apiFunctionName)
             runtimePackage.set(extension.runtimePackage)
             resImportPackage.set(extension.resImportPackage)

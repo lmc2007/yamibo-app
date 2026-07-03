@@ -1,9 +1,7 @@
 name: Release Android APK
 
 on:
-  push:
-    tags:
-      - "*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -20,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout release tag
+      - name: Checkout source repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -38,7 +36,7 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
-      - name: Validate tag and update manifest
+      - name: Validate update manifest
         id: meta
         shell: bash
         run: |
@@ -48,15 +46,11 @@ jobs:
           import os
           from pathlib import Path
 
-          tag = os.environ["GITHUB_REF_NAME"]
           manifest_path = Path("update/manifest.json")
           manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
           version_code = str(manifest["versionCode"])
           version_name = str(manifest["versionName"])
           channel = str(manifest.get("channel", "stable"))
-
-          if tag != version_code:
-              raise SystemExit(f"Release tag must equal manifest versionCode. tag={tag}, versionCode={version_code}")
 
           changelog = Path("update/changelogs") / f"{version_code}.changelog"
           if not changelog.exists() or not changelog.read_text(encoding="utf-8").strip():
@@ -64,8 +58,8 @@ jobs:
 
           apk_name = f"yamibo-{channel}-v{version_name}.apk"
           release_title = f"{channel}-v{version_name}"
-          release_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/tag/{tag}"
-          github_asset_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{tag}/{apk_name}"
+          release_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/tag/{version_code}"
+          github_asset_url = f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/{version_code}/{apk_name}"
 
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
               out.write(f"version_code={version_code}\n")
@@ -77,6 +71,25 @@ jobs:
               out.write(f"github_asset_url={github_asset_url}\n")
               out.write(f"changelog={changelog.as_posix()}\n")
           PY
+
+      - name: Create release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.version_code }}"
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            tag_commit="$(git rev-list -n 1 "$tag")"
+            head_commit="$(git rev-parse HEAD)"
+            if [ "$tag_commit" != "$head_commit" ]; then
+              echo "Release tag $tag already exists at $tag_commit, but this workflow is running on $head_commit." >&2
+              exit 1
+            fi
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git tag "$tag"
+            git push origin "refs/tags/$tag"
+          fi
 
       - name: Sync and validate stable manifest
         run: ./gradlew syncStableManifest validateUpdateManifest --console=plain
@@ -137,7 +150,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          tag="${{ github.ref_name }}"
+          tag="${{ steps.meta.outputs.version_code }}"
           title="${{ steps.meta.outputs.release_title }}"
           changelog="${{ steps.meta.outputs.changelog }}"
           apk="${{ steps.sign.outputs.apk_path }}"
@@ -199,8 +212,8 @@ jobs:
             git -C "$dir" commit -m "Prepare mirror release tag ${{ steps.meta.outputs.release_title }}"
             git -C "$dir" branch -M main
             git -C "$dir" push --force origin main
-            git -C "$dir" tag -f "${{ github.ref_name }}"
-            git -C "$dir" push --force origin "${{ github.ref_name }}"
+            git -C "$dir" tag -f "${{ steps.meta.outputs.version_code }}"
+            git -C "$dir" push --force origin "${{ steps.meta.outputs.version_code }}"
           }
 
           prepare_mirror_tag "gitee" "git@gitee.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"
@@ -211,7 +224,7 @@ jobs:
         shell: bash
         env:
           GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.meta.outputs.version_code }}
           TITLE: ${{ steps.meta.outputs.release_title }}
           CHANGELOG: ${{ steps.meta.outputs.changelog }}
           APK: ${{ steps.sign.outputs.apk_path }}
@@ -226,7 +239,7 @@ jobs:
         env:
           GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
           GITEA_BASE_URL: ${{ env.GITEA_BASE_URL }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ steps.meta.outputs.version_code }}
           TITLE: ${{ steps.meta.outputs.release_title }}
           CHANGELOG: ${{ steps.meta.outputs.changelog }}
           APK: ${{ steps.sign.outputs.apk_path }}
@@ -319,8 +332,8 @@ jobs:
             git -C "$dir" commit -m "Update release manifest"
             git -C "$dir" branch -M main
             git -C "$dir" push --force origin main
-            git -C "$dir" tag -f "${{ github.ref_name }}"
-            git -C "$dir" push --force origin "${{ github.ref_name }}"
+            git -C "$dir" tag -f "${{ steps.meta.outputs.version_code }}"
+            git -C "$dir" push --force origin "${{ steps.meta.outputs.version_code }}"
           }
 
           push_mirror "gitee" "git@gitee.com:${MIRROR_OWNER}/${MIRROR_REPO}.git"
