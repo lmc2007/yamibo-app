@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -76,7 +77,9 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import coil3.SingletonImageLoader
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.INovelThreadDetailScreen
+import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
 import coil3.compose.LocalPlatformContext
@@ -85,6 +88,7 @@ import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
 import me.thenano.yamibo.yamibo_app.repository.settings.resolveEffectiveReadingMode
 import me.thenano.yamibo.yamibo_app.components.systembars.SystemBarsEffect
+import me.thenano.yamibo.yamibo_app.util.buildImageRequest
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -131,6 +135,7 @@ fun ImagesReaderScreen(
     val downloadQueue by downloadRepository.queue.collectAsState()
     val chapterStateRepository = LocalChapterStateRepository.current
     val platformContext = LocalPlatformContext.current
+    val authRepository = LocalAuthRepository.current
     ReadingTimeTracker()
 
     // Tag specific state
@@ -560,6 +565,10 @@ fun ImagesReaderScreen(
     val offsetXAnim = remember { Animatable(0f) }
     val offsetYAnim = remember { Animatable(0f) }
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
+    var pageDragOffset by remember { mutableFloatStateOf(0f) }
+    var pageDragTarget by remember { mutableStateOf<Int?>(null) }
+    var isPageDragSettling by remember { mutableStateOf(false) }
+    var committedPageOverlay by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(readingMode) {
         if (isScrollMode) {
@@ -571,6 +580,26 @@ fun ImagesReaderScreen(
                 scrollListState.scrollToItem(targetIndex)
             }
         }
+    }
+
+    LaunchedEffect(isScrollMode, actualImageList, currentPage) {
+        if (isScrollMode || actualImageList.isEmpty()) return@LaunchedEffect
+
+        val imageLoader = SingletonImageLoader.get(platformContext)
+        val cookie = authRepository.cookieStore.load().orEmpty()
+        listOf(currentPage - 1, currentPage, currentPage + 1)
+            .filter { it in actualImageList.indices }
+            .distinct()
+            .forEach { index ->
+                imageLoader.enqueue(
+                    buildImageRequest(
+                        context = platformContext,
+                        url = actualImageList[index],
+                        cookie = cookie,
+                        enableCrossfade = false,
+                    )
+                )
+            }
     }
 
     /** Reset zoom with animation */
@@ -613,6 +642,51 @@ fun ImagesReaderScreen(
     fun setReaderPage(page: Int) {
         pageTurnDirection = 0
         currentPage = page
+    }
+
+    fun sameChapterPreviewSide(targetPage: Int): Int {
+        val targetIsNext = targetPage > currentPage
+        return if (isVerticalMode) {
+            if (targetIsNext) 1 else -1
+        } else if (isRtl) {
+            if (targetIsNext) -1 else 1
+        } else {
+            if (targetIsNext) 1 else -1
+        }
+    }
+
+    fun settleSameChapterDrag(targetPage: Int?, shouldCommit: Boolean) {
+        val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
+        if (axisSize <= 0 || targetPage == null || targetPage !in actualImageList.indices) {
+            pageDragOffset = 0f
+            pageDragTarget = null
+            isPageDragSettling = false
+            return
+        }
+
+        scope.launch {
+            isPageDragSettling = true
+            val animation = Animatable(pageDragOffset)
+            if (shouldCommit) {
+                val side = sameChapterPreviewSide(targetPage)
+                animation.animateTo(-side * axisSize.toFloat(), tween(180)) {
+                    pageDragOffset = value
+                }
+                committedPageOverlay = targetPage
+                snapNextTransition = true
+                setReaderPage(targetPage)
+                resetZoom()
+                delay(360.milliseconds)
+            } else {
+                animation.animateTo(0f, tween(180)) {
+                    pageDragOffset = value
+                }
+            }
+            pageDragOffset = 0f
+            pageDragTarget = null
+            committedPageOverlay = null
+            isPageDragSettling = false
+        }
     }
 
     val launchNextChapter = {
@@ -697,7 +771,17 @@ fun ImagesReaderScreen(
         if (showTouchZonePreview) { showTouchZonePreview = false; return }
 
         if (touchZoneLayout != TouchZoneLayout.DISABLED) {
-            when (getTouchAction(touchZoneLayout, xFraction, yFraction)) {
+            val action = getTouchAction(touchZoneLayout, xFraction, yFraction)
+            val readingDirectionAction = if (!isScrollMode && isRtl) {
+                when (action) {
+                    TouchAction.PREV -> TouchAction.NEXT
+                    TouchAction.NEXT -> TouchAction.PREV
+                    else -> action
+                }
+            } else {
+                action
+            }
+            when (readingDirectionAction) {
                 TouchAction.PREV -> {
                     if (isScrollMode) {
                         if (currentPage == minPage() && hasPrevChapter) launchPrevChapter()
@@ -809,35 +893,94 @@ fun ImagesReaderScreen(
                     if (!isScrollMode) {
                         var dragAccX = 0f
                         var dragAccY = 0f
+                        var swipeVelocityTracker = VelocityTracker()
                         detectDragGestures(
-                            onDragStart = { dragAccX = 0f; dragAccY = 0f },
+                            onDragStart = {
+                                dragAccX = 0f
+                                dragAccY = 0f
+                                swipeVelocityTracker = VelocityTracker()
+                                isPageDragSettling = false
+                                pageDragOffset = 0f
+                                pageDragTarget = null
+                            },
                             onDragEnd = {
+                                val sameChapterTarget = pageDragTarget
+                                var handledByPreviewAnimation = false
+                                val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
+                                val velocity = swipeVelocityTracker.calculateVelocity()
+                                val axisDrag = if (isVerticalMode) dragAccY else dragAccX
+                                val axisVelocity = if (isVerticalMode) velocity.y else velocity.x
+                                val dir = if (!isVerticalMode && isRtl) -1 else 1
+                                val effectiveDrag = axisDrag * dir
+                                val effectiveVelocity = axisVelocity * dir
+                                val distanceCommit = axisSize > 0 && abs(effectiveDrag) >= axisSize * 0.4f
+                                val velocityCommit = abs(effectiveVelocity) >= 1200f
+                                val shouldTurnPage = distanceCommit || velocityCommit
+                                val wantsNext = effectiveDrag < 0f || effectiveVelocity < -1200f
+                                val wantsPrev = effectiveDrag > 0f || effectiveVelocity > 1200f
                                 if (scaleAnim.value <= 1.05f) { // Only turn page if not zoomed in
+                                    if (shouldTurnPage && wantsNext) {
+                                        if (sameChapterTarget == currentPage + 1 && sameChapterTarget in actualImageList.indices) {
+                                            handledByPreviewAnimation = true
+                                            settleSameChapterDrag(sameChapterTarget, shouldCommit = true)
+                                        } else if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
+                                        else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
+                                    } else if (shouldTurnPage && wantsPrev) {
+                                        if (sameChapterTarget == currentPage - 1 && sameChapterTarget in actualImageList.indices) {
+                                            handledByPreviewAnimation = true
+                                            settleSameChapterDrag(sameChapterTarget, shouldCommit = true)
+                                        } else if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
+                                        else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
+                                    }
+                                }
+                                if (!handledByPreviewAnimation) {
+                                    if (sameChapterTarget != null) {
+                                        settleSameChapterDrag(sameChapterTarget, shouldCommit = false)
+                                    } else {
+                                        pageDragOffset = 0f
+                                        pageDragTarget = null
+                                    }
+                                }
+                            },
+                            onDragCancel = {
+                                settleSameChapterDrag(pageDragTarget, shouldCommit = false)
+                            }
+                        ) { change, dragAmount ->
+                            if (scaleAnim.value <= 1.05f && !isPageDragSettling) {
+                                swipeVelocityTracker.addPosition(change.uptimeMillis, change.position)
+                                dragAccX += dragAmount.x
+                                dragAccY += dragAmount.y
+                                val target = if (actualImageList.isNotEmpty() && currentPage in actualImageList.indices) {
                                     if (isVerticalMode) {
-                                        if (dragAccY < -80f) {
-                                            if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
-                                            else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
-                                        } else if (dragAccY > 80f) {
-                                            if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
-                                            else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
+                                        when {
+                                            dragAccY < 0f && currentPage < actualImageList.lastIndex -> currentPage + 1
+                                            dragAccY > 0f && currentPage > 0 -> currentPage - 1
+                                            else -> null
                                         }
                                     } else {
                                         val dir = if (isRtl) -1 else 1
                                         val effectiveDrag = dragAccX * dir
-                                        if (effectiveDrag < -80f) {
-                                            if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
-                                            else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
-                                        } else if (effectiveDrag > 80f) {
-                                            if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
-                                            else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
+                                        when {
+                                            effectiveDrag < 0f && currentPage < actualImageList.lastIndex -> currentPage + 1
+                                            effectiveDrag > 0f && currentPage > 0 -> currentPage - 1
+                                            else -> null
                                         }
                                     }
+                                } else {
+                                    null
                                 }
-                            }
-                        ) { change, dragAmount ->
-                            if (scaleAnim.value <= 1.05f) {
-                                dragAccX += dragAmount.x
-                                dragAccY += dragAmount.y
+                                pageDragTarget = target
+                                pageDragOffset = if (target != null) {
+                                    val rawOffset = if (isVerticalMode) dragAccY else dragAccX
+                                    val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
+                                    if (axisSize > 0) {
+                                        rawOffset.coerceIn(-axisSize.toFloat(), axisSize.toFloat())
+                                    } else {
+                                        rawOffset
+                                    }
+                                } else {
+                                    0f
+                                }
                                 change.consume() // Prevent other gestures from seeing this unzoomed drag
                             }
                         }
@@ -1065,88 +1208,152 @@ fun ImagesReaderScreen(
                         }
                 }
             } else {
-                AnimatedContent(
-                    targetState = ImageReaderPageTarget(
-                        threadId = activeTid.value,
-                        page = currentPage,
-                        transitionSerial = pageTransitionSerial,
-                        directionOverride = pageTurnDirection,
-                    ),
-                    transitionSpec = {
-                        val forcedDir = targetState.directionOverride.takeIf { it != 0 }
-                        val dir = forcedDir ?: if (targetState.page > initialState.page) 1 else -1
-
-                        if (snapNextTransition) {
-                            snapNextTransition = false
-                            EnterTransition.None togetherWith ExitTransition.None
-                        } else if (isVerticalMode) {
-                            slideInVertically(tween(300)) { it * dir } togetherWith
-                                slideOutVertically(tween(300)) { -it * dir }
-                        } else {
-                            val dirMul = if (isRtl) -1 else 1
-                            slideInHorizontally(tween(300)) { it * dirMul * dir } togetherWith
-                                slideOutHorizontally(tween(300)) { -it * dirMul * dir }
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                ) { pageTarget ->
-                    when (val page = pageTarget.page) {
-                        -1 -> InterstitialCard(
-                            item = ReaderItem.InterstitialItem(
-                                prevTitle = prevThreadTitle,
-                                nextTitle = activeTitle,
-                                isEnd = !hasPrevChapter,
-                                isPrev = true,
-                                readingMode = readingMode
+                @Composable
+                fun SinglePageContent(
+                    page: Int,
+                    modifier: Modifier = Modifier,
+                    showLoadingPlaceholder: Boolean = true,
+                ) {
+                    Box(modifier = modifier) {
+                        when (page) {
+                            -1 -> InterstitialCard(
+                                item = ReaderItem.InterstitialItem(
+                                    prevTitle = prevThreadTitle,
+                                    nextTitle = activeTitle,
+                                    isEnd = !hasPrevChapter,
+                                    isPrev = true,
+                                    readingMode = readingMode
+                                )
                             )
-                        )
-                        totalContentPages() -> InterstitialCard(
-                            item = ReaderItem.InterstitialItem(
-                                prevTitle = activeTitle,
-                                nextTitle = nextThreadTitle,
-                                isEnd = !hasNextChapter,
-                                isPrev = false,
-                                readingMode = readingMode
+                            totalContentPages() -> InterstitialCard(
+                                item = ReaderItem.InterstitialItem(
+                                    prevTitle = activeTitle,
+                                    nextTitle = nextThreadTitle,
+                                    isEnd = !hasNextChapter,
+                                    isPrev = false,
+                                    readingMode = readingMode
+                                )
                             )
-                        )
-                        else -> {
-                            if (actualImageList.isEmpty()) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    if (isLoadingImages) {
-                                        CircularProgressIndicator(color = YamiboTheme.colors.brownPrimary)
-                                    } else {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                            Icon(
-                                                imageVector = YamiboIcons.Book,
-                                                contentDescription = null,
-                                                tint = Color.White.copy(alpha = 0.5f),
-                                                modifier = Modifier.size(48.dp)
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            Text(text = i18n("沒有找到圖片"), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-                                            Spacer(Modifier.height(16.dp))
-                                            OutlinedButton(
-                                                onClick = { retryTrigger++ },
-                                                colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
-                                            ) {
-                                                Text(i18n("重新載入"))
+                            else -> {
+                                if (actualImageList.isEmpty()) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        if (isLoadingImages) {
+                                            CircularProgressIndicator(color = YamiboTheme.colors.brownPrimary)
+                                        } else {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Icon(
+                                                    imageVector = YamiboIcons.Book,
+                                                    contentDescription = null,
+                                                    tint = Color.White.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(48.dp)
+                                                )
+                                                Spacer(Modifier.height(16.dp))
+                                                Text(text = i18n("沒有找到圖片"), color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
+                                                Spacer(Modifier.height(16.dp))
+                                                OutlinedButton(
+                                                    onClick = { retryTrigger++ },
+                                                    colors = outlinedButtonColors(contentColor = Color.White.copy(alpha = 0.8f))
+                                                ) {
+                                                    Text(i18n("重新載入"))
+                                                }
                                             }
                                         }
                                     }
+                                } else {
+                                    val imageUrl = actualImageList.getOrElse(page) { "" }
+                                    key(page, imageUrl, showLoadingPlaceholder) {
+                                        ImageViewer(
+                                            url = imageUrl,
+                                            contentDescription = i18n("第{}頁", page + 1),
+                                            contentScale = ContentScale.Fit,
+                                            modifier = Modifier.fillMaxSize(),
+                                            fillContainer = true,
+                                            enableContextMenu = false,
+                                            isDarkTheme = true,
+                                            enableCrossfade = false,
+                                            showLoadingPlaceholder = showLoadingPlaceholder,
+                                        )
+                                    }
                                 }
-                            } else {
-                                ImageViewer(
-                                    url = actualImageList.getOrElse(page) { "" },
-                                    contentDescription = i18n("第{}頁", page + 1),
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier.fillMaxSize(),
-                                    fillContainer = true,
-                                    enableContextMenu = false,
-                                    isDarkTheme = true,
-                                    enableCrossfade = false
-                                )
                             }
                         }
+                    }
+                }
+
+                val dragTarget = pageDragTarget
+                val activeDragTarget = dragTarget?.takeIf {
+                    pageDragOffset != 0f &&
+                        currentPage in actualImageList.indices &&
+                        it in actualImageList.indices &&
+                        (it != currentPage || committedPageOverlay == it) &&
+                        containerSize != IntSize.Zero
+                }
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AnimatedContent(
+                        targetState = ImageReaderPageTarget(
+                            threadId = activeTid.value,
+                            page = currentPage,
+                            transitionSerial = pageTransitionSerial,
+                            directionOverride = pageTurnDirection,
+                        ),
+                        transitionSpec = {
+                            val forcedDir = targetState.directionOverride.takeIf { it != 0 }
+                            val dir = forcedDir ?: if (targetState.page > initialState.page) 1 else -1
+
+                            val snapDragCommit = committedPageOverlay != null &&
+                                committedPageOverlay == targetState.page
+                            if (snapDragCommit || snapNextTransition) {
+                                snapNextTransition = false
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else if (isVerticalMode) {
+                                slideInVertically(tween(300)) { it * dir } togetherWith
+                                    slideOutVertically(tween(300)) { -it * dir }
+                            } else {
+                                val dirMul = if (isRtl) -1 else 1
+                                slideInHorizontally(tween(300)) { it * dirMul * dir } togetherWith
+                                    slideOutHorizontally(tween(300)) { -it * dirMul * dir }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .zIndex(0f)
+                            .graphicsLayer {
+                                if (activeDragTarget != null) {
+                                    if (isVerticalMode) {
+                                        translationY = pageDragOffset
+                                    } else {
+                                        translationX = pageDragOffset
+                                    }
+                                }
+                            }
+                    ) { pageTarget ->
+                        SinglePageContent(page = pageTarget.page, modifier = Modifier.fillMaxSize())
+                    }
+
+                    if (activeDragTarget != null) {
+                        val side = if (pageDragOffset < 0f) 1 else -1
+                        SinglePageContent(
+                            page = activeDragTarget,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .zIndex(if (committedPageOverlay == activeDragTarget) 2f else 1f)
+                                .graphicsLayer {
+                                    if (isVerticalMode) {
+                                        translationY = pageDragOffset + side * containerSize.height
+                                    } else {
+                                        translationX = pageDragOffset + side * containerSize.width
+                                    }
+                                },
+                            showLoadingPlaceholder = false,
+                        )
+                    } else if (committedPageOverlay != null && committedPageOverlay == currentPage) {
+                        SinglePageContent(
+                            page = currentPage,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .zIndex(2f),
+                            showLoadingPlaceholder = false,
+                        )
                     }
                 }
             }

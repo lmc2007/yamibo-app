@@ -62,6 +62,7 @@ fun ImageViewer(
     cachedHeightPx: Int? = null,
     placeholderAspectRatio: Float? = null,
     imageVerticalPadding: Dp = 1.dp,
+    showLoadingPlaceholder: Boolean = true,
     onRenderedHeightChanged: ((Int) -> Unit)? = null,
     onRenderedAspectRatioChanged: ((Float) -> Unit)? = null,
 ) {
@@ -167,10 +168,12 @@ fun ImageViewer(
             } else {
                 when (val state = painterState) {
                     is AsyncImagePainter.State.Loading, is AsyncImagePainter.State.Empty -> {
-                        ImageLoadingContent(
-                            reservedHeight = reservedHeight,
-                            onImageRetry = onReload,
-                        )
+                        if (showLoadingPlaceholder) {
+                            ImageLoadingContent(
+                                reservedHeight = reservedHeight,
+                                onImageRetry = onReload,
+                            )
+                        }
                     }
 
                     is AsyncImagePainter.State.Error -> {
