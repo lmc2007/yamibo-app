@@ -1734,6 +1734,12 @@ fun ImagesReaderScreen(
                     }
                 }
             } else null,
+            onMessage = { message ->
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(message)
+                }
+            },
             onDismiss = { showContextMenu = false },
             isBottomSheet = true
         )

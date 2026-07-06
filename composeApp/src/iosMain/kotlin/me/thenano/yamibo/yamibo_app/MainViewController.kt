@@ -21,6 +21,7 @@ import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseCo
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadImageFetcher
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.download.IOSDownloadStorageProvider
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteShareRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
@@ -103,6 +104,12 @@ fun MainViewController() = ComposeUIViewController {
             forumRepository = forumRepository,
         )
     }
+    val favoriteShareRepository = remember {
+        FavoriteShareRepositoryImpl(
+            favoriteRepository = favoriteRepository,
+            rssRepository = rssSearchSubscriptionRepository,
+        )
+    }
     val favoriteUpdateRepository = remember {
         FavoriteUpdateRepositoryImpl(
             db = favoriteSyncDatabase,
@@ -181,6 +188,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalDetailNoteRepository provides detailNoteRepository,
         LocalBookMarkRepository provides bookMarkRepository,
         LocalFavoriteRepository provides favoriteRepository,
+        LocalFavoriteShareRepository provides favoriteShareRepository,
         LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
         LocalFavoriteSyncRepository provides favoriteSyncRepository,
         LocalFavoriteSyncRunner provides favoriteSyncRunner,

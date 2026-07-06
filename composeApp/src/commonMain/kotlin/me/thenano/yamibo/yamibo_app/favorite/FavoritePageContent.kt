@@ -61,6 +61,8 @@ internal fun FavoritePageContent(
     onEnterSearch: () -> Unit,
     onShowFilter: () -> Unit,
     onToggleFavoriteCounts: () -> Unit,
+    onShareFavorites: () -> Unit,
+    onLoadFavorites: () -> Unit,
     onSearchQueryChange: (String) -> Unit,
     onSearchSubmit: () -> Unit,
     onExitSearch: () -> Unit,
@@ -103,6 +105,8 @@ internal fun FavoritePageContent(
                     onCreateCategory = onCreateCategory,
                     onManageCategory = onManageCategory,
                     onSyncFavorites = onSyncFavorites,
+                    onShareFavorites = onShareFavorites,
+                    onLoadFavorites = onLoadFavorites,
                 )
             }
             FavoritePageMode.Search -> {

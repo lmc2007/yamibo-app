@@ -1,7 +1,5 @@
 package me.thenano.yamibo.yamibo_app
 
-import me.thenano.yamibo.yamibo_app.i18n.i18n
-
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -9,44 +7,46 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.addCallback
-import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.runtime.DisposableEffect
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import io.github.littlesurvival.YamiboClient
+import kotlinx.coroutines.delay
 import me.thenano.yamibo.yamibo_app.core.cache.DiskCacheFactory
 import me.thenano.yamibo.yamibo_app.db.DatabaseFactory
-import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
+import me.thenano.yamibo.yamibo_app.download.AndroidDownloadBackgroundController
+import me.thenano.yamibo.yamibo_app.download.AndroidDownloadRuntime
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidAppForegroundTracker
 import me.thenano.yamibo.yamibo_app.favorite.sync.AndroidBackgroundTaskRepository
 import me.thenano.yamibo.yamibo_app.favorite.sync.FavoriteSyncRunner
 import me.thenano.yamibo.yamibo_app.favorite.updates.AndroidFavoriteUpdateScheduler
 import me.thenano.yamibo.yamibo_app.favorite.updates.FavoriteUpdateRunner
+import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.AndroidSignReminderScheduler
+import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
+import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
+import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
+import me.thenano.yamibo.yamibo_app.repository.contentcover.ContentCoverRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.download.AndroidDownloadStorageProvider
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadImageFetcher
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepositoryImpl
-import me.thenano.yamibo.yamibo_app.download.AndroidDownloadBackgroundController
-import me.thenano.yamibo.yamibo_app.download.AndroidDownloadRuntime
-import me.thenano.yamibo.yamibo_app.profile.settings.sign.SignReminderScheduler
-import me.thenano.yamibo.yamibo_app.repository.*
-import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
-import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
+import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteShareRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteSyncRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.favorite.FavoriteUpdateRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.font.AndroidFontPlatform
 import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
-import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.rss.RssSearchSubscriptionRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
@@ -60,7 +60,7 @@ import me.thenano.yamibo.yamibo_app.store.AndroidUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
 import me.thenano.yamibo.yamibo_app.update.AndroidAppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.util.state
-import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     var lastBackTime = 0L
@@ -178,6 +178,12 @@ class MainActivity : ComponentActivity() {
                     forumRepository = forumRepository,
                 )
             }
+            val favoriteShareRepository = remember {
+                FavoriteShareRepositoryImpl(
+                    favoriteRepository = favoriteRepository,
+                    rssRepository = rssSearchSubscriptionRepository,
+                )
+            }
             val favoriteUpdateRepository = remember {
                 FavoriteUpdateRepositoryImpl(
                     db = favoriteSyncDatabase,
@@ -269,6 +275,7 @@ class MainActivity : ComponentActivity() {
                 LocalBookMarkRepository provides bookMarkRepository,
                 LocalChapterStateRepository provides chapterStateRepository,
                 LocalFavoriteRepository provides favoriteRepository,
+                LocalFavoriteShareRepository provides favoriteShareRepository,
                 LocalRemoteFavoriteRepository provides remoteFavoriteRepository,
                 LocalFavoriteSyncRepository provides favoriteSyncRepository,
                 LocalFavoriteSyncRunner provides favoriteSyncRunner,
@@ -296,24 +303,24 @@ class MainActivity : ComponentActivity() {
                 
                 LaunchedEffect(Unit) {
                     if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
-                        delay(1_200)
+                        delay(1_200.milliseconds)
                         diskCacheFactory.clearAllCache()
                     }
                 }
                 LaunchedEffect(favoriteUpdateInterval) {
-                    delay(1_200)
+                    delay(1_200.milliseconds)
                     favoriteUpdateRunner.schedulePeriodicUpdate(favoriteUpdateInterval)
                 }
                 LaunchedEffect(backupInterval) {
-                    delay(1_200)
+                    delay(1_200.milliseconds)
                     backupScheduler.schedule(backupInterval)
                 }
                 LaunchedEffect(signReminderFrequency) {
-                    delay(1_200)
+                    delay(1_200.milliseconds)
                     signReminderScheduler.schedule(signReminderFrequency)
                 }
                 LaunchedEffect(Unit) {
-                    delay(1_200)
+                    delay(1_200.milliseconds)
                     if (
                         android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
                         ContextCompat.checkSelfPermission(

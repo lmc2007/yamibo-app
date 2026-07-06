@@ -26,6 +26,7 @@ import me.thenano.yamibo.yamibo_app.favorite.sync.IFavoriteSyncProgressScreen
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
+import me.thenano.yamibo.yamibo_app.repository.FavoriteShareRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository.*
 import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.FavoriteSortMode
@@ -37,6 +38,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.rss.IRssSearchSubscriptionDeta
 import me.thenano.yamibo.yamibo_app.thread.detail.tag.ITagDetailScreen
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 internal sealed interface FavoritePageState {
     data object Loading : FavoritePageState
@@ -125,6 +127,7 @@ fun FavoritePage() {
     val colors = YamiboTheme.colors
     val appSettingsRepository = LocalAppSettingsRepository.current
     val favoriteRepository = LocalFavoriteRepository.current
+    val favoriteShareRepository = LocalFavoriteShareRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
     val favoriteSyncRunner = LocalFavoriteSyncRunner.current
     val readHistoryRepository = LocalReadHistoryRepository.current
@@ -166,11 +169,77 @@ fun FavoritePage() {
     var showFavoriteCounts by rememberSaveable { mutableStateOf(false) }
     var favoriteCategoryCounts by remember { mutableStateOf<Map<Long, Int>>(emptyMap()) }
     var favoriteForumCounts by remember { mutableStateOf<List<FavoriteForumFilterOption>>(emptyList()) }
+    var showShareExportDialog by remember { mutableStateOf(false) }
+    var showShareExportPreviewDialog by remember { mutableStateOf(false) }
+    var shareFolderOptions by remember { mutableStateOf<List<FavoriteCategory>>(emptyList()) }
+    var shareFolderSelection by remember { mutableStateOf<Set<FavoriteCategory>>(emptySet()) }
+    var pendingExportJson by remember { mutableStateOf<String?>(null) }
+    var pendingExportFileName by remember { mutableStateOf<String?>(null) }
+    var pendingExportFolderCount by remember { mutableStateOf(0) }
+    var pendingExportItemCount by remember { mutableStateOf(0) }
+    var pendingImportJson by remember { mutableStateOf<String?>(null) }
+    var importPreview by remember { mutableStateOf<FavoriteShareRepository.ImportPreview?>(null) }
+    var showImportPreviewDialog by remember { mutableStateOf(false) }
+    var showImportTargetDialog by remember { mutableStateOf(false) }
+    var importTargetSelection by remember { mutableStateOf<Set<FavoriteCategory>>(emptySet()) }
 
     fun showSnackbarMessage(message: String) {
         scope.launch {
             snackbarHostState.currentSnackbarData?.dismiss()
             snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    fun importResultMessage(result: FavoriteShareRepository.ImportResult): String {
+        return i18n(
+            "已載入：新增 {} 項，重用 {} 項，跳過 {} 項",
+            result.createdItemCount,
+            result.reusedItemCount,
+            result.skippedDuplicateCount + result.unsupportedCount + result.invalidCount,
+        )
+    }
+
+    val favoriteShareFileActions = rememberFavoriteShareFileActions(
+        onExported = { fileName -> showSnackbarMessage(i18n("已匯出 {}", fileName)) },
+        onExportFailed = { message -> showSnackbarMessage(message) },
+        onImportPicked = { jsonText ->
+            scope.launch {
+                try {
+                    val preview = withContext(Dispatchers.Default) {
+                        favoriteShareRepository.previewImport(jsonText)
+                    }
+                    pendingImportJson = jsonText
+                    importPreview = preview
+                    showImportPreviewDialog = true
+                } catch (error: IllegalArgumentException) {
+                    showSnackbarMessage(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("收藏分享檔案格式錯誤"))
+                }
+            }
+        },
+        onImportFailed = { message -> showSnackbarMessage(message) },
+    )
+
+    fun exportFolders(categoryIds: Set<Long>) {
+        scope.launch {
+            try {
+                val exportData = withContext(Dispatchers.Default) {
+                    val packageData = favoriteShareRepository.export(
+                        FavoriteShareRepository.ExportSelection(categoryIds = categoryIds),
+                    )
+                    Triple(
+                        favoriteShareRepository.encode(packageData),
+                        packageData.folders.size,
+                        packageData.folders.sumOf { it.items.size },
+                    )
+                }
+                pendingExportJson = exportData.first
+                pendingExportFileName = "yamibo-favorites-${currentTimeMillis()}.json"
+                pendingExportFolderCount = exportData.second
+                pendingExportItemCount = exportData.third
+                showShareExportPreviewDialog = true
+            } catch (error: IllegalArgumentException) {
+                showSnackbarMessage(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("匯出收藏夾失敗"))
+            }
         }
     }
 
@@ -224,6 +293,26 @@ fun FavoritePage() {
             openedCollectionId = null
         }
         state = snapshot
+    }
+
+    fun importFavorites(target: FavoriteShareRepository.ImportTarget) {
+        val jsonText = pendingImportJson ?: return
+        scope.launch {
+            try {
+                val result = withContext(Dispatchers.Default) {
+                    favoriteShareRepository.importFavorites(jsonText, target)
+                }
+                showImportPreviewDialog = false
+                showImportTargetDialog = false
+                pendingImportJson = null
+                importPreview = null
+                importTargetSelection = emptySet()
+                reload()
+                showSnackbarMessage(importResultMessage(result))
+            } catch (error: IllegalArgumentException) {
+                showSnackbarMessage(error.message?.let { i18n(it) }?.takeIf { it.isNotBlank() } ?: i18n("載入收藏夾失敗"))
+            }
+        }
     }
 
     suspend fun loadSelectionIntersection(itemIds: Set<Long>) {
@@ -462,6 +551,22 @@ fun FavoritePage() {
                 onEnterSearch = { searchActive = true },
                 onShowFilter = { showFavoriteFilterDialog = true },
                 onToggleFavoriteCounts = { showFavoriteCounts = !showFavoriteCounts },
+                onShareFavorites = {
+                    scope.launch {
+                        shareFolderOptions = withContext(Dispatchers.Default) {
+                            favoriteRepository.getCategories()
+                        }
+                        if (shareFolderOptions.isEmpty()) {
+                            showSnackbarMessage(i18n("沒有可分享的收藏夾"))
+                        } else {
+                            shareFolderSelection = emptySet()
+                            showShareExportDialog = true
+                        }
+                    }
+                },
+                onLoadFavorites = {
+                    favoriteShareFileActions.pickJson()
+                },
                 onSearchQueryChange = { searchQuery = it },
                 onSearchSubmit = { },
                 onExitSearch = {
@@ -737,6 +842,114 @@ fun FavoritePage() {
                 }
             },
             onSelect = { syncTargetCategoryId = it },
+        )
+    }
+
+    if (showShareExportDialog) {
+        FavoriteShareExportDialog(
+            options = shareFolderOptions,
+            selected = shareFolderSelection,
+            onDismiss = {
+                showShareExportDialog = false
+                shareFolderSelection = emptySet()
+            },
+            onConfirm = { selected ->
+                showShareExportDialog = false
+                shareFolderSelection = selected
+                val categoryIds = selected.mapTo(mutableSetOf()) { it.id }
+                if (categoryIds.isEmpty()) {
+                    showSnackbarMessage(i18n("請選擇要分享的收藏夾"))
+                } else {
+                    exportFolders(categoryIds)
+                }
+            },
+        )
+    }
+
+    if (showShareExportPreviewDialog) {
+        FavoriteShareExportPreviewDialog(
+            folderCount = pendingExportFolderCount,
+            itemCount = pendingExportItemCount,
+            onDismiss = {
+                showShareExportPreviewDialog = false
+                pendingExportJson = null
+                pendingExportFileName = null
+            },
+            onShare = {
+                val jsonText = pendingExportJson ?: return@FavoriteShareExportPreviewDialog
+                val fileName = pendingExportFileName ?: "yamibo-favorites-${currentTimeMillis()}.json"
+                showShareExportPreviewDialog = false
+                pendingExportJson = null
+                pendingExportFileName = null
+                favoriteShareFileActions.shareJson(fileName, jsonText)
+            },
+            onExport = {
+                val jsonText = pendingExportJson ?: return@FavoriteShareExportPreviewDialog
+                val fileName = pendingExportFileName ?: "yamibo-favorites-${currentTimeMillis()}.json"
+                showShareExportPreviewDialog = false
+                pendingExportJson = null
+                pendingExportFileName = null
+                favoriteShareFileActions.exportJson(fileName, jsonText)
+            },
+        )
+    }
+
+    if (showImportPreviewDialog) {
+        val preview = importPreview
+        if (preview != null) {
+        FavoriteShareImportPreviewDialog(
+            preview = preview,
+            onDismiss = {
+                showImportPreviewDialog = false
+                pendingImportJson = null
+                importPreview = null
+            },
+            onCreateFolders = {
+                importFavorites(
+                    FavoriteShareRepository.ImportTarget(
+                        mode = FavoriteShareRepository.ImportMode.CreateFolders,
+                    )
+                )
+            },
+            onAddToExistingFolders = {
+                scope.launch {
+                    shareFolderOptions = withContext(Dispatchers.Default) {
+                        favoriteRepository.getCategories()
+                    }
+                    if (shareFolderOptions.isEmpty()) {
+                        showSnackbarMessage(i18n("沒有可加入的收藏夾"))
+                    } else {
+                        importTargetSelection = emptySet()
+                        showImportTargetDialog = true
+                    }
+                }
+            },
+        )
+        }
+    }
+
+    if (showImportTargetDialog) {
+        FavoriteShareImportTargetDialog(
+            options = shareFolderOptions,
+            selected = importTargetSelection,
+            onDismiss = {
+                showImportTargetDialog = false
+                importTargetSelection = emptySet()
+            },
+            onConfirm = { selected ->
+                importTargetSelection = selected
+                val categoryIds = selected.mapTo(mutableSetOf()) { it.id }
+                if (categoryIds.isEmpty()) {
+                    showSnackbarMessage(i18n("請選擇要加入的收藏夾"))
+                } else {
+                    importFavorites(
+                        FavoriteShareRepository.ImportTarget(
+                            mode = FavoriteShareRepository.ImportMode.AddToExistingFolders,
+                            categoryIds = categoryIds,
+                        )
+                    )
+                }
+            },
         )
     }
 

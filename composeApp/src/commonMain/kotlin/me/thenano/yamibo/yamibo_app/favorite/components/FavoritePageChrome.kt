@@ -58,6 +58,8 @@ fun FavoriteHeaderMenuRow(
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onSyncFavorites: () -> Unit,
+    onShareFavorites: () -> Unit,
+    onLoadFavorites: () -> Unit,
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val colors = YamiboTheme.colors
@@ -82,6 +84,8 @@ fun FavoriteHeaderMenuRow(
             onCreateCategory = onCreateCategory,
             onManageCategory = onManageCategory,
             onSyncFavorites = onSyncFavorites,
+            onShareFavorites = onShareFavorites,
+            onLoadFavorites = onLoadFavorites,
         )
     }
 }
@@ -96,6 +100,8 @@ private fun RowScopeMenuBox(
     onCreateCategory: () -> Unit,
     onManageCategory: () -> Unit,
     onSyncFavorites: () -> Unit,
+    onShareFavorites: () -> Unit,
+    onLoadFavorites: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
     Box {
@@ -159,6 +165,34 @@ private fun RowScopeMenuBox(
                 onClick = {
                     onDismissMenu()
                     onSyncFavorites()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(i18n("分享收藏夾"), color = colors.textStrong) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = YamiboIcons.Share,
+                        contentDescription = null,
+                        tint = colors.brownPrimary,
+                    )
+                },
+                onClick = {
+                    onDismissMenu()
+                    onShareFavorites()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(i18n("載入收藏夾"), color = colors.textStrong) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = YamiboIcons.Download,
+                        contentDescription = null,
+                        tint = colors.brownPrimary,
+                    )
+                },
+                onClick = {
+                    onDismissMenu()
+                    onLoadFavorites()
                 },
             )
         }

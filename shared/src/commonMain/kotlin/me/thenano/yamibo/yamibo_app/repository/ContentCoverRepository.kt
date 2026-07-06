@@ -40,12 +40,3 @@ interface ContentCoverRepository {
 
     suspend fun setDynamicEnabled(key: Key, enabled: Boolean)
 }
-
-fun ContentCoverRepository.TargetType.toStorageValue(): String = name
-
-fun ReadHistoryRepository.ThreadEntryType.toCoverTargetType(): ContentCoverRepository.TargetType =
-    when (this) {
-        ReadHistoryRepository.ThreadEntryType.Normal -> ContentCoverRepository.TargetType.ThreadNormal
-        ReadHistoryRepository.ThreadEntryType.Novel -> ContentCoverRepository.TargetType.ThreadNovel
-    }
-

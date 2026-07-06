@@ -7,10 +7,10 @@ import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.ActivityNotFoundException
 import android.util.Log
 import android.os.Environment
 import android.provider.MediaStore
-import android.widget.Toast
 import androidx.core.content.FileProvider
 import android.graphics.Bitmap
 import coil3.imageLoader
@@ -34,7 +34,33 @@ private fun logImageRequestFailure(result: Any) {
     }
 }
 
-private suspend fun downloadImage(context: Context, url: String, cookie: String, referer: String, fileName: String): File? {
+private data class ImageDownloadResult(
+    val file: File? = null,
+    val errorMessage: String? = null,
+)
+
+private fun detailedDownloadFailure(action: String, error: Throwable?): String {
+    val rawMessage = error?.message.orEmpty()
+    val detail = when {
+        rawMessage.contains("401") || rawMessage.contains("403") ->
+            i18n("HTTP {}，可能是登入狀態或圖片 Referer 已失效", rawMessage.substringAfter("HTTP ").substringBefore(' ').ifBlank { rawMessage })
+        rawMessage.contains("404") ->
+            i18n("HTTP 404，圖片來源不存在或已被移除")
+        rawMessage.isNotBlank() -> rawMessage
+        else -> i18n("圖片請求沒有回傳可用錯誤原因")
+    }
+    return i18n("{}失敗：{}", action, detail)
+}
+
+private fun detailedDownloadFailureFromResult(action: String, result: Any): String {
+    val error = (result as? ErrorResult)?.throwable
+    return detailedDownloadFailure(action, error)
+}
+
+private fun detailedSaveFailure(reason: String): ImageActionResult =
+    ImageActionResult(errorMessage = i18n("儲存圖片失敗：{}", reason))
+
+private suspend fun downloadImage(context: Context, url: String, cookie: String, referer: String, fileName: String): ImageDownloadResult {
     return withContext(Dispatchers.IO) {
         try {
             val request = buildImageRequest(
@@ -58,7 +84,7 @@ private suspend fun downloadImage(context: Context, url: String, cookie: String,
                         val sourceFile = sourcePath.toFile()
                         sourceFile.copyTo(file, overwrite = true)
                         snapshot.close()
-                        return@withContext file
+                        return@withContext ImageDownloadResult(file = file)
                     }
                 }
                 
@@ -72,31 +98,31 @@ private suspend fun downloadImage(context: Context, url: String, cookie: String,
                     FileOutputStream(file).use { 
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
                     }
-                    return@withContext file
+                    return@withContext ImageDownloadResult(file = file)
                 }
             }
             logImageRequestFailure(result)
-            withContext(Dispatchers.Main) { Toast.makeText(context, i18n("下載圖片失敗"), Toast.LENGTH_SHORT).show() }
-            null
+            ImageDownloadResult(errorMessage = detailedDownloadFailureFromResult(i18n("下載圖片"), result))
         } catch (e: Exception) {
             Log.e(ImageActionLogTag, "Image download failed", e)
-            withContext(Dispatchers.Main) { Toast.makeText(context, i18n("下載圖片失敗"), Toast.LENGTH_SHORT).show() }
-            null
+            ImageDownloadResult(errorMessage = detailedDownloadFailure(i18n("下載圖片"), e))
         }
     }
 }
 
-actual suspend fun copyImageToClipboard(context: PlatformContext, url: String, cookie: String, referer: String) {
-    val file = downloadImage(context, url, cookie, referer, "copy_image.jpg") ?: return
+actual suspend fun copyImageToClipboard(context: PlatformContext, url: String, cookie: String, referer: String): ImageActionResult {
+    val download = downloadImage(context, url, cookie, referer, "copy_image.jpg")
+    val file = download.file ?: return ImageActionResult(errorMessage = download.errorMessage)
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     val clip = ClipData.newUri(context.contentResolver, "Image", uri)
     clipboard.setPrimaryClip(clip)
-    withContext(Dispatchers.Main) { Toast.makeText(context, i18n("已複製圖片"), Toast.LENGTH_SHORT).show() }
+    return ImageActionResult(successMessage = i18n("已複製圖片"))
 }
 
-actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie: String, referer: String) {
-    val file = downloadImage(context, url, cookie, referer, "share_image.jpg") ?: return
+actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie: String, referer: String): ImageActionResult {
+    val download = downloadImage(context, url, cookie, referer, "share_image.jpg")
+    val file = download.file ?: return ImageActionResult(errorMessage = download.errorMessage)
     val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
     
     val intent = Intent(Intent.ACTION_SEND).apply {
@@ -108,11 +134,19 @@ actual suspend fun shareImageToApp(context: PlatformContext, url: String, cookie
     val chooser = Intent.createChooser(intent, i18n("分享圖片")).apply {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    context.startActivity(chooser)
+    return try {
+        context.startActivity(chooser)
+        ImageActionResult()
+    } catch (e: ActivityNotFoundException) {
+        ImageActionResult(errorMessage = i18n("分享圖片失敗：找不到可分享圖片的 App"))
+    } catch (e: Exception) {
+        Log.e(ImageActionLogTag, "Sharing image failed", e)
+        ImageActionResult(errorMessage = i18n("分享圖片失敗：{}", e.message ?: i18n("系統無法開啟分享畫面")))
+    }
 }
 
-actual suspend fun saveImageToGallery(context: PlatformContext, url: String, cookie: String, referer: String) {
-    withContext(Dispatchers.IO) {
+actual suspend fun saveImageToGallery(context: PlatformContext, url: String, cookie: String, referer: String): ImageActionResult {
+    return withContext(Dispatchers.IO) {
         try {
             val request = buildImageRequest(
                 context = context,
@@ -134,54 +168,49 @@ actual suspend fun saveImageToGallery(context: PlatformContext, url: String, coo
 
                 val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
                 if (uri != null) {
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    val outputStream = context.contentResolver.openOutputStream(uri)
+                    if (outputStream == null) {
+                        return@withContext detailedSaveFailure(i18n("系統相簿無法開啟輸出串流"))
+                    }
+                    outputStream.use {
                         val diskCacheKey = result.diskCacheKey
                         var handled = false
                         if (diskCacheKey != null) {
                             val snapshot = context.imageLoader.diskCache?.openSnapshot(diskCacheKey)
                             if (snapshot != null) {
                                 val sourceFile = snapshot.data.toFile()
-                                sourceFile.inputStream().use { it.copyTo(outputStream) }
+                                sourceFile.inputStream().use { input -> input.copyTo(it) }
                                 snapshot.close()
                                 handled = true
                             }
                         }
-                        
+
                         if (!handled) {
                             val image = result.image
                             val bitmap = (image as? BitmapImage)?.bitmap
                             if (bitmap != null) {
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream)
+                                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, it)
                                 handled = true
                             }
                         }
-                        
+
                         if (handled) {
-                            withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, i18n("已儲存圖片至相簿"), Toast.LENGTH_SHORT).show()
-                            }
+                            return@withContext ImageActionResult(successMessage = i18n("已儲存圖片至相簿"))
                         } else {
-                            withContext(Dispatchers.Main) { 
-                                Toast.makeText(context, i18n("儲存失敗"), Toast.LENGTH_SHORT).show()
-                            }
+                            return@withContext detailedSaveFailure(i18n("圖片已下載，但無法取得原始檔案或 Bitmap"))
                         }
                     }
                 } else {
-                    withContext(Dispatchers.Main) { 
-                        Toast.makeText(context, i18n("儲存失敗"), Toast.LENGTH_SHORT).show()
-                    }
+                    return@withContext detailedSaveFailure(i18n("系統相簿無法建立檔案"))
                 }
             } else {
                 logImageRequestFailure(result)
-                withContext(Dispatchers.Main) { 
-                    Toast.makeText(context, i18n("下載失敗"), Toast.LENGTH_SHORT).show()
-                }
+                return@withContext ImageActionResult(errorMessage = detailedDownloadFailureFromResult(i18n("下載圖片"), result))
             }
         } catch (e: Exception) {
             Log.e(ImageActionLogTag, "Saving image failed", e)
-            withContext(Dispatchers.Main) { 
-                Toast.makeText(context, i18n("下載失敗"), Toast.LENGTH_SHORT).show()
-            }
+            return@withContext ImageActionResult(errorMessage = i18n("儲存圖片失敗：{}", e.message ?: i18n("系統相簿寫入失敗")))
         }
+        detailedSaveFailure(i18n("未知錯誤"))
     }
 }

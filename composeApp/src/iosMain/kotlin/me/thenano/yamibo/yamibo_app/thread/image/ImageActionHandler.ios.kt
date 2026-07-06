@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.thread.image
 
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import coil3.request.ErrorResult
 import coil3.request.SuccessResult
 import coil3.toBitmap
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -15,13 +16,19 @@ import platform.Foundation.NSData
 import platform.Foundation.dataWithBytes
 import platform.UIKit.*
 import me.thenano.yamibo.yamibo_app.util.buildImageRequest
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+
+private data class ImageBytesResult(
+    val bytes: ByteArray? = null,
+    val errorMessage: String? = null,
+)
 
 private suspend fun downloadImageBytes(
     context: PlatformContext,
     url: String,
     cookie: String,
     referer: String
-): ByteArray? {
+): ImageBytesResult {
     return withContext(Dispatchers.Default) {
         try {
             val imageLoader = SingletonImageLoader.get(context)
@@ -34,7 +41,12 @@ private suspend fun downloadImageBytes(
                 enableCrossfade = false,
             )
 
-            val result = imageLoader.execute(request) as? SuccessResult ?: return@withContext null
+            val result = imageLoader.execute(request)
+            if (result !is SuccessResult) {
+                val detail = (result as? ErrorResult)?.throwable?.message
+                    ?: i18n("圖片請求沒有回傳可用錯誤原因")
+                return@withContext ImageBytesResult(errorMessage = i18n("下載圖片失敗：{}", detail))
+            }
 
             val diskCacheKey = result.diskCacheKey
             if (diskCacheKey != null) {
@@ -43,14 +55,19 @@ private suspend fun downloadImageBytes(
                 if (snapshot != null) {
                     val bytes = diskCache.fileSystem.read(snapshot.data) { readByteArray() }
                     snapshot.close()
-                    return@withContext bytes
+                    return@withContext ImageBytesResult(bytes = bytes)
                 }
             }
 
-            result.image.toPngByteArray()
+            val bytes = result.image.toPngByteArray()
+            if (bytes != null) {
+                ImageBytesResult(bytes = bytes)
+            } else {
+                ImageBytesResult(errorMessage = i18n("下載圖片失敗：圖片已下載但無法轉換成 PNG"))
+            }
         } catch (e: Exception) {
             e.printStackTrace()
-            null
+            ImageBytesResult(errorMessage = i18n("下載圖片失敗：{}", e.message ?: i18n("未知錯誤")))
         }
     }
 }
@@ -88,12 +105,14 @@ actual suspend fun copyImageToClipboard(
     url: String,
     cookie: String,
     referer: String
-) {
-    val bytes = downloadImageBytes(context, url, cookie, referer) ?: return
-    val image = bytes.toUIImage() ?: return
+): ImageActionResult {
+    val result = downloadImageBytes(context, url, cookie, referer)
+    val bytes = result.bytes ?: return ImageActionResult(errorMessage = result.errorMessage)
+    val image = bytes.toUIImage() ?: return ImageActionResult(errorMessage = i18n("複製圖片失敗：圖片資料無法轉換為系統圖片"))
     withContext(Dispatchers.Main) {
         UIPasteboard.generalPasteboard.image = image
     }
+    return ImageActionResult(successMessage = i18n("已複製圖片"))
 }
 
 actual suspend fun shareImageToApp(
@@ -101,15 +120,18 @@ actual suspend fun shareImageToApp(
     url: String,
     cookie: String,
     referer: String
-) {
-    val bytes = downloadImageBytes(context, url, cookie, referer) ?: return
-    val image = bytes.toUIImage() ?: return
+): ImageActionResult {
+    val result = downloadImageBytes(context, url, cookie, referer)
+    val bytes = result.bytes ?: return ImageActionResult(errorMessage = result.errorMessage)
+    val image = bytes.toUIImage() ?: return ImageActionResult(errorMessage = i18n("分享圖片失敗：圖片資料無法轉換為系統圖片"))
     withContext(Dispatchers.Main) {
         val activityViewController = UIActivityViewController(listOf(image), null)
-        val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController ?: return@withContext
+        val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
+            ?: return@withContext
         rootViewController.topMostViewController()
             .presentViewController(activityViewController, animated = true, completion = null)
     }
+    return ImageActionResult()
 }
 
 @OptIn(ExperimentalForeignApi::class)
@@ -118,10 +140,12 @@ actual suspend fun saveImageToGallery(
     url: String,
     cookie: String,
     referer: String
-) {
-    val bytes = downloadImageBytes(context, url, cookie, referer) ?: return
-    val image = bytes.toUIImage() ?: return
+) : ImageActionResult {
+    val result = downloadImageBytes(context, url, cookie, referer)
+    val bytes = result.bytes ?: return ImageActionResult(errorMessage = result.errorMessage)
+    val image = bytes.toUIImage() ?: return ImageActionResult(errorMessage = i18n("儲存圖片失敗：圖片資料無法轉換為系統圖片"))
     withContext(Dispatchers.Main) {
         UIImageWriteToSavedPhotosAlbum(image, null, null, null)
     }
+    return ImageActionResult(successMessage = i18n("已儲存圖片至相簿"))
 }

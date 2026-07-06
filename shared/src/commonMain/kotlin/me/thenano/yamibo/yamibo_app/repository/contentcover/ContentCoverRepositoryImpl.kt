@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
-import me.thenano.yamibo.yamibo_app.repository.toStorageValue
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamiboapp.ContentCover
 
@@ -112,4 +112,12 @@ private fun repairDomainPrefixedLocalCoverUri(url: String): String =
         url.startsWith("https://bbs.yamibo.com/content://") -> url.removePrefix("https://bbs.yamibo.com/")
         url.startsWith("https://bbs.yamibo.com/file://") -> url.removePrefix("https://bbs.yamibo.com/")
         else -> url
+    }
+
+private fun ContentCoverRepository.TargetType.toStorageValue(): String = name
+
+fun ReadHistoryRepository.ThreadEntryType.toCoverTargetType(): ContentCoverRepository.TargetType =
+    when (this) {
+        ReadHistoryRepository.ThreadEntryType.Normal -> ContentCoverRepository.TargetType.ThreadNormal
+        ReadHistoryRepository.ThreadEntryType.Novel -> ContentCoverRepository.TargetType.ThreadNovel
     }

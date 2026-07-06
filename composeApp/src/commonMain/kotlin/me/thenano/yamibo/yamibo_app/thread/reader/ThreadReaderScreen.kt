@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.thread.reader
 
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 
-
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -52,7 +51,6 @@ import me.thenano.yamibo.yamibo_app.components.tracking.ReadingTimeTracker
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
-import me.thenano.yamibo.yamibo_app.repository.toCoverTargetType
 import me.thenano.yamibo.yamibo_app.repository.contentcover.ThreadCoverResolver
 import me.thenano.yamibo.yamibo_app.repository.BookMarkRepository as BookMarkRepository
 import me.thenano.yamibo.yamibo_app.repository.ChapterStateRepository as ChapterStateRepository
@@ -66,6 +64,8 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadLoadingSkeleton
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
+import me.thenano.yamibo.yamibo_app.repository.contentcover.toCoverTargetType
+import me.thenano.yamibo.yamibo_app.thread.image.LocalImageActionMessageListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageDoubleClickListener
 import me.thenano.yamibo.yamibo_app.thread.image.LocalImageSetCatalogCoverLabel
@@ -1723,9 +1723,7 @@ internal fun ThreadReaderScreen(
     val latestPersistCurrentReadingState = rememberUpdatedState<suspend () -> Unit> {
         persistCurrentReadingState()
     }
-    val latestCaptureReadingSnapshot = rememberUpdatedState<
-        () -> Pair<ThreadReadingHistory?, List<ChapterStateRepository.ProgressUpdate>>?
-    >(
+    val latestCaptureReadingSnapshot = rememberUpdatedState(
         newValue = {
             if (!canWriteReadingState()) {
                 null
@@ -2072,6 +2070,12 @@ internal fun ThreadReaderScreen(
             LocalImageSetCoverListener provides ::applySelectedCover,
             LocalImageSetCatalogCoverListener provides if (catalogCoverKey != null) ::applySelectedCatalogCover else null,
             LocalImageSetCatalogCoverLabel provides catalogCoverLabel,
+            LocalImageActionMessageListener provides { message ->
+                scope.launch {
+                    snackbarHostState.currentSnackbarData?.dismiss()
+                    snackbarHostState.showSnackbar(message)
+                }
+            },
         ) {
             Box(
                 modifier = Modifier

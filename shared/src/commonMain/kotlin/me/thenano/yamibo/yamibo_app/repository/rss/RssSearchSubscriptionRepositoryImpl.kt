@@ -15,8 +15,6 @@ import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import me.thenano.yamibo.yamibo_app.Database
 import me.thenano.yamibo.yamibo_app.repository.AuthRepository
@@ -88,6 +86,36 @@ class RssSearchSubscriptionRepositoryImpl(
         )
         val seededPage = normalizeSearchPageForum(searchPage, scopedForumId)
         mergeResults(id, seededPage.threads, now, pageIndex = seededPage.pageNav?.currentPage ?: 1, pageForumId = seededPage.forumId)
+        reloadState()
+        return YamiboResult.Success(id)
+    }
+
+    override suspend fun ensureSubscription(
+        query: String,
+        forumId: ForumId?,
+        forumName: String?,
+    ): YamiboResult<Long> {
+        val keyword = normalizeKeyword(query)
+        if (keyword.isBlank()) return YamiboResult.Failure("搜尋關鍵字不能為空白")
+        findBySearch(keyword, forumId)?.let { return YamiboResult.Success(it.id) }
+        val now = currentTimeMillis()
+        val scopedForumName = forumName ?: forumId?.let { YamiboForum.toForumName(it) }
+        subscriptionQueries.insertSubscription(
+            title = keyword,
+            query = keyword,
+            forumId = forumId?.value?.toLong(),
+            forumName = scopedForumName,
+            enabled = 1,
+            createdAt = now,
+            updatedAt = now,
+            lastRefreshStartedAt = null,
+            lastRefreshFinishedAt = null,
+            lastRefreshStatus = null,
+            lastRefreshMessage = null,
+            lastSearchId = null,
+            lastTotalCount = 0,
+        )
+        val id = subscriptionQueries.lastInsertedId().executeAsOne()
         reloadState()
         return YamiboResult.Success(id)
     }

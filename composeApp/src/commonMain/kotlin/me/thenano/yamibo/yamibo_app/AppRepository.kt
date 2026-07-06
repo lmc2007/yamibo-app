@@ -11,6 +11,7 @@ import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
+import me.thenano.yamibo.yamibo_app.repository.FavoriteShareRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.FontRepository
@@ -87,6 +88,9 @@ val LocalChapterStateRepository =
 
 val LocalFavoriteRepository =
     compositionLocalOf<FavoriteStoreRepositoryType> { error("LocalFavoriteRepository not provided") }
+
+val LocalFavoriteShareRepository =
+    compositionLocalOf<FavoriteShareRepository> { error("LocalFavoriteShareRepository not provided") }
 
 val LocalRemoteFavoriteRepository =
     compositionLocalOf<FavoriteRepository> { error("LocalRemoteFavoriteRepository not provided") }

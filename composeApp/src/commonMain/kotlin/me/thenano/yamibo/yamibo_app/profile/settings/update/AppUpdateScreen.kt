@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,7 +18,6 @@ import me.thenano.yamibo.yamibo_app.AppVersion
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
 import me.thenano.yamibo.yamibo_app.LocalAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboSingleSelectDialog
-import me.thenano.yamibo.yamibo_app.components.controls.YamiboVerticalScrollbar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -27,9 +25,6 @@ import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.appupdate.*
 import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
 import me.thenano.yamibo.yamibo_app.util.state
-import org.jetbrains.compose.resources.painterResource
-import yamibo_app.composeapp.generated.resources.Res
-import yamibo_app.composeapp.generated.resources.logo_about
 
 private const val ShowUpdatePromptPreviewButton = false
 
@@ -150,7 +145,6 @@ internal fun AppUpdateScreen() {
 
 @Composable
 private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
-    val colors = YamiboTheme.colors
     val release = AppUpdateRelease(
         source = AppUpdateSource(
             name = "Preview",
@@ -179,19 +173,6 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
         """.trimIndent(),
     )
     var hasScrolledToBottom by remember { mutableStateOf(false) }
-    val scrollState = rememberScrollState()
-    LaunchedEffect(scrollState) {
-        snapshotFlow {
-            val v = scrollState.value
-            val max = scrollState.maxValue
-            val vp = scrollState.viewportSize
-            vp > 0 && (max == 0 || v >= max)
-        }.collect { reached ->
-            if (reached) {
-                hasScrolledToBottom = true
-            }
-        }
-    }
 
     Dialog(
         onDismissRequest = { if (hasScrolledToBottom) onDismiss() },
@@ -200,110 +181,14 @@ private fun PreviewUpdatePromptDialog(onDismiss: () -> Unit) {
             dismissOnClickOutside = hasScrolledToBottom
         )
     ) {
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(colors.creamSurface)
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Text(
-                    text = i18n("發現新版本"),
-                    color = colors.textOnSurface,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = release.fullVersionName(),
-                    color = colors.textDark.copy(alpha = 0.72f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Image(
-                    painter = painterResource(Res.drawable.logo_about),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .width(270.dp)
-                        .height(76.dp),
-                    contentScale = ContentScale.Fit,
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 220.dp)
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .verticalScroll(scrollState)
-                            .padding(end = 8.dp),
-                    ) {
-                        Text(
-                            text = release.changelogContent(),
-                            color = colors.textDark.copy(alpha = 0.78f),
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    YamiboVerticalScrollbar(
-                        scrollState = scrollState,
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .fillMaxHeight()
-                    )
-                }
-                Button(
-                    onClick = onDismiss,
-                    enabled = hasScrolledToBottom,
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = colors.brownDeep,
-                        contentColor = colors.textOnDeep,
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(i18n("立即更新"), fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        enabled = hasScrolledToBottom,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = colors.creamBackground,
-                            contentColor = colors.textStrong,
-                        ),
-                        border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.6f)),
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text(i18n("手動更新"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        enabled = hasScrolledToBottom,
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = colors.creamBackground,
-                            contentColor = colors.textDark,
-                        ),
-                        border = BorderStroke(1.dp, colors.brownLight.copy(alpha = 0.45f)),
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text(i18n("稍後"), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
+        AppUpdatePromptContent(
+            release = release,
+            hasScrolledToBottom = hasScrolledToBottom,
+            onScrolledToBottomChange = { hasScrolledToBottom = it },
+            onPrimaryClick = onDismiss,
+            onManualClick = onDismiss,
+            onLaterClick = onDismiss,
+        )
     }
 }
 

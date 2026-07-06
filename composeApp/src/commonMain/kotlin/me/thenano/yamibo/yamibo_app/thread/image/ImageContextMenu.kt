@@ -47,6 +47,7 @@ fun ImageContextMenu(
     onSetAsCover: ((String) -> Unit)? = null,
     onSetAsCatalogCover: ((String) -> Unit)? = null,
     catalogCoverLabel: String? = null,
+    onMessage: ((String) -> Unit)? = null,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
     isBottomSheet: Boolean = false
@@ -79,6 +80,7 @@ fun ImageContextMenu(
                         onSetAsCover = onSetAsCover,
                         onSetAsCatalogCover = onSetAsCatalogCover,
                         catalogCoverLabel = catalogCoverLabel,
+                        onMessage = onMessage,
                         onDismiss = onDismiss,
                         isBottomSheet = true
                     )
@@ -106,6 +108,7 @@ fun ImageContextMenu(
                         onSetAsCover = onSetAsCover,
                         onSetAsCatalogCover = onSetAsCatalogCover,
                         catalogCoverLabel = catalogCoverLabel,
+                        onMessage = onMessage,
                         onDismiss = onDismiss,
                         isBottomSheet = true
                     )
@@ -121,6 +124,7 @@ private fun ContextMenuContainer(
     onSetAsCover: ((String) -> Unit)?,
     onSetAsCatalogCover: ((String) -> Unit)?,
     catalogCoverLabel: String?,
+    onMessage: ((String) -> Unit)?,
     onDismiss: () -> Unit,
     isBottomSheet: Boolean = true
 ) {
@@ -132,6 +136,11 @@ private fun ContextMenuContainer(
     val cookie = authRepo.cookieStore.load() ?: ""
     val referer = "https://bbs.yamibo.com/"
 
+    fun handleResult(result: ImageActionResult) {
+        val message = result.errorMessage ?: result.successMessage ?: return
+        onMessage?.invoke(message)
+    }
+
     @Composable
     fun ContextMenuActions() {
         ContextMenuItem(
@@ -139,7 +148,7 @@ private fun ContextMenuContainer(
             label = i18n("複製"),
             onClick = {
                 scope.launch {
-                    copyImageToClipboard(context, imageUrl, cookie, referer)
+                    handleResult(copyImageToClipboard(context, imageUrl, cookie, referer))
                     onDismiss()
                 }
             },
@@ -149,7 +158,7 @@ private fun ContextMenuContainer(
             label = i18n("分享"),
             onClick = {
                 scope.launch {
-                    shareImageToApp(context, imageUrl, cookie, referer)
+                    handleResult(shareImageToApp(context, imageUrl, cookie, referer))
                     onDismiss()
                 }
             },
@@ -159,7 +168,7 @@ private fun ContextMenuContainer(
             label = i18n("儲存"),
             onClick = {
                 scope.launch {
-                    saveImageToGallery(context, imageUrl, cookie, referer)
+                    handleResult(saveImageToGallery(context, imageUrl, cookie, referer))
                     onDismiss()
                 }
             },

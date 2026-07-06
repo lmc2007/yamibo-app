@@ -702,3 +702,45 @@ RSS 漫畫章節,RSS manga chapter,RSS 漫畫章節,RSS 漫画章节
 設為RSS封面,Set as RSS cover,設為RSS封面,设为RSS封面
 已設為標籤封面,Set as tag cover,已設為標籤封面,已设为标签封面
 已設為RSS封面,Set as RSS cover,已設為RSS封面,已设为RSS封面
+{} 個收藏夾，{} 個收藏項目,{} folders and {} favorite items,{} 個收藏夾，{} 個收藏項目,{} 个收藏夹，{} 个收藏项目
+分享哪些收藏夾,Choose folders to share,分享哪些收藏夾,分享哪些收藏夹
+分享收藏夾,Share favorite folders,分享收藏夾,分享收藏夹
+分享檔案,Share file,分享檔案,分享文件
+加入到哪些收藏夾,Choose target folders,加入到哪些收藏夾,加入到哪些收藏夹
+加入既有收藏夾,Add to existing folders,加入既有收藏夾,加入既有收藏夹
+匯出,Export,匯出,导出
+匯出收藏夾失敗,Failed to export favorite folders,匯出收藏夾失敗,导出收藏夹失败
+將建立一個 JSON 收藏分享檔案。,A JSON favorite share file will be created.,將建立一個 JSON 收藏分享檔案。,将建立一个 JSON 收藏分享文件。
+可儲存為檔案，或直接分享給其他 App。,"Save it as a file, or share it directly to another app.",可儲存為檔案，或直接分享給其他 App。,可储存为文件，或直接分享给其他 App。
+儲存檔案,Save file,儲存檔案,储存文件
+找不到可分享檔案的 App,No app is available to share this file,找不到可分享檔案的 App,找不到可分享文件的 App
+另有 {} 個收藏夾,{} more folders,另有 {} 個收藏夾,另有 {} 个收藏夹
+已匯出 {},Exported {},已匯出 {},已导出 {}
+已載入：新增 {} 項，重用 {} 項，跳過 {} 項,"Imported: {} created, {} reused, {} skipped",已載入：新增 {} 項，重用 {} 項，跳過 {} 項,已载入：新增 {} 项，重用 {} 项，跳过 {} 项
+建立新收藏夾,Create new folders,建立新收藏夾,建立新收藏夹
+收藏分享檔案格式錯誤,Favorite share file format is invalid,收藏分享檔案格式錯誤,收藏分享文件格式错误
+沒有可分享的收藏夾,No favorite folders to share,沒有可分享的收藏夾,没有可分享的收藏夹
+沒有可加入的收藏夾,No favorite folders to add to,沒有可加入的收藏夾,没有可加入的收藏夹
+請選擇要分享的收藏夾,Select favorite folders to share,請選擇要分享的收藏夾,请选择要分享的收藏夹
+請選擇要加入的收藏夾,Select favorite folders to add to,請選擇要加入的收藏夾,请选择要加入的收藏夹
+載入收藏夾,Load favorite folders,載入收藏夾,载入收藏夹
+載入收藏夾失敗,Failed to load favorite folders,載入收藏夾失敗,载入收藏夹失败
+重複 {} / 不支援 {} / 無效 {},Duplicates {} / unsupported {} / invalid {},重複 {} / 不支援 {} / 無效 {},重复 {} / 不支持 {} / 无效 {}
+HTTP {}，可能是登入狀態或圖片 Referer 已失效,"HTTP {}; login state or image Referer may be invalid",HTTP {}，可能是登入狀態或圖片 Referer 已失效,HTTP {}，可能是登录状态或图片 Referer 已失效
+HTTP 404，圖片來源不存在或已被移除,"HTTP 404; the image source does not exist or was removed",HTTP 404，圖片來源不存在或已被移除,HTTP 404，图片来源不存在或已被移除
+圖片請求沒有回傳可用錯誤原因,The image request did not return a usable error reason,圖片請求沒有回傳可用錯誤原因,图片请求没有返回可用错误原因
+{}失敗：{},{} failed: {},{}失敗：{},{}失败：{}
+儲存圖片失敗：{},Failed to save image: {},儲存圖片失敗：{},储存图片失败：{}
+圖片已下載，但無法取得原始檔案或 Bitmap,"The image was downloaded, but the original file or bitmap could not be read",圖片已下載，但無法取得原始檔案或 Bitmap,图片已下载，但无法取得原始文件或 Bitmap
+系統相簿無法開啟輸出串流,The system photo album could not open an output stream,系統相簿無法開啟輸出串流,系统相簿无法开启输出串流
+系統相簿無法建立檔案,The system photo album could not create a file,系統相簿無法建立檔案,系统相簿无法建立文件
+分享圖片失敗：找不到可分享圖片的 App,Failed to share image: no app can share this image,分享圖片失敗：找不到可分享圖片的 App,分享图片失败：找不到可分享图片的 App
+分享圖片失敗：{},Failed to share image: {},分享圖片失敗：{},分享图片失败：{}
+系統無法開啟分享畫面,The system could not open the share sheet,系統無法開啟分享畫面,系统无法开启分享画面
+系統相簿寫入失敗,The system photo album write failed,系統相簿寫入失敗,系统相簿写入失败
+未知錯誤,Unknown error,未知錯誤,未知错误
+下載圖片失敗：{},Failed to download image: {},下載圖片失敗：{},下载图片失败：{}
+下載圖片失敗：圖片已下載但無法轉換成 PNG,Failed to download image: the image was downloaded but could not be converted to PNG,下載圖片失敗：圖片已下載但無法轉換成 PNG,下载图片失败：图片已下载但无法转换成 PNG
+複製圖片失敗：圖片資料無法轉換為系統圖片,Failed to copy image: image data could not be converted to a system image,複製圖片失敗：圖片資料無法轉換為系統圖片,复制图片失败：图片资料无法转换为系统图片
+分享圖片失敗：圖片資料無法轉換為系統圖片,Failed to share image: image data could not be converted to a system image,分享圖片失敗：圖片資料無法轉換為系統圖片,分享图片失败：图片资料无法转换为系统图片
+儲存圖片失敗：圖片資料無法轉換為系統圖片,Failed to save image: image data could not be converted to a system image,儲存圖片失敗：圖片資料無法轉換為系統圖片,储存图片失败：图片资料无法转换为系统图片

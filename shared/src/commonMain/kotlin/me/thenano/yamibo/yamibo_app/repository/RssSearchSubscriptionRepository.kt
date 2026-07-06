@@ -1,8 +1,6 @@
 package me.thenano.yamibo.yamibo_app.repository
 
 import io.github.littlesurvival.core.YamiboResult
-import io.github.littlesurvival.dto.model.PageNav
-import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.SearchPage
 import io.github.littlesurvival.dto.page.TagPage
 import io.github.littlesurvival.dto.value.ForumId
@@ -55,6 +53,12 @@ interface RssSearchSubscriptionRepository {
         forumId: ForumId?,
         forumName: String?,
         searchPage: SearchPage,
+    ): YamiboResult<Long>
+
+    suspend fun ensureSubscription(
+        query: String,
+        forumId: ForumId?,
+        forumName: String?,
     ): YamiboResult<Long>
 
     suspend fun findBySearch(query: String, forumId: ForumId?): SubscriptionSummary?
