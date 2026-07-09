@@ -27,9 +27,9 @@ Workflow file:
 
 Trigger:
 
-- Push any tag.
-- The tag name must equal `update/manifest.json` `versionCode`.
-- Example: if `versionCode = 1`, push tag `1`.
+- Run `Release Android APK` manually from the GitHub Actions page.
+- The workflow creates the tag named after `update/manifest.json` `versionCode`.
+- If that tag already exists, it must point to the current commit.
 
 Manual preparation before release:
 
@@ -44,31 +44,32 @@ Manual preparation before release:
 
 Trigger the release:
 
-```powershell
-git tag 1
-git push origin 1
-```
+1. Push the prepared release commit to the source repository.
+2. Open GitHub Actions.
+3. Select `Release Android APK`.
+4. Click `Run workflow`.
 
 Workflow steps:
 
-1. Check out the tag.
-2. Verify that the tag name equals `manifest.versionCode` and that the changelog exists.
-3. Run `syncStableManifest validateUpdateManifest`, requiring the source manifest to remain `isReady=false`.
-4. Build the release APK.
-5. Zipalign, sign, and verify the APK with `mine.keystore`.
-6. Create or update the GitHub Release.
-7. Upload the APK asset.
-8. Calculate the APK `sha256` and `size`.
-9. Upload the same APK to the Gitee and Gitea release assets.
-10. Generate target-specific published update folders in runner temp:
+1. Check out the selected source branch.
+2. Validate the manifest, app version, and matching changelog.
+3. Create and push the `versionCode` release tag, or verify that an existing tag points to the current commit.
+4. Run `syncStableManifest validateUpdateManifest`, requiring the source manifest to remain `isReady=false`.
+5. Build the release APK.
+6. Zipalign, sign, and verify the APK with `mine.keystore`.
+7. Create or update the GitHub Release.
+8. Upload the APK asset.
+9. Calculate the APK `sha256` and `size`.
+10. Upload the same APK to the Gitee and Gitea release assets.
+11. Generate target-specific published update folders in runner temp:
    - `isReady=true`
    - `releaseUrl`
    - APK asset `url`, `sha256`, and `size`
    - `releaseNotes` and `changelogs/{versionCode}.changelog` from the matching source changelog
    - identical `manifest.json` and `stable.json`
-11. Run `validatePublishedUpdateManifest` for each target folder.
-12. Force push the GitHub-targeted `update` folder to the GitHub `update-release` branch.
-13. Force push the Gitee-targeted and Gitea-targeted `update` folders to their mirror repositories.
+12. Run `validatePublishedUpdateManifest` for each target folder.
+13. Force push the GitHub-targeted `update` folder to the GitHub `update-release` branch.
+14. Force push the Gitee-targeted and Gitea-targeted `update` folders to their mirror repositories.
 
 Important asset URL rule:
 
@@ -146,7 +147,7 @@ Purpose:
 
 ## Which Workflow To Use
 
-- Normal release: push a tag and use `Release Android APK`.
+- Normal release: run `Release Android APK` manually from GitHub Actions.
 - Update feed did not sync correctly after a release: run `Sync Update Folder To Mirrors` manually with `use_latest_release_asset=true`.
 - APK assets already exist and only the public feeds should become ready: run `Manual Ready Update Manifests`.
 - A released APK has a problem and app-side update prompts should be paused: run `Sync Update Folder To Mirrors` manually with `use_latest_release_asset=false`.
