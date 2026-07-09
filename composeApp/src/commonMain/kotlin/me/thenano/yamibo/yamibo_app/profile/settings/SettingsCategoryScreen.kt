@@ -616,7 +616,7 @@ private fun StorageContent(snackbarHostState: SnackbarHostState) {
 
     SettingsActionRow(
         title = i18n("立即清除所有緩存"),
-        subtitle = i18n("清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\\n目前緩存大小：{}", cacheSizeText),
+        subtitle = i18n("清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。\n目前緩存大小：{}", cacheSizeText),
         onClick = {
             coroutineScope.launch {
                 diskCacheFactory.clearAllCache()
