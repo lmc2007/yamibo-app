@@ -1,0 +1,32 @@
+upsert:
+INSERT OR REPLACE INTO LocalBookMark(
+    targetType, parentId, targetId, title, bookmarked, read, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+getByTarget:
+SELECT * FROM LocalBookMark
+WHERE targetType = ? AND parentId = ? AND targetId = ?;
+
+getByParent:
+SELECT * FROM LocalBookMark
+WHERE targetType = ? AND parentId = ?;
+
+getAll:
+SELECT * FROM LocalBookMark
+ORDER BY updatedAt DESC;
+
+deleteByTarget:
+DELETE FROM LocalBookMark
+WHERE targetType = ? AND parentId = ? AND targetId = ?;
+
+deleteIfEmpty:
+DELETE FROM LocalBookMark
+WHERE targetType = ? AND parentId = ? AND targetId = ?
+  AND bookmarked = 0 AND read = 0;
+
+deleteByParent:
+DELETE FROM LocalBookMark
+WHERE targetType = ? AND parentId = ?;
+
+deleteAll:
+DELETE FROM LocalBookMark;

@@ -1,0 +1,9 @@
+CREATE TABLE LocalFavoriteItemCategoryCrossRef (
+    itemId INTEGER NOT NULL,
+    categoryId INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL,
+    PRIMARY KEY (itemId, categoryId)
+);
+
+CREATE INDEX local_favorite_item_category_crossref_category_idx
+ON LocalFavoriteItemCategoryCrossRef(categoryId, itemId);

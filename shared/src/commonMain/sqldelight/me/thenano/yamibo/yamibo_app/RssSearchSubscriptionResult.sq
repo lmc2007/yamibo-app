@@ -1,0 +1,66 @@
+insertResultIgnore:
+INSERT OR IGNORE INTO RssSearchSubscriptionResult(
+    subscriptionId, threadId, title, forumId, attachmentType, hasPoll, url,
+    authorId, authorName, authorAvatarUrl, description, replyCount, viewCount,
+    tag, lastUpdateText, lastUpdateSpecialText, lastUpdateEpoch,
+    firstSeenAt, lastSeenAt, readAt, pageIndex, positionInPage
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateExistingResult:
+UPDATE RssSearchSubscriptionResult
+SET title = ?,
+    forumId = ?,
+    attachmentType = ?,
+    hasPoll = ?,
+    url = ?,
+    authorId = ?,
+    authorName = ?,
+    authorAvatarUrl = ?,
+    description = ?,
+    replyCount = ?,
+    viewCount = ?,
+    tag = ?,
+    lastUpdateText = ?,
+    lastUpdateSpecialText = ?,
+    lastUpdateEpoch = ?,
+    lastSeenAt = ?,
+    pageIndex = ?,
+    positionInPage = ?
+WHERE subscriptionId = ? AND threadId = ?;
+
+getBySubscription:
+SELECT * FROM RssSearchSubscriptionResult
+WHERE subscriptionId = ?
+ORDER BY readAt IS NOT NULL ASC, firstSeenAt DESC, lastSeenAt DESC, threadId DESC
+LIMIT ? OFFSET ?;
+
+getBySubscriptionPage:
+SELECT * FROM RssSearchSubscriptionResult
+WHERE subscriptionId = ? AND pageIndex = ?
+ORDER BY positionInPage ASC, threadId DESC;
+
+countBySubscription:
+SELECT COUNT(*) FROM RssSearchSubscriptionResult
+WHERE subscriptionId = ?;
+
+countUnreadBySubscription:
+SELECT COUNT(*) FROM RssSearchSubscriptionResult
+WHERE subscriptionId = ? AND readAt IS NULL;
+
+countUnreadAll:
+SELECT COUNT(*) FROM RssSearchSubscriptionResult
+WHERE readAt IS NULL;
+
+markRead:
+UPDATE RssSearchSubscriptionResult
+SET readAt = COALESCE(readAt, ?)
+WHERE subscriptionId = ? AND threadId = ?;
+
+markUnread:
+UPDATE RssSearchSubscriptionResult
+SET readAt = NULL
+WHERE subscriptionId = ? AND threadId = ?;
+
+deleteBySubscription:
+DELETE FROM RssSearchSubscriptionResult
+WHERE subscriptionId = ?;

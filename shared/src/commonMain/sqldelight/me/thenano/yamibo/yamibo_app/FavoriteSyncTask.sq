@@ -1,0 +1,46 @@
+insertOrReplace:
+INSERT OR REPLACE INTO FavoriteSyncTask(
+    runId,
+    status,
+    targetCategoryId,
+    startedAt,
+    updatedAt,
+    lastCompletedAt,
+    elapsedDurationMs,
+    phase,
+    currentPage,
+    totalPages,
+    scannedCount,
+    importedCount,
+    uploadedCount,
+    uploadTargetCount,
+    skippedCount,
+    failedCount,
+    logMessage,
+    warningMessage,
+    errorMessage
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByRunId:
+SELECT * FROM FavoriteSyncTask
+WHERE runId = ?
+LIMIT 1;
+
+getLatest:
+SELECT * FROM FavoriteSyncTask
+ORDER BY updatedAt DESC
+LIMIT 1;
+
+getLatestRecoverable:
+SELECT * FROM FavoriteSyncTask
+WHERE status IN ('RUNNING', 'INTERRUPTED', 'FAILED', 'COMPLETED')
+ORDER BY updatedAt DESC
+LIMIT 1;
+
+markRunningTasksInterrupted:
+UPDATE FavoriteSyncTask
+SET status = 'INTERRUPTED',
+    updatedAt = :updatedAt,
+    elapsedDurationMs = :elapsedDurationMs,
+    errorMessage = COALESCE(errorMessage, :message)
+WHERE status = 'RUNNING';

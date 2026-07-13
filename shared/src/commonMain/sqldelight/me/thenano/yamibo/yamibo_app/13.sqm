@@ -1,0 +1,5 @@
+ALTER TABLE ReadingHistory
+ADD COLUMN lastUpdatedTime INTEGER;
+
+ALTER TABLE LocalFavoriteItem
+ADD COLUMN lastUpdatedTime INTEGER;

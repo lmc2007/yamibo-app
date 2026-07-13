@@ -1,0 +1,124 @@
+CREATE TABLE ReadingHistory_new (
+    threadId INTEGER NOT NULL,
+    threadType TEXT NOT NULL DEFAULT 'Normal',
+    threadName TEXT NOT NULL,
+    threadCover TEXT,
+    forumName TEXT,
+    forumId INTEGER,
+    authorId INTEGER NOT NULL DEFAULT 0,
+    page INTEGER NOT NULL DEFAULT 1,
+    postId INTEGER NOT NULL DEFAULT 0,
+    postTitle TEXT NOT NULL DEFAULT '',
+    anchorPostId INTEGER NOT NULL DEFAULT 0,
+    anchorPostRatio REAL,
+    anchorBlockId TEXT,
+    anchorBlockType TEXT,
+    anchorBlockRatio REAL,
+    globalScrollY INTEGER,
+    viewportHeight INTEGER,
+    firstVisibleItemIndex INTEGER,
+    firstVisibleItemOffset INTEGER,
+    lastVisitTime INTEGER NOT NULL,
+    PRIMARY KEY (threadId, threadType, authorId)
+);
+
+INSERT INTO ReadingHistory_new (
+    threadId,
+    threadType,
+    threadName,
+    threadCover,
+    forumName,
+    forumId,
+    authorId,
+    page,
+    postId,
+    postTitle,
+    anchorPostId,
+    anchorPostRatio,
+    anchorBlockId,
+    anchorBlockType,
+    anchorBlockRatio,
+    globalScrollY,
+    viewportHeight,
+    firstVisibleItemIndex,
+    firstVisibleItemOffset,
+    lastVisitTime
+)
+SELECT
+    threadId,
+    CASE
+        WHEN authorId IS NOT NULL AND authorId != 0 THEN 'Novel'
+        ELSE 'Normal'
+    END,
+    threadName,
+    threadCover,
+    forumName,
+    forumId,
+    COALESCE(authorId, 0),
+    page,
+    postId,
+    postTitle,
+    anchorPostId,
+    anchorPostRatio,
+    anchorBlockId,
+    anchorBlockType,
+    anchorBlockRatio,
+    globalScrollY,
+    viewportHeight,
+    firstVisibleItemIndex,
+    firstVisibleItemOffset,
+    lastVisitTime
+FROM ReadingHistory;
+
+DROP TABLE ReadingHistory;
+ALTER TABLE ReadingHistory_new RENAME TO ReadingHistory;
+
+CREATE TABLE LocalFavoriteCategory (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    sortOrder INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+);
+
+CREATE TABLE LocalFavoriteCollection (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    categoryId INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    colorKey TEXT NOT NULL,
+    sortOrder INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+);
+
+CREATE TABLE LocalFavoriteItem (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    targetType TEXT NOT NULL,
+    targetId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    coverUrl TEXT,
+    forumId INTEGER,
+    forumName TEXT,
+    authorId INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL
+);
+
+CREATE TABLE LocalFavoriteItemCollectionCrossRef (
+    itemId INTEGER NOT NULL,
+    collectionId INTEGER NOT NULL,
+    createdAt INTEGER NOT NULL,
+    PRIMARY KEY (itemId, collectionId)
+);
+
+CREATE UNIQUE INDEX local_favorite_item_target_idx
+ON LocalFavoriteItem(targetType, targetId, authorId);
+
+CREATE INDEX local_favorite_category_sort_idx
+ON LocalFavoriteCategory(sortOrder, id);
+
+CREATE INDEX local_favorite_collection_category_sort_idx
+ON LocalFavoriteCollection(categoryId, sortOrder, id);
+
+CREATE INDEX local_favorite_crossref_collection_idx
+ON LocalFavoriteItemCollectionCrossRef(collectionId, itemId);

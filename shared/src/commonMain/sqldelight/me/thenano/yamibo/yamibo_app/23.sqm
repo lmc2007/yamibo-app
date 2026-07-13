@@ -1,0 +1,36 @@
+CREATE TABLE ContentCover(
+    targetType TEXT NOT NULL,
+    targetId INTEGER NOT NULL,
+    automaticCoverUrl TEXT,
+    manualCoverUrl TEXT,
+    dynamicEnabled INTEGER NOT NULL DEFAULT 1,
+    updatedAt INTEGER NOT NULL,
+    PRIMARY KEY(targetType, targetId)
+);
+
+INSERT OR IGNORE INTO ContentCover(targetType, targetId, automaticCoverUrl, dynamicEnabled, updatedAt)
+SELECT 'TagManga', tagId, coverUrl, 1, lastVisitTime
+FROM MangaTagReadingHistory
+WHERE coverUrl IS NOT NULL AND TRIM(coverUrl) != '';
+
+INSERT OR IGNORE INTO ContentCover(targetType, targetId, automaticCoverUrl, dynamicEnabled, updatedAt)
+SELECT CASE threadType WHEN 'Novel' THEN 'ThreadNovel' ELSE 'ThreadNormal' END,
+       threadId, threadCover, 1, lastVisitTime
+FROM ReadingHistory
+WHERE threadCover IS NOT NULL AND TRIM(threadCover) != '';
+
+INSERT OR IGNORE INTO ContentCover(targetType, targetId, automaticCoverUrl, dynamicEnabled, updatedAt)
+SELECT targetType, targetId, coverUrl, 1, lastFavoriteStatusUpdateAt
+FROM LocalFavoriteItem
+WHERE coverUrl IS NOT NULL AND TRIM(coverUrl) != '';
+
+INSERT OR IGNORE INTO ContentCover(targetType, targetId, automaticCoverUrl, dynamicEnabled, updatedAt)
+SELECT targetType, targetId, coverUrl, 1, COALESCE(lastUpdatedAt, lastCheckedAt, 0)
+FROM FavoriteUpdateTrackedTarget
+WHERE coverUrl IS NOT NULL AND TRIM(coverUrl) != '';
+
+INSERT OR IGNORE INTO ContentCover(targetType, targetId, automaticCoverUrl, dynamicEnabled, updatedAt)
+SELECT targetType, targetId, coverUrl, 1, detectedAt
+FROM FavoriteUpdateEvent
+WHERE coverUrl IS NOT NULL AND TRIM(coverUrl) != '';
+

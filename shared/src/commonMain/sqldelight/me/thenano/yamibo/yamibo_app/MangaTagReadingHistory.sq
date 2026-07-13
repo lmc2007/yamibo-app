@@ -1,0 +1,51 @@
+upsert:
+INSERT OR REPLACE INTO MangaTagReadingHistory(
+    tagId, tagName, tagPage,
+    threadId, threadTitle,
+    threadImagePageIndex, threadImageTotalPages,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime, coverUrl
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByTagId:
+SELECT * FROM MangaTagReadingHistory WHERE tagId = ?;
+
+deleteByTagId:
+DELETE FROM MangaTagReadingHistory WHERE tagId = ?;
+
+deleteAll:
+DELETE FROM MangaTagReadingHistory;
+
+getPage:
+SELECT * FROM MangaTagReadingHistory
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+getAll:
+SELECT * FROM MangaTagReadingHistory
+ORDER BY lastVisitTime DESC;
+
+countAll:
+SELECT COUNT(*) FROM MangaTagReadingHistory;
+
+searchByName:
+SELECT * FROM MangaTagReadingHistory
+WHERE tagName LIKE '%' || ? || '%' OR threadTitle LIKE '%' || ? || '%'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByName:
+SELECT COUNT(*) FROM MangaTagReadingHistory
+WHERE tagName LIKE '%' || ? || '%' OR threadTitle LIKE '%' || ? || '%';
+
+deleteByTagIds:
+DELETE FROM MangaTagReadingHistory WHERE tagId IN ?;
+
+trimToLatest:
+DELETE FROM MangaTagReadingHistory
+WHERE tagId IN (
+    SELECT tagId
+    FROM MangaTagReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

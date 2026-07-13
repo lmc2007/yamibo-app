@@ -1,0 +1,53 @@
+insertCollection:
+INSERT INTO LocalFavoriteCollection(
+    categoryId, name, colorKey, sortOrder, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?);
+
+getByCategoryId:
+SELECT * FROM LocalFavoriteCollection
+WHERE categoryId = ?
+ORDER BY sortOrder ASC, id ASC;
+
+getAll:
+SELECT * FROM LocalFavoriteCollection
+ORDER BY categoryId ASC, sortOrder ASC, id ASC;
+
+getById:
+SELECT * FROM LocalFavoriteCollection
+WHERE id = ?;
+
+getFirstByCategoryId:
+SELECT * FROM LocalFavoriteCollection
+WHERE categoryId = ?
+ORDER BY sortOrder ASC, id ASC
+LIMIT 1;
+
+getLatestByCategoryId:
+SELECT * FROM LocalFavoriteCollection
+WHERE categoryId = ?
+ORDER BY id DESC
+LIMIT 1;
+
+countByCategoryId:
+SELECT COUNT(*) FROM LocalFavoriteCollection
+WHERE categoryId = ?;
+
+getMaxSortOrderByCategoryId:
+SELECT MAX(sortOrder) FROM LocalFavoriteCollection
+WHERE categoryId = ?;
+
+updateCollection:
+UPDATE LocalFavoriteCollection
+SET name = ?, colorKey = ?, updatedAt = ?
+WHERE id = ?;
+
+updateCollectionOrder:
+UPDATE LocalFavoriteCollection
+SET sortOrder = ?, updatedAt = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM LocalFavoriteCollection WHERE id = ?;
+
+deleteAll:
+DELETE FROM LocalFavoriteCollection;

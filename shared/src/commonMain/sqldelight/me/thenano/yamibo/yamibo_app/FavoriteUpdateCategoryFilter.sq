@@ -1,0 +1,24 @@
+upsertFilter:
+INSERT OR REPLACE INTO FavoriteUpdateCategoryFilter(
+    categoryId, categoryName, enabled, itemCount, updatedAt
+) VALUES (?, ?, ?, ?, ?);
+
+getAll:
+SELECT * FROM FavoriteUpdateCategoryFilter
+ORDER BY itemCount DESC, categoryName ASC;
+
+getEnabled:
+SELECT * FROM FavoriteUpdateCategoryFilter
+WHERE enabled = 1;
+
+setEnabled:
+UPDATE FavoriteUpdateCategoryFilter
+SET enabled = ?, updatedAt = ?
+WHERE categoryId = ?;
+
+deleteMissing:
+DELETE FROM FavoriteUpdateCategoryFilter
+WHERE categoryId NOT IN ?;
+
+deleteAll:
+DELETE FROM FavoriteUpdateCategoryFilter;

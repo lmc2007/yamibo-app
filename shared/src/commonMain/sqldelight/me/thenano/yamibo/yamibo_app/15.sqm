@@ -1,0 +1,47 @@
+CREATE TABLE LocalFavoriteItem_new (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    targetType TEXT NOT NULL,
+    targetId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    coverUrl TEXT,
+    forumId INTEGER,
+    forumName TEXT,
+    authorId INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    lastFavoriteStatusUpdateAt INTEGER NOT NULL,
+    lastUpdatedTime INTEGER
+);
+
+INSERT INTO LocalFavoriteItem_new (
+    id,
+    targetType,
+    targetId,
+    title,
+    coverUrl,
+    forumId,
+    forumName,
+    authorId,
+    createdAt,
+    lastFavoriteStatusUpdateAt,
+    lastUpdatedTime
+)
+SELECT
+    id,
+    targetType,
+    targetId,
+    title,
+    coverUrl,
+    forumId,
+    forumName,
+    authorId,
+    createdAt,
+    updatedAt,
+    lastUpdatedTime
+FROM LocalFavoriteItem;
+
+DROP INDEX local_favorite_item_target_idx;
+DROP TABLE LocalFavoriteItem;
+ALTER TABLE LocalFavoriteItem_new RENAME TO LocalFavoriteItem;
+
+CREATE UNIQUE INDEX local_favorite_item_target_idx
+ON LocalFavoriteItem(targetType, targetId, authorId);

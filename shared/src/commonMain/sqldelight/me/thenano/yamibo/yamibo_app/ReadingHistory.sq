@@ -1,0 +1,79 @@
+upsert:
+INSERT OR REPLACE INTO ReadingHistory(
+    threadId, threadType, threadName, threadCover, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    historyOrigin,
+    lastVisitTime, lastUpdatedTime
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByThreadKey:
+SELECT * FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ?
+ORDER BY lastVisitTime DESC
+LIMIT 1;
+
+getPage:
+SELECT * FROM ReadingHistory
+WHERE historyOrigin = 'Direct'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+getAll:
+SELECT * FROM ReadingHistory
+WHERE historyOrigin = 'Direct'
+ORDER BY lastVisitTime DESC;
+
+countAll:
+SELECT COUNT(*) FROM ReadingHistory
+WHERE historyOrigin = 'Direct';
+
+getPageByForumId:
+SELECT * FROM ReadingHistory
+WHERE forumId = ? AND historyOrigin = 'Direct'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByForumId:
+SELECT COUNT(*) FROM ReadingHistory
+WHERE forumId = ? AND historyOrigin = 'Direct';
+
+getForumCounts:
+SELECT forumId, forumName, COUNT(*) AS count
+FROM ReadingHistory
+WHERE forumId IS NOT NULL AND historyOrigin = 'Direct'
+GROUP BY forumId, forumName
+ORDER BY count DESC;
+
+deleteByThreadKey:
+DELETE FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ?;
+
+deleteByThreadOrigin:
+DELETE FROM ReadingHistory
+WHERE threadId = ? AND threadType = ? AND authorId = ? AND historyOrigin = ?;
+
+deleteAll:
+DELETE FROM ReadingHistory;
+
+searchByName:
+SELECT * FROM ReadingHistory
+WHERE historyOrigin = 'Direct' AND threadName LIKE '%' || ? || '%'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByName:
+SELECT COUNT(*) FROM ReadingHistory
+WHERE historyOrigin = 'Direct' AND threadName LIKE '%' || ? || '%';
+
+trimToLatest:
+DELETE FROM ReadingHistory
+WHERE (threadId, threadType, authorId, historyOrigin) IN (
+    SELECT threadId, threadType, authorId, historyOrigin
+    FROM ReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

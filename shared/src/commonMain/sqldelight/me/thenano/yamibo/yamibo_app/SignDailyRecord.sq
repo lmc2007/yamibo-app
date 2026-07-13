@@ -1,0 +1,9 @@
+getByDateKey:
+SELECT * FROM SignDailyRecord
+WHERE dateKey = ?
+LIMIT 1;
+
+upsert:
+INSERT OR REPLACE INTO SignDailyRecord(
+    dateKey, isSigned, updatedAt, lastMessage
+) VALUES (?, ?, ?, ?);

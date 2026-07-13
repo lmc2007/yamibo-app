@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS RssSearchPageCache (
+    subscriptionId INTEGER NOT NULL,
+    pageIndex INTEGER NOT NULL,
+    pageJson TEXT NOT NULL,
+    fetchedAt INTEGER NOT NULL,
+    PRIMARY KEY(subscriptionId, pageIndex),
+    FOREIGN KEY(subscriptionId) REFERENCES RssSearchSubscription(id) ON DELETE CASCADE
+);

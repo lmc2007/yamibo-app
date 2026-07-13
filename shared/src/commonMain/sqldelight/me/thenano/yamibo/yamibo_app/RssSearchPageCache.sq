@@ -1,0 +1,13 @@
+upsert:
+INSERT OR REPLACE INTO RssSearchPageCache(
+    subscriptionId, pageIndex, pageJson, fetchedAt
+) VALUES (?, ?, ?, ?);
+
+getByPage:
+SELECT * FROM RssSearchPageCache
+WHERE subscriptionId = ? AND pageIndex = ?
+LIMIT 1;
+
+deleteBySubscription:
+DELETE FROM RssSearchPageCache
+WHERE subscriptionId = ?;

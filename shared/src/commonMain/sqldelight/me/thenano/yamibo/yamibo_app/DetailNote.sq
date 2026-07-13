@@ -1,0 +1,19 @@
+getByTarget:
+SELECT * FROM DetailNote
+WHERE targetType = ? AND targetId = ? AND authorId = ?;
+
+upsert:
+INSERT OR REPLACE INTO DetailNote(
+    targetType, targetId, authorId, content, createdAt, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?);
+
+deleteByTarget:
+DELETE FROM DetailNote
+WHERE targetType = ? AND targetId = ? AND authorId = ?;
+
+getAll:
+SELECT * FROM DetailNote
+ORDER BY updatedAt DESC;
+
+deleteAll:
+DELETE FROM DetailNote;

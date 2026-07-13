@@ -1,0 +1,12 @@
+CREATE TABLE MangaTagReadingHistory(
+    tagId INTEGER NOT NULL PRIMARY KEY,
+    tagName TEXT NOT NULL,
+    tagPage INTEGER NOT NULL DEFAULT 1,
+    threadId INTEGER NOT NULL,
+    threadTitle TEXT NOT NULL,
+    threadImagePageIndex INTEGER NOT NULL DEFAULT 0,
+    threadImageTotalPages INTEGER NOT NULL DEFAULT 0,
+    firstVisibleItemIndex INTEGER,
+    firstVisibleItemOffset INTEGER,
+    lastVisitTime INTEGER NOT NULL
+);

@@ -1,0 +1,33 @@
+upsert:
+INSERT OR REPLACE INTO DiskCacheEntry(namespace, cacheKey, createdAt, lastAccessedAt)
+VALUES (?, ?, ?, ?);
+
+get:
+SELECT * FROM DiskCacheEntry WHERE namespace = ? AND cacheKey = ?;
+
+updateAccessTime:
+UPDATE DiskCacheEntry SET lastAccessedAt = ? WHERE namespace = ? AND cacheKey = ?;
+
+delete:
+DELETE FROM DiskCacheEntry WHERE namespace = ? AND cacheKey = ?;
+
+clearNamespace:
+DELETE FROM DiskCacheEntry WHERE namespace = ?;
+
+deleteByPrefix:
+DELETE FROM DiskCacheEntry WHERE namespace = ? AND cacheKey LIKE ?;
+
+getKeysByPrefix:
+SELECT cacheKey FROM DiskCacheEntry WHERE namespace = ? AND cacheKey LIKE ?;
+
+clearAll:
+DELETE FROM DiskCacheEntry;
+
+deleteExpired:
+DELETE FROM DiskCacheEntry WHERE namespace = ? AND createdAt < ?;
+
+getLRUTargets:
+SELECT cacheKey FROM DiskCacheEntry
+WHERE namespace = ?
+ORDER BY lastAccessedAt DESC
+LIMIT -1 OFFSET :maxSize;

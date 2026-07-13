@@ -1,0 +1,67 @@
+CREATE TABLE ReadingHistory_new (
+    threadId INTEGER NOT NULL,
+    threadType TEXT NOT NULL DEFAULT 'Normal',
+    threadName TEXT NOT NULL,
+    threadCover TEXT,
+    forumName TEXT,
+    forumId INTEGER,
+    authorId INTEGER NOT NULL DEFAULT 0,
+    page INTEGER NOT NULL DEFAULT 1,
+    postId INTEGER NOT NULL DEFAULT 0,
+    postTitle TEXT NOT NULL DEFAULT '',
+    anchorPostId INTEGER NOT NULL DEFAULT 0,
+    anchorPostRatio REAL,
+    anchorBlockId TEXT,
+    anchorBlockType TEXT,
+    anchorBlockRatio REAL,
+    globalScrollY INTEGER,
+    viewportHeight INTEGER,
+    firstVisibleItemIndex INTEGER,
+    firstVisibleItemOffset INTEGER,
+    historyOrigin TEXT NOT NULL DEFAULT 'Direct',
+    lastVisitTime INTEGER NOT NULL,
+    lastUpdatedTime INTEGER,
+    PRIMARY KEY (threadId, threadType, authorId, historyOrigin)
+);
+
+INSERT INTO ReadingHistory_new (
+    threadId, threadType, threadName, threadCover, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    historyOrigin,
+    lastVisitTime, lastUpdatedTime
+)
+SELECT
+    threadId, threadType, threadName, threadCover, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    'Direct',
+    lastVisitTime, lastUpdatedTime
+FROM ReadingHistory;
+
+DROP TABLE ReadingHistory;
+ALTER TABLE ReadingHistory_new RENAME TO ReadingHistory;
+
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN anchorPostId INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN anchorPostRatio REAL;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN anchorBlockId TEXT;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN anchorBlockType TEXT;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN anchorBlockRatio REAL;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN viewportHeight INTEGER;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN firstVisibleItemIndex INTEGER;
+ALTER TABLE TagCatalogReadingHistory ADD COLUMN firstVisibleItemOffset INTEGER;
+
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN anchorPostId INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN anchorPostRatio REAL;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN anchorBlockId TEXT;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN anchorBlockType TEXT;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN anchorBlockRatio REAL;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN viewportHeight INTEGER;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN firstVisibleItemIndex INTEGER;
+ALTER TABLE RssCatalogReadingHistory ADD COLUMN firstVisibleItemOffset INTEGER;

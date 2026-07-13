@@ -1,0 +1,22 @@
+upsert:
+INSERT OR REPLACE INTO FavoriteUpdateTrackedTarget(
+    targetType, targetId, authorId, fid, forumName, title, mode, coverUrl,
+    knownLatestPostId, knownLatestAuthorPostId, knownReplyCount, knownPageCount,
+    knownThreadIds, knownFirstThreadId, knownMaxPage, tagPageFingerprints,
+    baselineReady, lastCheckedAt, lastUpdatedAt, lastError, consecutiveFailures
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByTarget:
+SELECT * FROM FavoriteUpdateTrackedTarget
+WHERE targetType = ? AND targetId = ? AND authorId = ?;
+
+getAll:
+SELECT * FROM FavoriteUpdateTrackedTarget;
+
+deleteByTarget:
+DELETE FROM FavoriteUpdateTrackedTarget
+WHERE targetType = ? AND targetId = ? AND authorId = ?;
+
+deleteMissingTargets:
+DELETE FROM FavoriteUpdateTrackedTarget
+WHERE (targetType || ':' || targetId || ':' || IFNULL(authorId, 0)) NOT IN ?;

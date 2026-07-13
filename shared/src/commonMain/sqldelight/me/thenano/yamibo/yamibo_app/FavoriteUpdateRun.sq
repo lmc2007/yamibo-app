@@ -1,0 +1,28 @@
+upsertRun:
+INSERT OR REPLACE INTO FavoriteUpdateRun(
+    runId, status, phase, startedAt, updatedAt, finishedAt, totalCount, completedCount,
+    skippedCount, failedCount, detectedCount, currentItem, logMessage, warningMessage, errorMessage
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getByRunId:
+SELECT * FROM FavoriteUpdateRun
+WHERE runId = ?;
+
+getLatest:
+SELECT * FROM FavoriteUpdateRun
+ORDER BY updatedAt DESC
+LIMIT 1;
+
+getLatestRecoverable:
+SELECT * FROM FavoriteUpdateRun
+WHERE status IN ('RUNNING', 'INTERRUPTED', 'FAILED', 'COMPLETED')
+ORDER BY updatedAt DESC
+LIMIT 1;
+
+markRunningInterrupted:
+UPDATE FavoriteUpdateRun
+SET status = 'INTERRUPTED',
+    phase = 'INTERRUPTED',
+    updatedAt = ?,
+    errorMessage = COALESCE(errorMessage, ?)
+WHERE status = 'RUNNING';

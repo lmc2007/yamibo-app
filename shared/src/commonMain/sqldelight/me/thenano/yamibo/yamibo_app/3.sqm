@@ -1,0 +1,52 @@
+-- 1. Create temporary table with the target schema (including authorId and threadCover)
+CREATE TABLE ReadingHistory_new (
+    threadId       INTEGER NOT NULL PRIMARY KEY,
+    threadName     TEXT NOT NULL,
+    threadCover    TEXT,
+    forumName      TEXT,
+    forumId        INTEGER,
+    authorId       INTEGER,
+    page           INTEGER NOT NULL DEFAULT 1,
+    postId         INTEGER NOT NULL DEFAULT 0,
+    postTitle      TEXT NOT NULL DEFAULT "",
+
+    anchorPostId   INTEGER NOT NULL DEFAULT 0,
+    anchorPostRatio REAL,
+
+    anchorBlockId    TEXT,
+    anchorBlockType  TEXT,
+    anchorBlockRatio REAL,
+
+    globalScrollY      INTEGER,
+    viewportHeight     INTEGER,
+    firstVisibleItemIndex  INTEGER,
+    firstVisibleItemOffset INTEGER,
+
+    lastVisitTime  INTEGER NOT NULL
+);
+
+-- 2. Copy data from old table to new table (map threadAvatar to threadCover)
+INSERT INTO ReadingHistory_new (
+    threadId, threadName, threadCover, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime
+)
+SELECT 
+    threadId, threadName, threadAvatar, forumName, forumId, authorId,
+    page, postId, postTitle,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    globalScrollY, viewportHeight,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime
+FROM ReadingHistory;
+
+-- 3. Drop the old table
+DROP TABLE ReadingHistory;
+
+-- 4. Rename new table to original name
+ALTER TABLE ReadingHistory_new RENAME TO ReadingHistory;

@@ -1,0 +1,24 @@
+upsertFilter:
+INSERT OR REPLACE INTO FavoriteUpdateFidFilter(
+    fid, forumName, enabled, itemCount, updatedAt
+) VALUES (?, ?, ?, ?, ?);
+
+getAll:
+SELECT * FROM FavoriteUpdateFidFilter
+ORDER BY itemCount DESC, forumName ASC;
+
+getEnabled:
+SELECT * FROM FavoriteUpdateFidFilter
+WHERE enabled = 1;
+
+setEnabled:
+UPDATE FavoriteUpdateFidFilter
+SET enabled = ?, updatedAt = ?
+WHERE fid = ?;
+
+deleteMissing:
+DELETE FROM FavoriteUpdateFidFilter
+WHERE fid NOT IN ?;
+
+deleteAll:
+DELETE FROM FavoriteUpdateFidFilter;

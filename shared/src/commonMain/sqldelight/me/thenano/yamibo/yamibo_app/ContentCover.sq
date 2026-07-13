@@ -1,0 +1,8 @@
+getByTarget:
+SELECT * FROM ContentCover
+WHERE targetType = ? AND targetId = ?;
+
+upsert:
+INSERT OR REPLACE INTO ContentCover(
+    targetType, targetId, automaticCoverUrl, manualCoverUrl, dynamicEnabled, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?);

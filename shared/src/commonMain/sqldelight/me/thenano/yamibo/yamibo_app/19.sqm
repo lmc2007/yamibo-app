@@ -1,0 +1,11 @@
+CREATE TABLE LocalBookMark(
+    targetType TEXT NOT NULL,
+    parentId INTEGER NOT NULL,
+    targetId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    bookmarked INTEGER NOT NULL DEFAULT 0,
+    read INTEGER NOT NULL DEFAULT 0,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    PRIMARY KEY(targetType, parentId, targetId)
+);

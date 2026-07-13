@@ -1,0 +1,55 @@
+upsert:
+INSERT OR REPLACE INTO RssSearchReadingHistory(
+    subscriptionId, subscriptionTitle, subscriptionQuery, subscriptionPage,
+    threadId, threadTitle,
+    threadImagePageIndex, threadImageTotalPages,
+    firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime, coverUrl
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getBySubscriptionId:
+SELECT * FROM RssSearchReadingHistory WHERE subscriptionId = ?;
+
+deleteBySubscriptionId:
+DELETE FROM RssSearchReadingHistory WHERE subscriptionId = ?;
+
+deleteAll:
+DELETE FROM RssSearchReadingHistory;
+
+getPage:
+SELECT * FROM RssSearchReadingHistory
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+getAll:
+SELECT * FROM RssSearchReadingHistory
+ORDER BY lastVisitTime DESC;
+
+countAll:
+SELECT COUNT(*) FROM RssSearchReadingHistory;
+
+searchByName:
+SELECT * FROM RssSearchReadingHistory
+WHERE subscriptionTitle LIKE '%' || ? || '%'
+   OR subscriptionQuery LIKE '%' || ? || '%'
+   OR threadTitle LIKE '%' || ? || '%'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByName:
+SELECT COUNT(*) FROM RssSearchReadingHistory
+WHERE subscriptionTitle LIKE '%' || ? || '%'
+   OR subscriptionQuery LIKE '%' || ? || '%'
+   OR threadTitle LIKE '%' || ? || '%';
+
+deleteBySubscriptionIds:
+DELETE FROM RssSearchReadingHistory WHERE subscriptionId IN ?;
+
+trimToLatest:
+DELETE FROM RssSearchReadingHistory
+WHERE subscriptionId IN (
+    SELECT subscriptionId
+    FROM RssSearchReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

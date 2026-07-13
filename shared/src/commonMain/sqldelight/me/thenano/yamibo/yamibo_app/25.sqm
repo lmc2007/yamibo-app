@@ -1,0 +1,17 @@
+ALTER TABLE RssSearchSubscriptionResult ADD COLUMN pageIndex INTEGER;
+ALTER TABLE RssSearchSubscriptionResult ADD COLUMN positionInPage INTEGER;
+
+CREATE TABLE RssSearchReadingHistory(
+    subscriptionId INTEGER NOT NULL PRIMARY KEY,
+    subscriptionTitle TEXT NOT NULL,
+    subscriptionQuery TEXT NOT NULL,
+    subscriptionPage INTEGER NOT NULL,
+    threadId INTEGER NOT NULL,
+    threadTitle TEXT NOT NULL,
+    threadImagePageIndex INTEGER NOT NULL,
+    threadImageTotalPages INTEGER NOT NULL,
+    firstVisibleItemIndex INTEGER,
+    firstVisibleItemOffset INTEGER,
+    lastVisitTime INTEGER NOT NULL,
+    coverUrl TEXT
+);

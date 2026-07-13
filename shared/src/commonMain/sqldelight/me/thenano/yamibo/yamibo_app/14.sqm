@@ -1,0 +1,6 @@
+CREATE TABLE SignDailyRecord (
+    dateKey TEXT NOT NULL PRIMARY KEY,
+    isSigned INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    lastMessage TEXT
+);

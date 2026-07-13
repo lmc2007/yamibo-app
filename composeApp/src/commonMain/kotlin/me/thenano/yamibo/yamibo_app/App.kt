@@ -1,0 +1,556 @@
+package me.thenano.yamibo.yamibo_app
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.compose.setSingletonImageLoaderFactory
+import coil3.memory.MemoryCache
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import io.github.littlesurvival.core.YamiboResult
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import me.thenano.yamibo.yamibo_app.components.font.getFontFamily
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost
+import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import me.thenano.yamibo.yamibo_app.home.HomePageScreen
+import me.thenano.yamibo.yamibo_app.i18n.AppLocaleProvider
+import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator
+import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
+import me.thenano.yamibo.yamibo_app.navigation.NavAction
+import me.thenano.yamibo.yamibo_app.profile.settings.update.AppUpdatePromptContent
+import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
+import me.thenano.yamibo.yamibo_app.repository.AuthRepository
+import me.thenano.yamibo.yamibo_app.repository.SignRepository
+import me.thenano.yamibo.yamibo_app.repository.appupdate.*
+import me.thenano.yamibo.yamibo_app.repository.chineseconversion.ChineseConversionMode
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
+import me.thenano.yamibo.yamibo_app.repository.settings.SignInMode
+import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKey
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+
+internal val showSignWebViewTrigger = mutableStateOf(false)
+
+@Composable
+fun HomeScreenContent(
+    onNewMessageStatusChange: (Boolean) -> Unit = {},
+) {
+    HomePageScreen(onNewMessageStatusChange = onNewMessageStatusChange)
+}
+
+@Composable
+fun App() {
+    val imageLoaderFactory = remember {
+        { context: PlatformContext ->
+            ImageLoader.Builder(context)
+                .memoryCache {
+                    MemoryCache.Builder()
+                        .maxSizePercent(context, 0.35)
+                        .build()
+                }
+                .components {
+                    add(KtorNetworkFetcherFactory())
+                }
+                .build()
+            }
+    }
+    setSingletonImageLoaderFactory(imageLoaderFactory)
+
+    val navigator = LocalNavigator.current
+    val appSettingsRepository = LocalAppSettingsRepository.current
+    val authRepository = LocalAuthRepository.current
+    val signRepository = LocalSignRepository.current
+    val appUpdateRepository = LocalAppUpdateRepository.current
+    val fontRepository = LocalFontRepository.current
+    val appLanguage = appSettingsRepository.language.state()
+    val appFontId = appSettingsRepository.appFontId.state()
+    val appFontFamily = remember(appFontId) { fontRepository.getFontFamily(appFontId) }
+    val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
+    val holder = rememberSaveableStateHolder()
+    val snackbarHostState = remember { SnackbarHostState() }
+    navigator.stateHolder = holder
+    ChineseConversionModeSync()
+
+    val stack = navigator.stack
+    val poppingIdx by navigator.poppingIndex
+    val duration = 250
+    var completedPushTopId by remember { mutableStateOf(stack.lastOrNull()?.id) }
+    var showSignReminder by remember { mutableStateOf(false) }
+    var launchUpdateRelease by remember { mutableStateOf<AppUpdateRelease?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        val threshold = appSettingsRepository.appUpdateLaunchCheckThreshold.getValue()
+        val intervalMillis = threshold.hours?.times(60L * 60L * 1000L) ?: return@LaunchedEffect
+        val now = currentTimeMillis()
+        val lastCheckAt = appSettingsRepository.appUpdateLastCheckAt.getValue().toLongOrNull() ?: 0L
+        if (now - lastCheckAt >= intervalMillis) {
+            val result = appUpdateRepository.checkForUpdate(force = false)
+            if (result is AppUpdateCheckResult.UpdateAvailable) {
+                launchUpdateRelease = result.release
+            }
+        }
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val downloadState by appUpdateRepository.downloadState.collectAsState()
+
+    DisposableEffect(lifecycleOwner, downloadState) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val state = downloadState
+                if (state is AppUpdateDownloadState.PermissionRequired && appUpdateRepository.isInstallPermissionGranted) {
+                    coroutineScope.launch {
+                        appUpdateRepository.downloadAndInstall(state.release)
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    AppLocaleProvider(appLanguage) {
+        val rootTextStyle = LocalTextStyle.current
+        CompositionLocalProvider(
+            LocalTextStyle provides rootTextStyle.copy(fontFamily = appFontFamily),
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = YamiboTheme.colors.creamBackground
+            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                val topIndex = stack.lastIndex
+                val topId = stack.lastOrNull()?.id
+                val renderPreviousForPush =
+                    navigator.lastAction == NavAction.Push &&
+                        topIndex > 0 &&
+                        completedPushTopId != topId
+                stack.forEachIndexed { index, navigatable ->
+                    val isPopping = index == poppingIdx
+                    val isTop = index == stack.lastIndex
+                    val isNewPush =
+                        navigator.lastAction == NavAction.Push &&
+                            isTop &&
+                            !isPopping &&
+                            topIndex > 0 &&
+                            completedPushTopId != navigatable.id
+                    val shouldDraw =
+                        isTop ||
+                            isPopping ||
+                            (poppingIdx >= 0 && index == poppingIdx - 1) ||
+                            (renderPreviousForPush && index == topIndex - 1)
+
+                    key(navigatable.id) {
+                        // New push screens start invisible (false→true), others start visible
+                        val visibleState = remember {
+                            MutableTransitionState(!isNewPush)
+                        }
+
+                        // Drive animation: pop = true→false, otherwise stay/become true
+                        if (isPopping) {
+                            visibleState.targetState = false
+                        } else {
+                            visibleState.targetState = true
+                        }
+
+                        holder.SaveableStateProvider(navigatable.id) {
+                            AnimatedVisibility(
+                                visibleState = visibleState,
+                                enter = slideInHorizontally(
+                                    initialOffsetX = { it },
+                                    animationSpec = tween(duration)
+                                ) + fadeIn(animationSpec = tween(duration)),
+                                exit = slideOutHorizontally(
+                                    targetOffsetX = { it },
+                                    animationSpec = tween(duration)
+                                ) + fadeOut(animationSpec = tween(duration)),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .drawOnlyWhen(shouldDraw)
+                                    .blockPointerPassthrough(isTop || isPopping)
+                                    .zIndex(index.toFloat())
+                            ) {
+                                navigatable.Content()
+                            }
+                        }
+
+                        // When exit animation finished, actually remove from stack
+                        if (isPopping && visibleState.isIdle && !visibleState.currentState) {
+                            LaunchedEffect(Unit) {
+                                navigator.completePop()
+                            }
+                        }
+                        if (isNewPush && visibleState.isIdle && visibleState.currentState && completedPushTopId != navigatable.id) {
+                            LaunchedEffect(navigatable.id) {
+                                completedPushTopId = navigatable.id
+                            }
+                        }
+                    }
+                }
+                YamiboSnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 72.dp)
+                )
+            }
+            LaunchSignReminderDialog(
+                visible = showSignReminder,
+                dismissTodayChecked = appSettingsRepository.signInLaunchReminderDismissToday.state(),
+                onDismissTodayChange = { appSettingsRepository.signInLaunchReminderDismissToday.setValue(it) },
+                onDismiss = {
+                    if (appSettingsRepository.signInLaunchReminderDismissToday.getValue()) {
+                        appSettingsRepository.signInLaunchReminderDismissedDate.setValue(currentLocalDateKey())
+                    }
+                    showSignReminder = false
+                },
+                onGoSign = {
+                    showSignReminder = false
+                    navigateToSignWebViewOrProfile(
+                        navigator = navigator,
+                        appSettingsRepository = appSettingsRepository,
+                        authRepository = authRepository,
+                        signRepository = signRepository,
+                        coroutineScope = coroutineScope,
+                        snackbarHostState = snackbarHostState,
+                    )
+                },
+            )
+            LaunchUpdateAvailableDialog(
+                release = launchUpdateRelease,
+                onDismiss = { launchUpdateRelease = null },
+                onDownload = { release ->
+                    launchUpdateRelease = null
+                    coroutineScope.launch {
+                        appUpdateRepository.downloadAndInstall(release)
+                    }
+                },
+                onOpenReleasePage = { release ->
+                    launchUpdateRelease = null
+                    appUpdateRepository.openReleasePage(release)
+                },
+            )
+            }
+        }
+    }
+
+    LaunchedEffect(signLaunchReminderEnabled, appLanguage) {
+        if (!signLaunchReminderEnabled) {
+            showSignReminder = false
+            return@LaunchedEffect
+        }
+        val today = currentLocalDateKey()
+        val dismissToday = appSettingsRepository.signInLaunchReminderDismissToday.getValue()
+        if (dismissToday && appSettingsRepository.signInLaunchReminderDismissedDate.getValue() == today) return@LaunchedEffect
+        if (authRepository.currentUser() == null) return@LaunchedEffect
+        if (!signRepository.isSignedToday()) {
+            showSignReminder = true
+        }
+    }
+
+    LaunchedEffect(showSignWebViewTrigger.value) {
+        if (showSignWebViewTrigger.value) {
+            showSignWebViewTrigger.value = false
+            navigateToSignWebViewOrProfile(
+                navigator = navigator,
+                appSettingsRepository = appSettingsRepository,
+                authRepository = authRepository,
+                signRepository = signRepository,
+                coroutineScope = coroutineScope,
+                snackbarHostState = snackbarHostState,
+            )
+        }
+    }
+}
+
+private fun Modifier.blockPointerPassthrough(enabled: Boolean): Modifier =
+    if (!enabled) {
+        this
+    } else {
+        pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    awaitPointerEvent()
+                }
+            }
+        }
+    }
+
+private fun Modifier.drawOnlyWhen(shouldDraw: Boolean): Modifier =
+    drawWithContent {
+        if (shouldDraw) drawContent()
+    }
+
+@Composable
+private fun LaunchUpdateAvailableDialog(
+    release: AppUpdateRelease?,
+    onDismiss: () -> Unit,
+    onDownload: (AppUpdateRelease) -> Unit,
+    onOpenReleasePage: (AppUpdateRelease) -> Unit,
+) {
+    if (release == null) return
+    var hasScrolledToBottom by remember { mutableStateOf(false) }
+    Dialog(
+        onDismissRequest = { if (hasScrolledToBottom) onDismiss() },
+        properties = DialogProperties(
+            dismissOnBackPress = hasScrolledToBottom,
+            dismissOnClickOutside = hasScrolledToBottom
+        )
+    ) {
+        LaunchUpdateAvailableContent(
+            release = release,
+            onDismiss = onDismiss,
+            onDownload = onDownload,
+            onOpenReleasePage = onOpenReleasePage,
+            hasScrolledToBottom = hasScrolledToBottom,
+            onScrolledToBottomChange = { hasScrolledToBottom = it }
+        )
+    }
+}
+
+@Composable
+private fun LaunchUpdateAvailableContent(
+    release: AppUpdateRelease,
+    onDismiss: () -> Unit,
+    onDownload: (AppUpdateRelease) -> Unit,
+    onOpenReleasePage: (AppUpdateRelease) -> Unit,
+    hasScrolledToBottom: Boolean,
+    onScrolledToBottomChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AppUpdatePromptContent(
+        release = release,
+        hasScrolledToBottom = hasScrolledToBottom,
+        onScrolledToBottomChange = onScrolledToBottomChange,
+        onPrimaryClick = {
+            if (release.asset == null) {
+                onOpenReleasePage(release)
+            } else {
+                onDownload(release)
+            }
+        },
+        onManualClick = { onOpenReleasePage(release) },
+        onLaterClick = onDismiss,
+        modifier = modifier,
+    )
+}
+
+@Composable
+private fun LaunchSignReminderDialog(
+    visible: Boolean,
+    dismissTodayChecked: Boolean,
+    onDismissTodayChange: (Boolean) -> Unit,
+    onDismiss: () -> Unit,
+    onGoSign: () -> Unit,
+) {
+    if (!visible) return
+    val colors = YamiboTheme.colors
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(colors.creamSurface)
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(
+                    text = i18n("你今天還沒簽到"),
+                    color = colors.textStrong,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = i18n("今天尚未完成每日簽到。"),
+                    color = colors.textDark.copy(alpha = 0.78f),
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onDismissTodayChange(!dismissTodayChecked) }
+                        .padding(vertical = 2.dp),
+                ) {
+                    Checkbox(
+                        checked = dismissTodayChecked,
+                        onCheckedChange = onDismissTodayChange,
+                        colors = CheckboxDefaults.colors(
+                            checkedColor = colors.brownDeep,
+                            uncheckedColor = colors.brownPrimary.copy(alpha = 0.6f),
+                            checkmarkColor = colors.textOnDeep,
+                        ),
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = i18n("今日不再提醒"),
+                        fontSize = 14.sp,
+                        color = colors.textDark,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = colors.textStrong,
+                        ),
+                    ) {
+                        Text(i18n("取消"))
+                    }
+                    Button(
+                        onClick = onGoSign,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.brownDeep,
+                            contentColor = colors.textOnDeep,
+                        ),
+                    ) {
+                        Text(i18n("前往簽到"))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChineseConversionModeSync() {
+    val conversionRepository = LocalChineseConversionRepository.current
+    val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
+    val option = novelSettingsRepository.chineseConversion.state()
+
+    LaunchedEffect(option) {
+        conversionRepository.setConversionMode(
+            when (option) {
+                ReaderChineseConversionOption.DEFAULT -> null
+                ReaderChineseConversionOption.SIMPLIFIED -> ChineseConversionMode.Simplified
+                ReaderChineseConversionOption.TRADITIONAL -> ChineseConversionMode.Traditional
+            }
+        )
+    }
+}
+
+private fun navigateToSignWebViewOrProfile(
+    navigator: ComposableNavigator,
+    appSettingsRepository: AppSettingsRepository,
+    authRepository: AuthRepository,
+    signRepository: SignRepository,
+    coroutineScope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
+) {
+    if (authRepository.currentUser() == null) return
+    val isDirect = appSettingsRepository.signInDirectWebView.getValue()
+    if (isDirect) {
+        val mode = appSettingsRepository.signInMode.getValue()
+        val allowRepair = appSettingsRepository.signInAllowRepair.getValue()
+        when (mode) {
+            SignInMode.FULL_MANUAL -> {
+                navigator.navigate(
+                    ISignWebView(
+                        semiAutomatic = false,
+                        onResultObserved = {
+                            coroutineScope.launch {
+                                authRepository.syncCookieFromWebView()
+                                signRepository.markTodaySigned()
+                                signRepository.fetchPageInfo()
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到成功"))
+                            }
+                        },
+                        onLoadFailed = { reason ->
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到頁載入失敗：{}", reason))
+                            }
+                        }
+                    )
+                )
+            }
+            SignInMode.SEMI_AUTOMATIC -> {
+                navigator.navigate(
+                    ISignWebView(
+                        semiAutomatic = true,
+                        onCfCleared = {
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("開始自動簽到..."))
+                                when (val result = signRepository.runAutoSign(allowRepair)) {
+                                    is YamiboResult.Success -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(result.value.message)
+                                    }
+                                    is YamiboResult.Failure -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                    is YamiboResult.NotLoggedIn -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                    is YamiboResult.NoPermission -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n("目前無法自動簽到，請改用手動模式"))
+                                    }
+                                    is YamiboResult.Maintenance -> {
+                                        snackbarHostState.currentSnackbarData?.dismiss()
+                                        snackbarHostState.showSnackbar(i18n(result.message()))
+                                    }
+                                }
+                            }
+                        },
+                        onMaintenanceObserved = {
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("百合會維護中...現在不是簽到的好時機呢"))
+                            }
+                        },
+                        onLoadFailed = { reason ->
+                            coroutineScope.launch {
+                                snackbarHostState.currentSnackbarData?.dismiss()
+                                snackbarHostState.showSnackbar(i18n("簽到頁載入失敗：{}", reason))
+                            }
+                        }
+                    )
+                )
+            }
+        }
+    } else {
+        navigator.popToRoot()
+        navigator.replace(IMainScreen(MainTab.Profile))
+    }
+}

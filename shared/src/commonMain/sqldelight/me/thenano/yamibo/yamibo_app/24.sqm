@@ -1,0 +1,47 @@
+CREATE TABLE IF NOT EXISTS RssSearchSubscription (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    query TEXT NOT NULL,
+    forumId INTEGER,
+    forumName TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    createdAt INTEGER NOT NULL,
+    updatedAt INTEGER NOT NULL,
+    lastRefreshStartedAt INTEGER,
+    lastRefreshFinishedAt INTEGER,
+    lastRefreshStatus TEXT,
+    lastRefreshMessage TEXT,
+    lastSearchId INTEGER,
+    lastTotalCount INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS RssSearchSubscriptionResult (
+    subscriptionId INTEGER NOT NULL,
+    threadId INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    forumId INTEGER,
+    attachmentType TEXT,
+    hasPoll INTEGER NOT NULL DEFAULT 0,
+    url TEXT NOT NULL,
+    authorId INTEGER,
+    authorName TEXT,
+    authorAvatarUrl TEXT,
+    description TEXT,
+    replyCount INTEGER,
+    viewCount INTEGER,
+    tag TEXT,
+    lastUpdateText TEXT,
+    lastUpdateSpecialText TEXT,
+    lastUpdateEpoch INTEGER,
+    firstSeenAt INTEGER NOT NULL,
+    lastSeenAt INTEGER NOT NULL,
+    readAt INTEGER,
+    PRIMARY KEY(subscriptionId, threadId),
+    FOREIGN KEY(subscriptionId) REFERENCES RssSearchSubscription(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS RssSearchSubscription_enabled_idx
+ON RssSearchSubscription(enabled);
+
+CREATE INDEX IF NOT EXISTS RssSearchSubscriptionResult_subscription_read_idx
+ON RssSearchSubscriptionResult(subscriptionId, readAt, firstSeenAt DESC);

@@ -1,0 +1,34 @@
+insertCrossRef:
+INSERT OR IGNORE INTO LocalFavoriteItemCategoryCrossRef(
+    itemId, categoryId, createdAt
+) VALUES (?, ?, ?);
+
+getCategoryIdsByItemId:
+SELECT categoryId FROM LocalFavoriteItemCategoryCrossRef
+WHERE itemId = ?;
+
+getItemIdsByCategoryId:
+SELECT itemId FROM LocalFavoriteItemCategoryCrossRef
+WHERE categoryId = ?;
+
+deleteByItemId:
+DELETE FROM LocalFavoriteItemCategoryCrossRef
+WHERE itemId = ?;
+
+deleteByItemIdAndCategoryId:
+DELETE FROM LocalFavoriteItemCategoryCrossRef
+WHERE itemId = ? AND categoryId = ?;
+
+countByItemId:
+SELECT COUNT(*) FROM LocalFavoriteItemCategoryCrossRef
+WHERE itemId = ?;
+
+deleteByCategoryId:
+DELETE FROM LocalFavoriteItemCategoryCrossRef
+WHERE categoryId = ?;
+
+getAll:
+SELECT * FROM LocalFavoriteItemCategoryCrossRef;
+
+deleteAll:
+DELETE FROM LocalFavoriteItemCategoryCrossRef;

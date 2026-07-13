@@ -1,0 +1,9 @@
+CREATE TABLE DiskCacheEntry (
+    namespace TEXT NOT NULL,
+    cacheKey TEXT NOT NULL,
+    createdAt INTEGER NOT NULL,
+    lastAccessedAt INTEGER NOT NULL,
+    PRIMARY KEY (namespace, cacheKey)
+);
+
+CREATE INDEX disk_cache_namespace_accessed_idx ON DiskCacheEntry(namespace, lastAccessedAt);

@@ -1,0 +1,48 @@
+insertSubscription:
+INSERT INTO RssSearchSubscription(
+    title, query, forumId, forumName, enabled, createdAt, updatedAt,
+    lastRefreshStartedAt, lastRefreshFinishedAt, lastRefreshStatus,
+    lastRefreshMessage, lastSearchId, lastTotalCount
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+lastInsertedId:
+SELECT last_insert_rowid();
+
+getById:
+SELECT * FROM RssSearchSubscription
+WHERE id = ?
+LIMIT 1;
+
+getAll:
+SELECT * FROM RssSearchSubscription
+ORDER BY updatedAt DESC, id DESC;
+
+getEnabled:
+SELECT * FROM RssSearchSubscription
+WHERE enabled = 1
+ORDER BY updatedAt DESC, id DESC;
+
+updateRefreshStarted:
+UPDATE RssSearchSubscription
+SET lastRefreshStartedAt = ?, lastRefreshStatus = ?, lastRefreshMessage = ?, updatedAt = ?
+WHERE id = ?;
+
+updateRefreshFinished:
+UPDATE RssSearchSubscription
+SET lastRefreshFinishedAt = ?, lastRefreshStatus = ?, lastRefreshMessage = ?,
+    lastSearchId = ?, lastTotalCount = ?, updatedAt = ?
+WHERE id = ?;
+
+rename:
+UPDATE RssSearchSubscription
+SET title = ?, updatedAt = ?
+WHERE id = ?;
+
+setEnabled:
+UPDATE RssSearchSubscription
+SET enabled = ?, updatedAt = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM RssSearchSubscription
+WHERE id = ?;

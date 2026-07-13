@@ -1,0 +1,52 @@
+insertCategory:
+INSERT INTO LocalFavoriteCategory(
+    name, sortOrder, createdAt, updatedAt
+) VALUES (?, ?, ?, ?);
+
+getAll:
+SELECT * FROM LocalFavoriteCategory
+ORDER BY sortOrder ASC, id ASC;
+
+getFirstCategory:
+SELECT * FROM LocalFavoriteCategory
+ORDER BY sortOrder ASC, id ASC
+LIMIT 1;
+
+getFirstByName:
+SELECT * FROM LocalFavoriteCategory
+WHERE name = ?
+ORDER BY id DESC
+LIMIT 1;
+
+getDefaultByName:
+SELECT * FROM LocalFavoriteCategory
+WHERE name = ?
+ORDER BY sortOrder ASC, id ASC
+LIMIT 1;
+
+getById:
+SELECT * FROM LocalFavoriteCategory
+WHERE id = ?
+LIMIT 1;
+
+countAll:
+SELECT COUNT(*) FROM LocalFavoriteCategory;
+
+getMaxSortOrder:
+SELECT MAX(sortOrder) FROM LocalFavoriteCategory;
+
+updateCategoryName:
+UPDATE LocalFavoriteCategory
+SET name = ?, updatedAt = ?
+WHERE id = ?;
+
+updateCategoryOrder:
+UPDATE LocalFavoriteCategory
+SET sortOrder = ?, updatedAt = ?
+WHERE id = ?;
+
+deleteById:
+DELETE FROM LocalFavoriteCategory WHERE id = ?;
+
+deleteAll:
+DELETE FROM LocalFavoriteCategory;

@@ -1,0 +1,53 @@
+upsert:
+INSERT OR REPLACE INTO RssCatalogReadingHistory(
+    subscriptionId, subscriptionTitle, subscriptionQuery, subscriptionPage,
+    threadId, threadTitle,
+    threadPage, postId, postTitle, authorId,
+    anchorPostId, anchorPostRatio,
+    anchorBlockId, anchorBlockType, anchorBlockRatio,
+    viewportHeight, firstVisibleItemIndex, firstVisibleItemOffset,
+    lastVisitTime, coverUrl
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+getBySubscriptionId:
+SELECT * FROM RssCatalogReadingHistory WHERE subscriptionId = ?;
+
+deleteBySubscriptionId:
+DELETE FROM RssCatalogReadingHistory WHERE subscriptionId = ?;
+
+deleteAll:
+DELETE FROM RssCatalogReadingHistory;
+
+getPage:
+SELECT * FROM RssCatalogReadingHistory
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countAll:
+SELECT COUNT(*) FROM RssCatalogReadingHistory;
+
+searchByName:
+SELECT * FROM RssCatalogReadingHistory
+WHERE subscriptionTitle LIKE '%' || ? || '%'
+   OR subscriptionQuery LIKE '%' || ? || '%'
+   OR threadTitle LIKE '%' || ? || '%'
+ORDER BY lastVisitTime DESC
+LIMIT ? OFFSET ?;
+
+countByName:
+SELECT COUNT(*) FROM RssCatalogReadingHistory
+WHERE subscriptionTitle LIKE '%' || ? || '%'
+   OR subscriptionQuery LIKE '%' || ? || '%'
+   OR threadTitle LIKE '%' || ? || '%';
+
+deleteBySubscriptionIds:
+DELETE FROM RssCatalogReadingHistory WHERE subscriptionId IN ?;
+
+trimToLatest:
+DELETE FROM RssCatalogReadingHistory
+WHERE subscriptionId IN (
+    SELECT subscriptionId
+    FROM RssCatalogReadingHistory
+    ORDER BY lastVisitTime DESC
+    LIMIT -1 OFFSET ?
+);

@@ -1,0 +1,24 @@
+CREATE TABLE IF NOT EXISTS ReadingHistory (
+    threadId       INTEGER NOT NULL PRIMARY KEY,
+    threadName     TEXT NOT NULL,
+    threadAvatar   TEXT,
+    forumName      TEXT,
+    forumId        INTEGER,
+    page           INTEGER NOT NULL DEFAULT 1,
+    postId         INTEGER NOT NULL DEFAULT 0,
+    postTitle      TEXT NOT NULL DEFAULT "",
+
+    anchorPostId   INTEGER NOT NULL DEFAULT 0,
+    anchorPostRatio REAL,
+
+    anchorBlockId    TEXT,
+    anchorBlockType  TEXT,
+    anchorBlockRatio REAL,
+
+    globalScrollY      INTEGER,
+    viewportHeight     INTEGER,
+    firstVisibleItemIndex  INTEGER,
+    firstVisibleItemOffset INTEGER,
+
+    lastVisitTime  INTEGER NOT NULL
+);
