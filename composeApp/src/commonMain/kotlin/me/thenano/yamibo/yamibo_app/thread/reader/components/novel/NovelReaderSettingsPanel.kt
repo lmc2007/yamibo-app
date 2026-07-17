@@ -15,6 +15,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +39,8 @@ import me.thenano.yamibo.yamibo_app.util.state
 fun NovelReaderSettingsPanel(
     visible: Boolean,
     appSettingsRepo: AppSettingsRepository,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onCopyChapter: (() -> Unit)? = null,
 ) {
     val colors = YamiboTheme.colors
     val themeMode = appSettingsRepo.themeMode.state()
@@ -88,6 +90,16 @@ fun NovelReaderSettingsPanel(
 
                     Spacer(Modifier.height(24.dp))
 
+                    // Copy Chapter Action
+                    SectionTitle(i18n("操作"), color = colors.textDark)
+                    CopyChapterButton(
+                        onClick = { onCopyChapter?.invoke() },
+                        enabled = onCopyChapter != null,
+                        colors = colors,
+                    )
+
+                    Spacer(Modifier.height(24.dp))
+
                     SectionTitle(i18n("簡繁轉換"), color = colors.textDark)
                     NovelChineseConversionSetting()
 
@@ -120,6 +132,40 @@ fun NovelReaderSettingsPanel(
                     Spacer(Modifier.height(16.dp))
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CopyChapterButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    colors: me.thenano.yamibo.yamibo_app.components.theme.YamiboColors,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                enabled = enabled,
+                onClick = onClick,
+            )
+            .padding(vertical = 12.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = i18n("複製本章"),
+                fontSize = 16.sp,
+                color = if (enabled) colors.textDark else colors.textDark.copy(alpha = 0.38f),
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = i18n("將當前章節的內容複製到剪貼簿。"),
+                fontSize = 13.sp,
+                color = if (enabled) colors.textDark.copy(alpha = 0.6f) else colors.textDark.copy(alpha = 0.24f),
+            )
         }
     }
 }

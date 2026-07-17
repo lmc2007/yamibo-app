@@ -30,6 +30,8 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import coil3.SingletonImageLoader
 import coil3.compose.LocalPlatformContext
 import io.github.littlesurvival.YamiboForum
@@ -2624,9 +2626,40 @@ internal fun ThreadReaderScreen(
 
                 val appSettingsRepo = LocalAppSettingsRepository.current
 
+                val clipboardManager = LocalClipboardManager.current
+
+                val copyChapter: () -> Unit = {
+                    val currentIndex = visibleAnchorEntryIndex() ?: listState.firstVisibleItemIndex
+                    val entry = readerEntries.getOrNull(currentIndex)
+                    if (entry != null) {
+                        val pid = entry.post.pid.value.toLong()
+                        val rawHtml = convertedContentByPid[pid] ?: entry.post.contentHtml
+                        val plainText = rawHtml
+                            .replace(Regex("</div>", RegexOption.IGNORE_CASE), "\n")
+                            .replace(Regex("<br\\s*/?>\r?\n?", RegexOption.IGNORE_CASE), "\n")
+                            .replace(Regex("<[^>]*>"), "")
+                            .replace("&nbsp;", " ")
+                            .replace("&amp;", "&")
+                            .replace("&lt;", "<")
+                            .replace("&gt;", ">")
+                            .replace("&quot;", "\"")
+                            .replace(Regex("\\n\\s*\\n+"), "\n")
+                            .trim()
+                        clipboardManager.setText(AnnotatedString(plainText))
+                        scope.launch {
+                            snackbarHostState.showSnackbar(i18n("已複製本章內容"))
+                        }
+                    } else {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(i18n("暫無內容可複製"))
+                        }
+                    }
+                }
+
                 NovelReaderSettingsPanel(
                     visible = showSettingsPanel,
                     appSettingsRepo = appSettingsRepo,
+                    onCopyChapter = copyChapter,
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }

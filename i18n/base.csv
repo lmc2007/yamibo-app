@@ -743,3 +743,8 @@ source,en,zh-tw,zh-cn
 "已加入收藏，但同步失敗：{}","Added to favorites, but sync failed: {}","已加入收藏，但同步失敗：{}","已加入收藏，但同步失败：{}"
 "已加入本地收藏，但同步到百合會失敗：{}","Added to local favorites, but sync to Yamibo failed: {}","已加入本地收藏，但同步到百合會失敗：{}","已加入本地收藏，但同步到百合会失败：{}"
 "本帖隱藏內容需要積分: {}","Hidden content requires points: {}","本帖隱藏內容需要積分: {}","本帖隐藏内容需要积分: {}"
+"操作","Actions","操作","操作"
+"複製本章","Copy Chapter","複製本章","复制本章"
+"將當前章節的內容複製到剪貼簿。","Copy the current chapter content to the clipboard.","將當前章節的內容複製到剪貼簿。","将当前章节的内容复制到剪贴板。"
+"已複製本章內容","Chapter content copied","已複製本章內容","已复制本章内容"
+"暫無內容可複製","No content to copy","暫無內容可複製","暂无内容可复制"
