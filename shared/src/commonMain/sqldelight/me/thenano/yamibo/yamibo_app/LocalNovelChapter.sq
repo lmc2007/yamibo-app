@@ -1,0 +1,23 @@
+getChaptersByNovelId:
+SELECT * FROM LocalNovelChapter
+WHERE novelId = ?
+ORDER BY chapterIndex ASC;
+
+getChapterById:
+SELECT * FROM LocalNovelChapter
+WHERE id = ?
+LIMIT 1;
+
+insertChapter:
+INSERT INTO LocalNovelChapter(
+    novelId, title, chapterIndex, startOffset, endOffset, internalPath
+) VALUES (?, ?, ?, ?, ?, ?);
+
+insertChapters:
+INSERT INTO LocalNovelChapter(
+    novelId, title, chapterIndex, startOffset, endOffset, internalPath
+)
+VALUES ?;
+
+deleteChaptersByNovelId:
+DELETE FROM LocalNovelChapter WHERE novelId = ?;

@@ -1,0 +1,44 @@
+getAllNovels:
+SELECT * FROM LocalNovel
+ORDER BY lastReadAt DESC, id DESC;
+
+getNovelById:
+SELECT * FROM LocalNovel
+WHERE id = ?
+LIMIT 1;
+
+insertNovel:
+INSERT INTO LocalNovel(
+    fileType, title, author, fileUri, coverPath, totalChars, encoding, totalChapters, epubExtractDir, createdAt, lastReadAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateNovelMeta:
+UPDATE LocalNovel
+SET title = ?, author = ?, totalChars = ?, totalChapters = ?
+WHERE id = ?;
+
+updateNovelChapters:
+UPDATE LocalNovel
+SET totalChapters = ?
+WHERE id = ?;
+
+updateCoverPath:
+UPDATE LocalNovel
+SET coverPath = ?
+WHERE id = ?;
+
+updateEpubExtractDir:
+UPDATE LocalNovel
+SET epubExtractDir = ?
+WHERE id = ?;
+
+updateLastReadAt:
+UPDATE LocalNovel
+SET lastReadAt = ?
+WHERE id = ?;
+
+deleteNovelById:
+DELETE FROM LocalNovel WHERE id = ?;
+
+deleteAllNovels:
+DELETE FROM LocalNovel;

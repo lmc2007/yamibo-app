@@ -29,6 +29,7 @@ import me.thenano.yamibo.yamibo_app.LocalDownloadRepository
 import me.thenano.yamibo.yamibo_app.LocalSignRepository
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
+import me.thenano.yamibo.yamibo_app.localnovel.ILocalNovelBookshelfScreen
 import me.thenano.yamibo.yamibo_app.message.IMessageCenterScreen
 import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -320,6 +321,12 @@ fun ProfilePage(
                 icon = YamiboIcons.Download,
                 showBadge = hasDownloadBadge,
                 onClick = { navigator.navigate(IDownloadQueueScreen()) }
+            )
+
+            EntryCard(
+                title = i18n("本地小說"),
+                icon = YamiboIcons.Book,
+                onClick = { navigator.navigate(ILocalNovelBookshelfScreen()) }
             )
 
             EntryDivider()

@@ -35,6 +35,8 @@ import me.thenano.yamibo.yamibo_app.profile.settings.access.AndroidBackgroundAcc
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.AndroidBackupScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.AndroidSignReminderScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.localnovel.AndroidLocalNovelRepository
+import me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations
 import me.thenano.yamibo.yamibo_app.repository.appupdate.DefaultAppUpdateRepository
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
@@ -250,6 +252,8 @@ class MainActivity : ComponentActivity() {
                 )
             }
             val themeRepository = remember { AndroidThemeRepository() }
+            val localNovelRepository = remember { AndroidLocalNovelRepository(dbFactory) }
+            val platformFileOps = remember { PlatformFileOperations(context) }
             val appUpdateRepository = remember {
                 DefaultAppUpdateRepository(
                     appSettingsRepository = appSettingsRepository,
@@ -289,6 +293,8 @@ class MainActivity : ComponentActivity() {
                 LocalContentCoverRepository provides contentCoverRepository,
                 LocalSignRepository provides signRepository,
                 LocalThemeRepository provides themeRepository,
+                LocalLocalNovelRepository provides localNovelRepository,
+                LocalPlatformFileOperations provides platformFileOps,
                 LocalTagRepository provides tagRepository,
                 LocalAppSettingsRepository provides appSettingsRepository,
                 LocalDiskCacheFactory provides diskCacheFactory,

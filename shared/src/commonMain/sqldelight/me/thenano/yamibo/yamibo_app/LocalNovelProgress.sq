@@ -1,0 +1,12 @@
+getProgressByNovelId:
+SELECT * FROM LocalNovelProgress
+WHERE novelId = ?
+LIMIT 1;
+
+upsertProgress:
+INSERT OR REPLACE INTO LocalNovelProgress(
+    novelId, chapterId, charOffset
+) VALUES (?, ?, ?);
+
+deleteProgressByNovelId:
+DELETE FROM LocalNovelProgress WHERE novelId = ?;

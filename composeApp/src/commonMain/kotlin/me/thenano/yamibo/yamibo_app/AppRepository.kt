@@ -9,6 +9,8 @@ import me.thenano.yamibo.yamibo_app.repository.BackupRepository
 import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
+import me.thenano.yamibo.yamibo_app.repository.LocalNovelRepository
+import me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteShareRepository
@@ -145,3 +147,9 @@ val LocalImageReaderModeOverrideRepository =
 
 val LocalDiskCacheFactory =
     compositionLocalOf<DiskCacheFactory> { error("LocalDiskCacheFactory not provided") }
+
+val LocalLocalNovelRepository =
+    compositionLocalOf<LocalNovelRepository> { error("LocalLocalNovelRepository not provided") }
+
+val LocalPlatformFileOperations =
+    compositionLocalOf<PlatformFileOperations> { error("LocalPlatformFileOperations not provided") }

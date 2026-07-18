@@ -16,6 +16,8 @@ import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IOSBackupScheduler
 import me.thenano.yamibo.yamibo_app.repository.*
+import me.thenano.yamibo.yamibo_app.repository.localnovel.IOSLocalNovelRepository
+import me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.chineseconversion.createChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadImageFetcher
@@ -164,6 +166,8 @@ fun MainViewController() = ComposeUIViewController {
         )
     }
     val themeRepository = remember { IOSThemeRepository() }
+    val localNovelRepository = remember { IOSLocalNovelRepository(dbFactory) }
+    val platformFileOps = remember { PlatformFileOperations() }
     val appUpdateRepository = remember {
         DefaultAppUpdateRepository(
             appSettingsRepository = appSettingsRepository,
@@ -202,6 +206,8 @@ fun MainViewController() = ComposeUIViewController {
         LocalContentCoverRepository provides contentCoverRepository,
         LocalSignRepository provides signRepository,
         LocalThemeRepository provides themeRepository,
+        LocalLocalNovelRepository provides localNovelRepository,
+        LocalPlatformFileOperations provides platformFileOps,
         LocalTagRepository provides tagRepository,
         LocalAppSettingsRepository provides appSettingsRepository,
         LocalDiskCacheFactory provides diskCacheFactory,
