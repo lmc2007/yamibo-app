@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.localnovel
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import kotlinx.serialization.Serializable
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
+import YamiboIcons
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelInfo
@@ -65,19 +67,26 @@ fun LocalNovelBookshelfScreen() {
     var novels by remember { mutableStateOf<List<LocalNovelInfo>>(emptyList()) }
     var progressMap by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
     var showDeleteConfirm by remember { mutableStateOf<LocalNovelInfo?>(null) }
-    var showImportDialog by remember { mutableStateOf(false) }
-
-    val pickFile = rememberLocalNovelFilePicker { handle ->
-        scope.launch {
-            showImportDialog = false
-            importNovel(handle, repository, fileOps, snackbarHostState, navigator)
-            reloadNovels(repository) { novels = it; progressMap = buildProgressMap(it, repository) }
-        }
-    }
+    var manageMode by remember { mutableStateOf(false) }
+    var selectedIds by remember { mutableStateOf(setOf<Long>()) }
+    var showBatchDeleteConfirm by remember { mutableStateOf(false) }
 
     fun reload() {
         scope.launch {
-            reloadNovels(repository) { novels = it; progressMap = buildProgressMap(it, repository) }
+            val result = withContext(Dispatchers.Default) {
+                val list = repository.getAllNovels()
+                val map = buildProgressMap(list, repository)
+                list to map
+            }
+            novels = result.first
+            progressMap = result.second
+        }
+    }
+
+    val pickFile = rememberLocalNovelFilePicker { handle ->
+        scope.launch {
+            importNovel(handle, repository, fileOps, snackbarHostState, navigator)
+            reload()
         }
     }
 
@@ -89,8 +98,28 @@ fun LocalNovelBookshelfScreen() {
                 title = { Text(i18n("本地小說"), color = colors.textDark) },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = colors.creamBackground),
                 navigationIcon = {
-                    TextButton(onClick = { navigator.pop() }) {
-                        Text(i18n("返回"), color = colors.brownPrimary)
+                    TextButton(onClick = {
+                        if (manageMode) {
+                            manageMode = false
+                            selectedIds = emptySet()
+                        } else {
+                            navigator.pop()
+                        }
+                    }) {
+                        Text(if (manageMode) i18n("取消") else i18n("返回"), color = colors.brownPrimary)
+                    }
+                },
+                actions = {
+                    if (novels.isNotEmpty()) {
+                        TextButton(onClick = {
+                            manageMode = !manageMode
+                            selectedIds = emptySet()
+                        }) {
+                            Text(
+                                if (manageMode) i18n("完成") else i18n("管理"),
+                                color = colors.brownPrimary,
+                            )
+                        }
                     }
                 },
             )
@@ -116,36 +145,69 @@ fun LocalNovelBookshelfScreen() {
                 }
             }
         } else {
-            LazyColumn(
-                Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-            ) {
-                item {
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                // Batch action bar (manage mode)
+                if (manageMode && selectedIds.isNotEmpty()) {
                     Row(
-                        Modifier.fillMaxWidth().padding(bottom = 4.dp),
-                        horizontalArrangement = Arrangement.End,
+                        Modifier
+                            .fillMaxWidth()
+                            .background(colors.creamSurface)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        YamiboActionChip(
-                            text = i18n("導入小說"),
-                            onClick = { pickFile() },
+                        Text(
+                            i18n("已選擇 {} 項", selectedIds.size),
+                            color = colors.textDark,
+                            fontSize = 14.sp,
                         )
+                        TextButton(onClick = { showBatchDeleteConfirm = true }) {
+                            Text(i18n("刪除"), color = colors.redAccent)
+                        }
                     }
                 }
-                items(novels, key = { it.id }) { novel ->
-                    LocalNovelCard(
-                        novel = novel,
-                        progress = progressMap[novel.id],
-                        onClick = {
-                            navigator.navigate(ILocalNovelReaderScreen(novel.id))
-                        },
-                        onLongClick = { showDeleteConfirm = novel },
-                    )
+
+                LazyColumn(
+                    Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                ) {
+                    if (!manageMode) {
+                        item {
+                            Row(
+                                Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                                horizontalArrangement = Arrangement.End,
+                            ) {
+                                YamiboActionChip(
+                                    text = i18n("導入小說"),
+                                    onClick = { pickFile() },
+                                )
+                            }
+                        }
+                    }
+                    items(novels, key = { it.id }) { novel ->
+                        LocalNovelCard(
+                            novel = novel,
+                            progress = progressMap[novel.id],
+                            manageMode = manageMode,
+                            isSelected = novel.id in selectedIds,
+                            onClick = {
+                                if (manageMode) {
+                                    selectedIds = if (novel.id in selectedIds)
+                                        selectedIds - novel.id else selectedIds + novel.id
+                                } else {
+                                    navigator.navigate(ILocalNovelReaderScreen(novel.id))
+                                }
+                            },
+                            onDelete = { showDeleteConfirm = novel },
+                        )
+                    }
                 }
             }
         }
     }
 
+    // Single delete confirmation
     if (showDeleteConfirm != null) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = null },
@@ -174,14 +236,50 @@ fun LocalNovelBookshelfScreen() {
             },
         )
     }
+
+    // Batch delete confirmation
+    if (showBatchDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteConfirm = false },
+            title = { Text(i18n("批量刪除")) },
+            text = { Text(i18n("確定要刪除所選的 {} 本小說嗎？此操作無法復原。", selectedIds.size)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        withContext(Dispatchers.Default) {
+                            for (id in selectedIds) {
+                                val novel = repository.getNovelById(id)
+                                repository.deleteNovel(id)
+                                novel?.epubExtractDir?.let { fileOps.deleteDirectory(it) }
+                            }
+                        }
+                        snackbarHostState.showSnackbar(i18n("已刪除 {} 項", selectedIds.size))
+                        selectedIds = emptySet()
+                        manageMode = false
+                        reload()
+                    }
+                    showBatchDeleteConfirm = false
+                }) {
+                    Text(i18n("刪除"), color = colors.redAccent)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteConfirm = false }) {
+                    Text(i18n("取消"))
+                }
+            },
+        )
+    }
 }
 
 @Composable
 private fun LocalNovelCard(
     novel: LocalNovelInfo,
     progress: String?,
+    manageMode: Boolean,
+    isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
     Card(
@@ -189,13 +287,25 @@ private fun LocalNovelCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isSelected) colors.brownPrimary.copy(alpha = 0.1f) else colors.creamSurface
+        ),
         shape = RoundedCornerShape(8.dp),
     ) {
         Row(
             Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Checkbox in manage mode
+            if (manageMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = { onClick() },
+                    colors = CheckboxDefaults.colors(checkedColor = colors.brownPrimary),
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+
             Column(Modifier.weight(1f)) {
                 Text(
                     novel.title,
@@ -238,18 +348,19 @@ private fun LocalNovelCard(
                     }
                 }
             }
+
+            if (!manageMode) {
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        YamiboIcons.Trashcan,
+                        contentDescription = i18n("刪除"),
+                        tint = colors.textOnBackground,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
     }
-}
-
-private suspend fun reloadNovels(
-    repository: me.thenano.yamibo.yamibo_app.repository.LocalNovelRepository,
-    onResult: suspend (List<LocalNovelInfo>) -> Unit,
-) {
-    val result = withContext(Dispatchers.Default) {
-        repository.getAllNovels()
-    }
-    onResult(result)
 }
 
 private suspend fun buildProgressMap(
@@ -311,21 +422,14 @@ private suspend fun importTxt(
     val title = fileName.removeSuffix(".txt").removeSuffix(".TXT")
     val now = currentTimeMillis()
 
-    val novel = me.thenano.yamibo.yamibo_app.repository.LocalNovelInfo(
+    val novel = LocalNovelInfo(
         fileType = LocalNovelFileType.TXT,
-        title = title,
-        author = "",
-        fileUri = handle.uri,
-        totalChars = result.totalChars,
-        encoding = result.encoding,
-        totalChapters = result.chapters.size,
-        createdAt = now,
-        lastReadAt = now,
+        title = title, author = "", fileUri = handle.uri,
+        totalChars = result.totalChars, encoding = result.encoding,
+        totalChapters = result.chapters.size, createdAt = now, lastReadAt = now,
     )
     val novelId = repository.insertNovel(novel)
-
-    val chaptersWithNovelId = result.chapters.map { it.copy(novelId = novelId) }
-    repository.insertChapters(chaptersWithNovelId)
+    repository.insertChapters(result.chapters.map { it.copy(novelId = novelId) })
 }
 
 private suspend fun importEpub(
@@ -343,22 +447,15 @@ private suspend fun importEpub(
     }
     val now = currentTimeMillis()
 
-    val novel = me.thenano.yamibo.yamibo_app.repository.LocalNovelInfo(
+    val novel = LocalNovelInfo(
         fileType = LocalNovelFileType.EPUB,
-        title = title,
-        author = result.metadata.author,
-        fileUri = handle.uri,
-        totalChapters = result.chapters.size,
-        epubExtractDir = extractDir,
-        createdAt = now,
-        lastReadAt = now,
+        title = title, author = result.metadata.author, fileUri = handle.uri,
+        totalChapters = result.chapters.size, epubExtractDir = extractDir,
+        createdAt = now, lastReadAt = now,
     )
     val novelId = repository.insertNovel(novel)
+    repository.insertChapters(result.chapters.map { it.copy(novelId = novelId) })
 
-    val chaptersWithNovelId = result.chapters.map { it.copy(novelId = novelId) }
-    repository.insertChapters(chaptersWithNovelId)
-
-    // Copy cover image if exists
     result.metadata.coverInternalPath?.let { coverPath ->
         if (fileOps.localFileExists(coverPath)) {
             val coverDest = "${fileOps.getInternalFilesDir()}/covers/${novelId}"

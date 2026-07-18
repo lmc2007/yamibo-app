@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -32,6 +33,7 @@ import me.thenano.yamibo.yamibo_app.navigation.*
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelFileType
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelInfo
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelChapterInfo
+import me.thenano.yamibo.yamibo_app.repository.LocalNovelProgressInfo
 import me.thenano.yamibo.yamibo_app.repository.localnovel.EpubFileParser
 import me.thenano.yamibo.yamibo_app.repository.localnovel.TxtFileParser
 import me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderFloatButtons
@@ -81,6 +83,8 @@ fun LocalNovelReaderScreen(novelId: Long) {
     var chapters by remember { mutableStateOf<List<LocalNovelChapterInfo>>(emptyList()) }
     var currentChapterIndex by remember { mutableIntStateOf(0) }
     var chapterSegments by remember { mutableStateOf<List<String>>(emptyList()) }
+    var savedSegmentIndex by remember { mutableLongStateOf(0L) }
+    var canSaveProgress by remember { mutableStateOf(false) }
 
     // UI state — mirrors ThreadReaderScreen's overlay pattern
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -89,24 +93,43 @@ fun LocalNovelReaderScreen(novelId: Long) {
 
     val listState = rememberLazyListState()
 
-    fun loadChapter(index: Int) {
+    fun saveProgressNow(chapterId: Long, segmentIndex: Long, scrollOffset: Int = 0) {
         scope.launch {
-            val n = novel ?: return@launch
-            val ch = chapters.getOrNull(index) ?: return@launch
-            val segs = withContext(Dispatchers.Default) {
-                buildChapterSegments(n, ch, fileOps)
-            }
-            chapterSegments = segs
-            currentChapterIndex = index
-            listState.scrollToItem(0)
             withContext(Dispatchers.Default) {
                 repository.saveProgress(
-                    me.thenano.yamibo.yamibo_app.repository.LocalNovelProgressInfo(
-                        novelId = novelId, chapterId = ch.id, charOffset = 0,
+                    LocalNovelProgressInfo(
+                        novelId = novelId, chapterId = chapterId,
+                        charOffset = (segmentIndex shl 32) or (scrollOffset.toLong() and 0xFFFF_FFFF),
                     )
                 )
                 repository.updateLastReadAt(novelId, currentTimeMillis())
             }
+        }
+    }
+
+    fun loadChapter(index: Int, restoreSegment: Long = 0L, restoreOffset: Int = 0) {
+        scope.launch {
+            canSaveProgress = false
+            val n = novel ?: return@launch
+            val ch = chapters.getOrNull(index) ?: return@launch
+            if (chapters.isNotEmpty() && currentChapterIndex != index) {
+                val currentCh = chapters.getOrNull(currentChapterIndex)
+                if (currentCh != null) {
+                    saveProgressNow(currentCh.id, listState.firstVisibleItemIndex.toLong(), listState.firstVisibleItemScrollOffset)
+                }
+            }
+            val segs = withContext(Dispatchers.Default) { buildChapterSegments(n, ch, fileOps) }
+            chapterSegments = segs
+            currentChapterIndex = index
+            val targetEncoded = (restoreSegment shl 32) or (restoreOffset.toLong() and 0xFFFF_FFFF)
+            savedSegmentIndex = targetEncoded
+            val targetIdx = restoreSegment.toInt().coerceAtMost(segs.lastIndex.coerceAtLeast(0))
+            listState.scrollToItem(targetIdx, restoreOffset)
+            kotlinx.coroutines.delay(120)
+            listState.scrollToItem(targetIdx, restoreOffset)
+            kotlinx.coroutines.delay(300)
+            listState.scrollToItem(targetIdx, restoreOffset)
+            canSaveProgress = true
         }
     }
 
@@ -118,13 +141,52 @@ fun LocalNovelReaderScreen(novelId: Long) {
             val startChapterIndex = if (progress != null && progress.chapterId > 0) {
                 chs.indexOfFirst { it.id == progress.chapterId }.coerceAtLeast(0)
             } else 0
-            Triple(n, chs, startChapterIndex)
+            val encoded = progress?.charOffset ?: 0L
+            ChapterInitData(n, chs, startChapterIndex, encoded shr 32, (encoded and 0xFFFF_FFFF).toInt())
         }
         if (result != null) {
-            val (n, chs, startIdx) = result
-            novel = n
-            chapters = chs
-            loadChapter(startIdx)
+            novel = result.novel
+            chapters = result.chapters
+            loadChapter(result.startChapterIndex, result.restoreSeg, result.restoreOff)
+        }
+    }
+
+    // Lightweight position tracking — distinctUntilChanged via the savedSegmentIndex guard
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .collect { (index, offset) ->
+                if (canSaveProgress && chapterSegments.isNotEmpty() && index >= 0) {
+                    val ch = chapters.getOrNull(currentChapterIndex)
+                    if (ch != null) {
+                        val encoded = (index.toLong() shl 32) or (offset.toLong() and 0xFFFF_FFFF)
+                        if (encoded != savedSegmentIndex) {
+                            savedSegmentIndex = encoded
+                            saveProgressNow(ch.id, index.toLong(), offset)
+                        }
+                    }
+                }
+            }
+    }
+
+    // Save progress when leaving the screen (runBlocking ensures it completes)
+    DisposableEffect(novelId) {
+        onDispose {
+            val ch = chapters.getOrNull(currentChapterIndex)
+            if (ch != null) {
+                val idx = listState.firstVisibleItemIndex.toLong()
+                val off = listState.firstVisibleItemScrollOffset
+                kotlinx.coroutines.runBlocking {
+                    withContext(Dispatchers.Default) {
+                        repository.saveProgress(
+                            LocalNovelProgressInfo(
+                                novelId = novelId, chapterId = ch.id,
+                                charOffset = (idx shl 32) or (off.toLong() and 0xFFFF_FFFF),
+                            )
+                        )
+                        repository.updateLastReadAt(novelId, currentTimeMillis())
+                    }
+                }
+            }
         }
     }
 
@@ -357,7 +419,10 @@ private fun buildChapterSegments(
             textToHtml(text)
         }
         LocalNovelFileType.EPUB -> {
-            EpubFileParser(fileOps).readChapterHtml(chapter.internalPath)
+            val rawHtml = EpubFileParser(fileOps).readChapterHtml(chapter.internalPath)
+            // Fix relative image paths to absolute file paths
+            val chapterDir = chapter.internalPath.substringBeforeLast("/", "")
+            fixEpubImagePaths(rawHtml, chapterDir)
         }
     }
     return segmentHtml(html, MAX_READER_TEXT_SEGMENT_CHARS)
@@ -415,3 +480,33 @@ private fun segmentHtml(html: String, maxChars: Int): List<String> {
     if (remaining.isNotBlank()) chunks.add(remaining)
     return chunks.ifEmpty { listOf(html) }
 }
+
+/**
+ * Replaces relative image paths in EPUB XHTML with absolute file paths,
+ * so HtmlRenderer can load images from the extracted EPUB directory.
+ */
+private fun fixEpubImagePaths(html: String, chapterDir: String): String {
+    // Match src="..." or src='...' in img tags
+    val srcRegex = Regex("""(src=["'])(.*?)(["'])""", RegexOption.IGNORE_CASE)
+    return srcRegex.replace(html) { match ->
+        val prefix = match.groupValues[1]
+        val path = match.groupValues[2]
+        val suffix = match.groupValues[3]
+        // Only fix relative paths (not http/https/data)
+        if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("data:") || path.startsWith("/")) {
+            "${prefix}${path}${suffix}"
+        } else {
+            // Resolve relative to chapter directory
+            val resolved = if (chapterDir.isNotEmpty()) "$chapterDir/$path" else path
+            "${prefix}file://$resolved${suffix}"
+        }
+    }
+}
+
+private data class ChapterInitData(
+    val novel: LocalNovelInfo,
+    val chapters: List<LocalNovelChapterInfo>,
+    val startChapterIndex: Int,
+    val restoreSeg: Long,
+    val restoreOff: Int,
+)

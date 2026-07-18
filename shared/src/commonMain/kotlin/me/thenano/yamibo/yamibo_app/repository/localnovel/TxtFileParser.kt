@@ -2,7 +2,6 @@ package me.thenano.yamibo.yamibo_app.repository.localnovel
 
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelChapterInfo
 import java.nio.ByteBuffer
-import java.nio.CharBuffer
 import java.nio.charset.*
 
 class TxtFileParser(
@@ -16,11 +15,43 @@ class TxtFileParser(
 
     companion object {
         private val CANDIDATE_ENCODINGS = listOf("UTF-8", "GBK", "GB18030", "Big5")
-        private val CHAPTER_REGEX = Regex(
-            """(?:^|\n)\s*((?:第)[\s]*[0-9零一二三四五六七八九十百千万]+[\s]*[章節节卷])(?:\s+(.*?))?\s*(?:\n|$)"""
-        )
+
         /** Unicode range for CJK Unified Ideographs (U+4E00–U+9FFF) */
         private fun isCjkChar(c: Char): Boolean = c in '\u4E00'..'\u9FFF'
+
+        // ---- Chapter detection patterns adapted from 阅读 (YueDu) app ----
+        // Each pattern is tested against individual lines; the first match for a line wins.
+
+        private val CN_NUM = "[\\d〇零一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟]"
+        private val PREFIX = "(?:序章|楔子|正文(?!完|结)|终章|后记|尾声|番外|简介|文案|前言)"
+
+        private val CHAPTER_PATTERNS = listOf(
+            // 1. 第X章/节/卷/部/篇 (standard Chinese chapter)
+            Regex("""^\s*第\s*${CN_NUM}+\s*(?:[章節节卷部篇回])\s*.{0,40}$"""),
+            // 2. 序章/楔子/终章/后记/尾声/番外/简介/文案/前言 (special labels)
+            Regex("""^\s*(?:${PREFIX})\s*.{0,40}$"""),
+            // 3. 第X章 - with bracket prefix 【第一章】
+            Regex("""^\s*[【〔〖「『〈［\[]\s*第\s*${CN_NUM}+\s*[章節节卷].{0,30}$"""),
+            // 4. 正文 + space + title
+            Regex("""^\s*正文\s+.{1,30}$"""),
+            // 5. 卷X / 章X (prefix without 第)
+            Regex("""^\s*[卷章]\s*${CN_NUM}+\s*.{0,30}$"""),
+            // 6. Chapter/Section/Part/Episode + number (English)
+            Regex("""^\s*(?:[Cc]hapter|[Ss]ection|[Pp]art|[Ee]pisode)\s*\d{1,4}.{0,30}$"""),
+            // 7. Number with delimiter: 1、标题 / 1. 标题 / 1,标题 / 1:标题
+            Regex("""^\s*\d{1,5}\s*[：:,.，、_.—\-]\s*.{1,40}$"""),
+            // 8. Chinese number with delimiter: 一、标题
+            Regex("""^\s*[零一二两三四五六七八九十百千万]{1,8}章?\s*[、_—\-]\s*.{1,40}$"""),
+            // 9. Special symbol prefix: ☆标题 / ★标题
+            Regex("""^\s*[☆★✦✧].{1,40}$"""),
+            // 10. 分节阅读 / 分页阅读 / 第一页
+            Regex("""^\s*(?:.{0,10}分[页节章段]阅读|第\s*${CN_NUM}{1,6}\s*[页节]).{0,30}$"""),
+            // 11. Book title with bracketed number: 标题(12)
+            Regex("""^\s*.{1,20}\s*[(（]\s*${CN_NUM}{1,8}\s*[)）]\s*$"""),
+            // 12. Generic: number or CN number at line start followed by text (20 chars max, for simple numbered chapters)
+            Regex("""^\s*\d{1,5}\s*$"""),
+            Regex("""^\s*[零一二两三四五六七八九十百千万]{1,10}\s*$"""),
+        )
     }
 
     fun parse(fileUri: String, novelId: Long = 0): TxtParseResult {
@@ -119,67 +150,75 @@ class TxtFileParser(
         return bestEncoding to bestText
     }
 
-    // ---- chapter splitting (unchanged from before) ----
+    // ---- chapter splitting ----
 
     private fun splitChapters(text: String, novelId: Long): List<LocalNovelChapterInfo> {
-        val matches = CHAPTER_REGEX.findAll(text).toList()
-        if (matches.isEmpty()) {
+        // Split text into lines with their offsets
+        val lines = text.split("\n")
+        // Find lines that match chapter patterns
+        val chapterLineIndices = mutableListOf<Int>()
+
+        for ((i, line) in lines.withIndex()) {
+            if (line.length > 50) continue // chapter titles are never very long
+            val trimmed = line.trim()
+            if (trimmed.isEmpty()) continue
+
+            for (pattern in CHAPTER_PATTERNS) {
+                if (pattern.matches(trimmed)) {
+                    chapterLineIndices.add(i)
+                    break
+                }
+            }
+        }
+
+        if (chapterLineIndices.isEmpty()) {
             return listOf(
                 LocalNovelChapterInfo(
-                    novelId = novelId,
-                    title = "全文",
-                    chapterIndex = 0,
-                    startOffset = 0,
-                    endOffset = text.length.toLong(),
-                    internalPath = "",
+                    novelId = novelId, title = "全文", chapterIndex = 0,
+                    startOffset = 0, endOffset = text.length.toLong(), internalPath = "",
                 )
             )
+        }
+
+        // Build chapter boundaries based on line offsets
+        val chapterStarts = chapterLineIndices.map { idx ->
+            // Calculate the byte/char offset of this line's start
+            var offset = 0L
+            for (j in 0 until idx) {
+                offset += lines[j].length + 1 // +1 for the \n
+            }
+            offset
         }
 
         val chapters = mutableListOf<LocalNovelChapterInfo>()
         var chapterIndex = 0
 
-        val firstMatch = matches.first()
-        val preText = text.substring(0, firstMatch.range.first).trim()
+        // Text before first chapter
+        val firstStart = chapterStarts.first()
+        val preText = text.substring(0, firstStart.toInt()).trim()
         if (preText.isNotEmpty() && preText.length > 50) {
             chapters.add(
                 LocalNovelChapterInfo(
-                    novelId = novelId,
-                    title = "前言",
-                    chapterIndex = chapterIndex++,
-                    startOffset = 0,
-                    endOffset = firstMatch.range.first.toLong(),
-                    internalPath = "",
+                    novelId = novelId, title = "前言", chapterIndex = chapterIndex++,
+                    startOffset = 0, endOffset = firstStart, internalPath = "",
                 )
             )
         }
 
-        for (i in matches.indices) {
-            val match = matches[i]
-            val title = buildString {
-                append(match.groupValues[1].trim())
-                val extra = match.groupValues.getOrNull(2)?.trim()?.take(50)
-                if (!extra.isNullOrEmpty()) {
-                    append(" ")
-                    append(extra)
-                }
-            }
-            val bodyStart = match.range.last + 1
-            val bodyEnd = if (i + 1 < matches.size) {
-                matches[i + 1].range.first
+        for (i in chapterLineIndices.indices) {
+            val title = lines[chapterLineIndices[i]].trim().take(80)
+            val bodyStart = chapterStarts[i]
+            val bodyEnd = if (i + 1 < chapterStarts.size) {
+                chapterStarts[i + 1]
             } else {
-                text.length
+                text.length.toLong()
             }
 
             if (bodyEnd > bodyStart) {
                 chapters.add(
                     LocalNovelChapterInfo(
-                        novelId = novelId,
-                        title = title,
-                        chapterIndex = chapterIndex++,
-                        startOffset = bodyStart.toLong(),
-                        endOffset = bodyEnd.toLong(),
-                        internalPath = "",
+                        novelId = novelId, title = title, chapterIndex = chapterIndex++,
+                        startOffset = bodyStart, endOffset = bodyEnd, internalPath = "",
                     )
                 )
             }
@@ -188,12 +227,8 @@ class TxtFileParser(
         if (chapters.isEmpty()) {
             chapters.add(
                 LocalNovelChapterInfo(
-                    novelId = novelId,
-                    title = "全文",
-                    chapterIndex = 0,
-                    startOffset = 0,
-                    endOffset = text.length.toLong(),
-                    internalPath = "",
+                    novelId = novelId, title = "全文", chapterIndex = 0,
+                    startOffset = 0, endOffset = text.length.toLong(), internalPath = "",
                 )
             )
         }
