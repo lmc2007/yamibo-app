@@ -225,7 +225,7 @@ fun LocalNovelReaderScreen(novelId: Long) {
             val nextGi = data.groupIndex + 1
             if (nextGi < data.groups.size) appendGroup(data.novel, data.groups[nextGi])
             isLoading = false
-            // Restore position: use the saved (actual) chapter's start, not group-first
+            // Restore position
             val g = data.groups[data.groupIndex]
             val savedChapter = g.chapters.firstOrNull { it.id == data.restoreChapterId } ?: g.chapters.first()
             val chStart = chapterStarts[savedChapter.chapterIndex] ?: chapterStarts[g.chapters.first().chapterIndex] ?: 0
@@ -235,6 +235,49 @@ fun LocalNovelReaderScreen(novelId: Long) {
             kotlinx.coroutines.delay(300); listState.scrollToItem(target, data.restoreOff)
             savedSegmentIndex = (data.restoreWithinGroup shl 32) or (data.restoreOff.toLong() and 0xFFFF_FFFF)
             canSaveProgress = true
+
+            // Preload previous group in background — avoids blocking initial load if I/O fails
+            if (data.groupIndex > 0) {
+                scope.launch {
+                    try {
+                        prependGroup(data.novel, data.groups[data.groupIndex - 1])
+                    } catch (_: Exception) {
+                        // lazy-load will retry when user scrolls to top boundary
+                    }
+                }
+            }
+
+            // Active lazy-load check: snapshotFlow may have already emitted while canSaveProgress was false.
+            // Re-check boundaries so the user isn't stuck at a group edge on re-entry.
+            scope.launch {
+                kotlinx.coroutines.delay(50) // let layout settle after scrollToItem
+                if (!canSaveProgress || allSegments.isEmpty() || novel == null) return@launch
+                val info = listState.layoutInfo
+                val first = info.visibleItemsInfo.firstOrNull()?.index ?: 0
+                val last = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+                val total = info.totalItemsCount
+                // Near bottom: load next group
+                if (total - last < 20) {
+                    val nextGi = currentGroupIndex + 1
+                    if (nextGi < groups.size) {
+                        val firstCh = groups[nextGi].chapters.firstOrNull()
+                        if (firstCh != null && firstCh.chapterIndex !in chapterStarts) {
+                            appendGroup(novel!!, groups[nextGi]); currentGroupIndex = nextGi
+                        }
+                    }
+                }
+                // Near top: load previous group
+                if (first < 4) {
+                    val prevGi = currentGroupIndex - 1
+                    if (prevGi >= 0) {
+                        val firstCh = groups[prevGi].chapters.firstOrNull()
+                        if (firstCh != null && firstCh.chapterIndex !in chapterStarts) {
+                            prependGroup(novel!!, groups[prevGi])
+                            currentGroupIndex = prevGi
+                        }
+                    }
+                }
+            }
         }
     }
 

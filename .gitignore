@@ -31,3 +31,5 @@ node_modules/
 /.codex
 /data/
 /openspec
+/composeApp/release/
+/.reasonix/
