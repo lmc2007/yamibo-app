@@ -50,6 +50,14 @@ import me.thenano.yamibo.yamibo_app.util.formatDownloadedByteSize
 import me.thenano.yamibo.yamibo_app.task.AppTaskKey
 import me.thenano.yamibo.yamibo_app.task.isActive
 import me.thenano.yamibo.yamibo_app.util.state
+import me.thenano.yamibo.yamibo_app.LocalForumNovelShelfRepository
+import me.thenano.yamibo.yamibo_app.forumnovel.rememberForumNovelShareActions
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelPackageExportResult
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelPackageExporter
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelPackageWriter
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfEntry
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfSource
+import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 private enum class DownloadManagerTab(val title: String) {
     Queue(i18n("下載佇列")),
@@ -76,6 +84,14 @@ fun DownloadQueueScreen() {
     val feedbackController = me.thenano.yamibo.yamibo_app.LocalAppFeedbackController.current
     val appTaskManager = LocalAppTaskManager.current
     val scope = rememberCoroutineScope()
+    val forumNovelShelfRepository = LocalForumNovelShelfRepository.current
+    val forumNovelPackageWriter = remember { ForumNovelPackageWriter() }
+    val forumNovelPackageExporter = remember(repository, forumNovelPackageWriter) {
+        ForumNovelPackageExporter(repository, forumNovelPackageWriter)
+    }
+    val forumNovelShareActions = rememberForumNovelShareActions { message ->
+        feedbackController.post(message)
+    }
     var summary by remember { mutableStateOf(DownloadQueueSummary()) }
     var folderReady by remember { mutableStateOf(true) }
     var selectedTab by remember { mutableStateOf(DownloadManagerTab.Queue) }
@@ -231,6 +247,48 @@ fun DownloadQueueScreen() {
                         scope.launch {
                             handle.state.first { !it.isActive }
                             reloadContentManagement()
+                        }
+                    },
+                    onShareGroup = { group ->
+                        appTaskManager.launch(AppTaskKey("download-control:share-group:${group.id}")) {
+                            val fileName = group.title + ".zip"
+                            val zipPath = forumNovelShareActions.createShareZipPath(fileName)
+                            when (val result = forumNovelPackageExporter.export(group, zipPath)) {
+                                is ForumNovelPackageExportResult.Success -> {
+                                    forumNovelShareActions.shareZip(result.zipPath, fileName)
+                                    if (result.missingPages.isNotEmpty()) {
+                                        feedbackController.post(i18n("部分页面未下载，已跳过：{}", result.missingPages.joinToString(", ")))
+                                    }
+                                }
+                                is ForumNovelPackageExportResult.Failure -> {
+                                    feedbackController.post(result.message)
+                                }
+                            }
+                        }
+                    },
+                    onAddToShelf = { group ->
+                        appTaskManager.launch(AppTaskKey("download-control:add-shelf:${group.id}")) {
+                            val key = group.items.firstOrNull()?.key as? ThreadPageDownloadKey
+                            if (key == null) {
+                                feedbackController.post(i18n("只有论坛小说可以加入书架"))
+                            } else {
+                                val existing = forumNovelShelfRepository.getByTid(key.tid.toLong(), key.authorId?.toLong())
+                                if (existing != null) {
+                                    feedbackController.post(i18n("已在书架中"))
+                                } else {
+                                    forumNovelShelfRepository.insert(
+                                        ForumNovelShelfEntry(
+                                            source = ForumNovelShelfSource.Downloaded,
+                                            tid = key.tid.toLong(),
+                                            authorId = key.authorId?.toLong(),
+                                            title = group.title,
+                                            contentDir = null,
+                                            createdAt = currentTimeMillis(),
+                                        )
+                                    )
+                                    feedbackController.post(i18n("已加入书架"))
+                                }
+                            }
                         }
                     },
                 )
@@ -412,6 +470,8 @@ private fun DownloadContentManagementTab(
     onClearGroup: (DownloadedContentGroup) -> Unit,
     onClearItem: (DownloadedContentItem) -> Unit,
     onRefreshItem: (DownloadedContentItem) -> Unit,
+    onShareGroup: (DownloadedContentGroup) -> Unit,
+    onAddToShelf: (DownloadedContentGroup) -> Unit,
 ) {
     val colors = YamiboTheme.colors
     val groups = (state as? DownloadContentManagementState.Ready)?.groups.orEmpty()
@@ -488,6 +548,8 @@ private fun DownloadContentManagementTab(
                             onClearGroup = { onClearGroup(group) },
                             onClearItem = onClearItem,
                             onRefreshItem = onRefreshItem,
+                              onShareGroup = { onShareGroup(group) },
+                              onAddToShelf = { onAddToShelf(group) },
                         )
                     }
                 }
@@ -626,6 +688,8 @@ private fun DownloadContentGroupCard(
     onClearGroup: () -> Unit,
     onClearItem: (DownloadedContentItem) -> Unit,
     onRefreshItem: (DownloadedContentItem) -> Unit,
+    onShareGroup: () -> Unit,
+    onAddToShelf: () -> Unit,
 ) {
     val colors = YamiboTheme.colors
     val arrowRotation by animateFloatAsState(
@@ -669,6 +733,12 @@ private fun DownloadContentGroupCard(
                     DownloadContentItemRow(item, onClearItem, onRefreshItem)
                 }
                 Spacer(Modifier.height(8.dp))
+                if (group.type == DownloadedContentGroupType.Thread) {
+                    SmallQueueButton(i18n("分享论坛小说"), onShareGroup)
+                    Spacer(Modifier.size(6.dp))
+                    SmallQueueButton(i18n("加入书架"), onAddToShelf)
+                    Spacer(Modifier.height(8.dp))
+                }
                 SmallQueueButton(
                     text = if (group.type == DownloadedContentGroupType.TagManga) i18n("清除整個標籤") else i18n("清除整個 Thread"),
                     onClick = onClearGroup,

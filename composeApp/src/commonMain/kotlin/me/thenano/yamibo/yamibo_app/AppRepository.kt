@@ -17,6 +17,7 @@ import me.thenano.yamibo.yamibo_app.repository.ChineseConversionRepository
 import me.thenano.yamibo.yamibo_app.repository.ContentCoverRepository
 import me.thenano.yamibo.yamibo_app.repository.DetailNoteRepository
 import me.thenano.yamibo.yamibo_app.repository.DownloadRepository
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteShareRepository
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository
@@ -184,3 +185,6 @@ val LocalLocalNovelRepository =
 
 val LocalPlatformFileOperations =
     compositionLocalOf<PlatformFileOperations> { error("LocalPlatformFileOperations not provided") }
+
+val LocalForumNovelShelfRepository =
+    compositionLocalOf<ForumNovelShelfRepository> { error("LocalForumNovelShelfRepository not provided") }
