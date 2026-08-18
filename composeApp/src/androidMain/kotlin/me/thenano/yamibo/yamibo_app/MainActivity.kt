@@ -390,7 +390,7 @@ class MainActivity : ComponentActivity() {
             val appUpdateRepository = remember {
                 DefaultAppUpdateRepository(
                     appSettingsRepository = appSettingsRepository,
-                    platform = AndroidAppUpdatePlatform(context),
+                    platform = AndroidAppUpdatePlatform(context, appSettingsRepository),
                 )
             }
 

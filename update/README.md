@@ -94,7 +94,7 @@ Client update source order (all serve the same GitHub `lmc2007/yamibo-app` feed;
 
 Update-check timeouts: each proxy source uses a 5 second request timeout; GitHub direct uses 10 seconds.
 
-`gh-proxy.com` is not used for update checks; it only accelerates APK downloads. Android downloads of GitHub Release APK assets go through `https://gh-proxy.com/<asset-url>` first and fall back to the GitHub direct URL when the proxy fails. The client automatically falls back to the next source when one fails to fetch or decode, and skips stale mirrors (ready manifests not newer than the installed version) instead of stopping at them.
+The download proxies are not used for update checks; they only accelerate APK downloads. The user picks the download mode in the App update screen: GitHub direct, or mirror proxy (default). In proxy mode, Android downloads of GitHub Release APK assets go through the selected proxy (`https://gh-proxy.com/<asset-url>` / `https://ghproxy.net/<asset-url>` / `https://gh.dpik.top/<asset-url>`) first and fall back to the GitHub direct URL when the proxy fails; in direct mode only the GitHub URL is used. `gh.dpik.top` is the default proxy node used by the `github.akams.cn` frontend (that site itself does not serve prefix-proxy requests). The client automatically falls back to the next source when one fails to fetch or decode, and skips stale mirrors (ready manifests not newer than the installed version) instead of stopping at them.
 
 ## Sync Update Folder To Mirrors Workflow
 

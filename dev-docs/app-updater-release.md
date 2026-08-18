@@ -22,7 +22,7 @@ All seven endpoints serve the same GitHub `update-release` feed. `gh-proxy.com` 
 The client walks the sources in order and automatically falls back to the next endpoint when a source fails to fetch or decode (network error, non-2xx HTTP, JSON error, or an HTML error page); only when every source fails does the check report failure, with per-source error details. A ready manifest whose `versionCode` is not newer than the installed app is treated as a stale/cached mirror and the client keeps scanning the remaining sources instead of reporting "up to date" from the stale one. The client remembers the mirror that last returned a usable manifest (or the mirror that produced the final update/preparing result) and rotates it to the front, so the next check tries the last successfully detected mirror first.
 
 
-Android APK downloads: GitHub Release assets are downloaded through `https://gh-proxy.com/<original-url>` first, and fall back to the GitHub direct URL when the proxy attempt fails.
+Android APK downloads: the user picks a download mode in the App update screen — GitHub direct, or mirror proxy (default, preserving the historical behavior). In proxy mode the client tries the selected proxy first (`gh-proxy.com`, `ghproxy.net`, or `gh.dpik.top` — the default node used by the `github.akams.cn` frontend, which itself does not serve prefix-proxy requests), and falls back to the GitHub direct URL when the proxy attempt fails. In direct mode only the GitHub URL is used.
 
 For Gitea APK assets, publish through the API and write the upload response's `browser_download_url` into the
 published manifest. Do not construct `/releases/download/...` URLs: gitea.com may redirect those web routes to login.
@@ -111,7 +111,7 @@ The update feed lives in the GitHub repository `lmc2007/yamibo-app` (`update-rel
 - `gh.jasonzeng.dev`
 - `ghproxy.mirror.skybyte.me`
 
-`gh-proxy.com` is only used to accelerate APK downloads and is not part of the update check sources.
+The download proxies (`gh-proxy.com`, `ghproxy.net`, `gh.dpik.top`) are only used to accelerate APK downloads and are not part of the update check sources.
 
 If a mirror dies or changes its URL format, update `DefaultAppUpdateRepository.sources`, `tools/check-update-mirrors.ps1`, and this document together.
 For the release workflow's Gitee/Gitea release-mirror repositories and secrets, see `dev-docs/gitea-update-mirror-setup.md`.
@@ -124,4 +124,4 @@ Verify all check mirrors and the download proxy before a release:
 powershell -NoProfile -File .\tools\check-update-mirrors.ps1
 ```
 
-The script requests the GitHub feed directly and through every check mirror, warns when a mirror serves a stale `versionCode`, and HEAD-checks the GitHub APK asset both directly and through `https://gh-proxy.com/`.
+The script requests the GitHub feed directly and through every check mirror, warns when a mirror serves a stale `versionCode`, and HEAD-checks the GitHub APK asset directly and through every download proxy (`https://gh-proxy.com/`, `https://ghproxy.net/`, `https://gh.dpik.top/`).

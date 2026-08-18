@@ -903,3 +903,10 @@ Current cache size: {}","清除圖片、頁面與其他暫存資料，釋放目�
 部分页面未下载，已跳过：{},Some pages were not downloaded and were skipped: {},部分页面未下载，已跳过：{},部分页面未下载，已跳过：{}
 论坛小说,Forum novel,论坛小说,论坛小说
 已加入书架,Added to bookshelf,已加入书架,已加入书架
+下載方式,Download method,下載方式,下载方式
+GitHub 直連,GitHub direct,GitHub 直連,GitHub 直连
+鏡像代理,Mirror proxy,鏡像代理,镜像代理
+直接從 GitHub 下載更新檔案。,Download the update directly from GitHub.,直接從 GitHub 下載更新檔案。,直接从 GitHub 下载更新文件。
+鏡像代理失敗時自動回退 GitHub 直連。,Falls back to GitHub direct when the mirror proxy fails.,鏡像代理失敗時自動回退 GitHub 直連。,镜像代理失败时自动回退 GitHub 直连。
+代理伺服器,Proxy server,代理伺服器,代理服务器
+僅在「鏡像代理」模式下生效。,Only applies in mirror proxy mode.,僅在「鏡像代理」模式下生效。,仅在“镜像代理”模式下生效。
