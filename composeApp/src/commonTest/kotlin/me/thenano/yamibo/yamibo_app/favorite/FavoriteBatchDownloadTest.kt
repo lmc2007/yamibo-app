@@ -252,6 +252,8 @@ private class FakeDownloadRepository(
     override suspend fun getStatus(key: TagMangaChapterDownloadKey) = DownloadStatus.NotDownloaded
     override suspend fun getStatus(key: RssMangaChapterDownloadKey) = DownloadStatus.NotDownloaded
     override suspend fun getDownloadedPage(key: ThreadPageDownloadKey): ThreadPage? = null
+    override suspend fun getDownloadedRawPage(key: ThreadPageDownloadKey): ThreadPage? = null
+    override suspend fun getThreadPageImageBytes(key: ThreadPageDownloadKey, fileName: String): ByteArray? = null
     override suspend fun getManifest(key: ThreadPageDownloadKey): ThreadPageDownloadManifest? = null
     override suspend fun getTagMangaChapterImages(key: TagMangaChapterDownloadKey): List<String>? = null
     override suspend fun getTagMangaManifest(key: TagMangaChapterDownloadKey): TagMangaChapterManifest? = null
