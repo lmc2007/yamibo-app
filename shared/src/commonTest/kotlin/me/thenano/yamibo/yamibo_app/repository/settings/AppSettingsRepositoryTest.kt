@@ -37,6 +37,22 @@ class AppSettingsRepositoryTest {
         assertEquals(FixedScheduleInterval.Hours24, AppUpdateLaunchCheckThreshold.HOURS_24.fixedInterval)
         assertEquals(FixedScheduleInterval.Week1, BackupInterval.WEEK_1.fixedInterval)
     }
+
+    @Test
+    fun appUpdateDownloadSettingsPersist() {
+        val store = AppSettingsMemoryStore()
+        val repository = AppSettingsRepository(store)
+
+        assertEquals(AppUpdateDownloadMode.PROXY, repository.appUpdateDownloadMode.getValue())
+        assertEquals(AppUpdateDownloadProxy.GH_PROXY_COM, repository.appUpdateDownloadProxy.getValue())
+
+        repository.appUpdateDownloadMode.setValue(AppUpdateDownloadMode.DIRECT)
+        repository.appUpdateDownloadProxy.setValue(AppUpdateDownloadProxy.GH_DPIK_TOP)
+
+        val recreated = AppSettingsRepository(store)
+        assertEquals(AppUpdateDownloadMode.DIRECT, recreated.appUpdateDownloadMode.getValue())
+        assertEquals(AppUpdateDownloadProxy.GH_DPIK_TOP, recreated.appUpdateDownloadProxy.getValue())
+    }
 }
 
 private class AppSettingsMemoryStore : SettingsStore {

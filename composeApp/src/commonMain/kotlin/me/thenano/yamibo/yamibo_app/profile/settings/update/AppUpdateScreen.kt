@@ -23,6 +23,8 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.repository.appupdate.*
+import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateDownloadMode
+import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateDownloadProxy
 import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateLaunchCheckThreshold
 import me.thenano.yamibo.yamibo_app.util.state
 
@@ -37,10 +39,14 @@ internal fun AppUpdateScreen() {
     val coroutineScope = rememberCoroutineScope()
     val downloadState by repository.downloadState.collectAsState()
     val launchCheckThreshold = appSettingsRepository.appUpdateLaunchCheckThreshold.state()
+    val downloadMode = appSettingsRepository.appUpdateDownloadMode.state()
+    val downloadProxy = appSettingsRepository.appUpdateDownloadProxy.state()
 
     var checking by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf<AppUpdateCheckResult?>(null) }
     var showThresholdDialog by remember { mutableStateOf(false) }
+    var showDownloadModeDialog by remember { mutableStateOf(false) }
+    var showDownloadProxyDialog by remember { mutableStateOf(false) }
     var showUpdatePromptPreview by remember { mutableStateOf(false) }
     val release = (result as? AppUpdateCheckResult.UpdateAvailable)?.release
         ?: (result as? AppUpdateCheckResult.Ignored)?.release
@@ -73,6 +79,13 @@ internal fun AppUpdateScreen() {
             AppUpdateLaunchThresholdCard(
                 selected = launchCheckThreshold,
                 onClick = { showThresholdDialog = true },
+            )
+
+            AppUpdateDownloadSourceCard(
+                mode = downloadMode,
+                proxy = downloadProxy,
+                onModeClick = { showDownloadModeDialog = true },
+                onProxyClick = { showDownloadProxyDialog = true },
             )
 
             Row(
@@ -135,6 +148,34 @@ internal fun AppUpdateScreen() {
                 showThresholdDialog = false
             },
             onDismiss = { showThresholdDialog = false },
+        )
+    }
+    if (showDownloadModeDialog) {
+        YamiboSingleSelectDialog(
+            title = i18n("下載方式"),
+            options = AppUpdateDownloadMode.entries,
+            selected = downloadMode,
+            onDismiss = { showDownloadModeDialog = false },
+            onSelect = {
+                appSettingsRepository.appUpdateDownloadMode.setValue(it)
+                showDownloadModeDialog = false
+            },
+            label = { appUpdateDownloadModeLabel(it) },
+            dismissOnSelect = true,
+        )
+    }
+    if (showDownloadProxyDialog) {
+        YamiboSingleSelectDialog(
+            title = i18n("鏡像代理"),
+            options = AppUpdateDownloadProxy.entries,
+            selected = downloadProxy,
+            onDismiss = { showDownloadProxyDialog = false },
+            onSelect = {
+                appSettingsRepository.appUpdateDownloadProxy.setValue(it)
+                showDownloadProxyDialog = false
+            },
+            label = { appUpdateDownloadProxyLabel(it) },
+            dismissOnSelect = true,
         )
     }
     if (showUpdatePromptPreview) {
@@ -370,6 +411,113 @@ private fun AppUpdateLaunchThresholdCard(
 }
 
 @Composable
+private fun AppUpdateDownloadSourceCard(
+    mode: AppUpdateDownloadMode,
+    proxy: AppUpdateDownloadProxy,
+    onModeClick: () -> Unit,
+    onProxyClick: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = i18n("下載方式"),
+                        color = colors.textDark,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = when (mode) {
+                            AppUpdateDownloadMode.DIRECT -> i18n("直接從 GitHub 下載更新檔案。")
+                            AppUpdateDownloadMode.PROXY -> i18n("鏡像代理失敗時自動回退 GitHub 直連。")
+                        },
+                        color = colors.textDark.copy(alpha = 0.62f),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                    )
+                }
+                SettingValueChip(
+                    text = appUpdateDownloadModeLabel(mode),
+                    onClick = onModeClick,
+                )
+            }
+            if (mode == AppUpdateDownloadMode.PROXY) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = i18n("代理伺服器"),
+                            color = colors.textDark,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = i18n("僅在「鏡像代理」模式下生效。"),
+                            color = colors.textDark.copy(alpha = 0.62f),
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                        )
+                    }
+                    SettingValueChip(
+                        text = appUpdateDownloadProxyLabel(proxy),
+                        onClick = onProxyClick,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingValueChip(text: String, onClick: () -> Unit) {
+    val colors = YamiboTheme.colors
+    Box(
+        modifier = Modifier
+            .background(
+                color = colors.brownLight.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(8.dp),
+            )
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = colors.textOnBackground,
+            fontSize = 14.sp,
+        )
+    }
+}
+
+@Composable
 private fun AppUpdateLaunchThresholdDialog(
     selected: AppUpdateLaunchCheckThreshold,
     onSelect: (AppUpdateLaunchCheckThreshold) -> Unit,
@@ -390,6 +538,19 @@ private fun AppUpdateLaunchThresholdDialog(
 private fun appUpdateLaunchThresholdLabel(option: AppUpdateLaunchCheckThreshold): String = when (option) {
     AppUpdateLaunchCheckThreshold.MANUAL -> i18n("不自動檢查")
     else -> requireNotNull(option.fixedInterval).localizedLabel()
+}
+
+@Composable
+private fun appUpdateDownloadModeLabel(option: AppUpdateDownloadMode): String = when (option) {
+    AppUpdateDownloadMode.DIRECT -> i18n("GitHub 直連")
+    AppUpdateDownloadMode.PROXY -> i18n("鏡像代理")
+}
+
+@Composable
+private fun appUpdateDownloadProxyLabel(option: AppUpdateDownloadProxy): String = when (option) {
+    AppUpdateDownloadProxy.GH_PROXY_COM -> "gh-proxy.com"
+    AppUpdateDownloadProxy.GHPROXY_NET -> "ghproxy.net"
+    AppUpdateDownloadProxy.GH_DPIK_TOP -> "gh.dpik.top"
 }
 
 private fun AppUpdateCheckResult.Preparing.displayVersionLabel(): String = "$channel-v$versionName"

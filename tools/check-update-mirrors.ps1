@@ -10,8 +10,9 @@ directly or through third-party GitHub acceleration mirrors. The script:
   Proxy feeds use a 5 second timeout and the GitHub direct feed uses 10 seconds,
   matching DefaultAppUpdateRepository per-source timeouts.
 - Warns when versionCode values disagree (a mirror may be serving stale cache).
-- HEAD-checks the GitHub release APK asset directly and through
-  https://gh-proxy.com/ (gh-proxy.com is only used for downloads, not checks),
+- HEAD-checks the GitHub release APK asset directly and through every
+  user-selectable download proxy
+  (https://gh-proxy.com/ / https://ghproxy.net/ / https://gh.dpik.top/),
   and rejects HTML responses (login/error pages).
 
 Usage:
@@ -61,11 +62,20 @@ $githubAsset = $feeds['GitHub'].assets | Where-Object { $_.type -in @('universal
 if ($null -eq $githubAsset) {
     $githubAsset = $feeds.Values | ForEach-Object { $_.assets } | Where-Object { $_.type -in @('universal-apk', 'apk') } | Select-Object -First 1
 }
+
+# User-selectable download proxies (mirror-proxy download mode).
+# gh.dpik.top is the default proxy node used by the github.akams.cn frontend.
+$downloadProxies = @(
+    'https://gh-proxy.com/',
+    'https://ghproxy.net/',
+    'https://gh.dpik.top/'
+)
+
 if ($null -ne $githubAsset) {
-    foreach ($url in @("https://gh-proxy.com/$($githubAsset.url)", $githubAsset.url)) {
+    foreach ($proxyBase in $downloadProxies) {
+        $url = "$proxyBase$($githubAsset.url)"
         try {
-            $headTimeout = if ($url -eq $githubAsset.url) { $GithubTimeoutSec } else { $ProxyTimeoutSec }
-            $head = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $headTimeout -Method Head
+            $head = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec $ProxyTimeoutSec -Method Head
             $contentType = $head.Headers['Content-Type']
             if ($contentType -match 'text/html') {
                 throw "unexpected HTML content type: $contentType"
@@ -77,6 +87,19 @@ if ($null -ne $githubAsset) {
             "ERR  HEAD  $url"
             "     $($_.Exception.Message)"
         }
+    }
+    try {
+        $head = Invoke-WebRequest -Uri $githubAsset.url -UseBasicParsing -TimeoutSec $GithubTimeoutSec -Method Head
+        $contentType = $head.Headers['Content-Type']
+        if ($contentType -match 'text/html') {
+            throw "unexpected HTML content type: $contentType"
+        }
+        "OK   HEAD  $($githubAsset.url)"
+        "     status=$($head.StatusCode)  type=$contentType  len=$($head.Headers['Content-Length'])"
+    } catch {
+        $failed += "HEAD $($githubAsset.url) : $($_.Exception.Message)"
+        "ERR  HEAD  $($githubAsset.url)"
+        "     $($_.Exception.Message)"
     }
 } else {
     "WARN no installable APK asset in any feed"

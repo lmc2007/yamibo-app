@@ -13,6 +13,9 @@ import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateAsset
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateDownloadState
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.repository.appupdate.AppUpdateRelease
+import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateDownloadMode
+import me.thenano.yamibo.yamibo_app.repository.settings.AppUpdateDownloadProxy
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -20,6 +23,7 @@ import java.security.MessageDigest
 
 class AndroidAppUpdatePlatform(
     private val context: Context,
+    private val appSettingsRepository: AppSettingsRepository,
 ) : AppUpdatePlatform {
     @Volatile
     private var canceled = false
@@ -50,7 +54,11 @@ class AndroidAppUpdatePlatform(
             return@withContext requestInstall(apkFile, release)
         }
 
-        val urls = resolveApkDownloadUrls(asset.url)
+        val urls = resolveApkDownloadUrls(
+            assetUrl = asset.url,
+            mode = appSettingsRepository.appUpdateDownloadMode.getValue(),
+            proxy = appSettingsRepository.appUpdateDownloadProxy.getValue(),
+        )
         if (urls.isEmpty()) {
             return@withContext AppUpdateDownloadState.Failed(release, "APK asset URL is blank")
         }
@@ -178,23 +186,43 @@ class AndroidAppUpdatePlatform(
     }
 }
 
-internal const val GH_PROXY_BASE_URL = "https://gh-proxy.com/"
+/**
+ * 每個鏡像代理的加速請求前綴（「原 URL 前綴代理」格式）：
+ * `https://<proxy-host>/https://github.com/...`
+ *
+ * - gh-proxy.com：https://gh-proxy.com/<url>
+ * - ghproxy.net：https://ghproxy.net/<url>
+ * - gh.dpik.top：github.akams.cn 站點默認使用的自營代理節點（該站本身是
+ *   前端聚合頁，不直接提供前綴代理；以其默認節點保證請求可用）。
+ */
+internal val AppUpdateDownloadProxy.baseUrl: String
+    get() = when (this) {
+        AppUpdateDownloadProxy.GH_PROXY_COM -> "https://gh-proxy.com/"
+        AppUpdateDownloadProxy.GHPROXY_NET -> "https://ghproxy.net/"
+        AppUpdateDownloadProxy.GH_DPIK_TOP -> "https://gh.dpik.top/"
+    }
 
 /**
- * GitHub Release 资产优先通过 gh-proxy.com 代理下载（加速），
- * 代理不可用时回退到 GitHub 直连。
- * 其余来源（Gitee/Gitea 等）保持直连。
+ * 解析 APK 下載候選 URL 清單：
+ * - GitHub 託管的資產（github.com / objects.githubusercontent.com / *.github.com）：
+ *   [AppUpdateDownloadMode.DIRECT] 只走 GitHub 直連；
+ *   [AppUpdateDownloadMode.PROXY] 優先走所選鏡像代理，失敗時回退 GitHub 直連。
+ * - 其餘來源（Gitee/Gitea 等）保持直連。
  */
-internal fun resolveApkDownloadUrls(assetUrl: String): List<String> {
+internal fun resolveApkDownloadUrls(
+    assetUrl: String,
+    mode: AppUpdateDownloadMode = AppUpdateDownloadMode.PROXY,
+    proxy: AppUpdateDownloadProxy = AppUpdateDownloadProxy.GH_PROXY_COM,
+): List<String> {
     val normalized = assetUrl.trim()
     if (normalized.isEmpty()) return emptyList()
     val host = runCatching { URL(normalized).host.lowercase() }.getOrNull()
     val isGitHubHosted = host != null &&
         (host == "github.com" || host == "objects.githubusercontent.com" || host.endsWith(".github.com"))
-    return if (isGitHubHosted) {
-        listOf(GH_PROXY_BASE_URL + normalized, normalized)
-    } else {
-        listOf(normalized)
+    if (!isGitHubHosted) return listOf(normalized)
+    return when (mode) {
+        AppUpdateDownloadMode.DIRECT -> listOf(normalized)
+        AppUpdateDownloadMode.PROXY -> listOf(proxy.baseUrl + normalized, normalized)
     }
 }
 

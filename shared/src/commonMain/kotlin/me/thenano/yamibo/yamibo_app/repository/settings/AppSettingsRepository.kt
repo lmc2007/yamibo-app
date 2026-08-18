@@ -99,6 +99,19 @@ enum class AppUpdateLaunchCheckThreshold(
         get() = fixedInterval?.duration?.inWholeHours
 }
 
+/** App 更新下載方式：GitHub 直連或鏡像代理 */
+enum class AppUpdateDownloadMode(val label: String) {
+    DIRECT("direct"),
+    PROXY("proxy"),
+}
+
+/** App 更新下載鏡像代理（僅 [AppUpdateDownloadMode.PROXY] 模式生效） */
+enum class AppUpdateDownloadProxy(val label: String) {
+    GH_PROXY_COM("gh-proxy.com"),
+    GHPROXY_NET("ghproxy.net"),
+    GH_DPIK_TOP("gh.dpik.top"),
+}
+
 enum class BackupInterval(
     val label: String,
     val fixedInterval: FixedScheduleInterval?,
@@ -287,6 +300,18 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         default = AppUpdateLaunchCheckThreshold.HOURS_6,
     )
 
+    /** 更新下載方式（GitHub 直連 / 鏡像代理） */
+    val appUpdateDownloadMode by enumSetting(
+        name = "app_update_download_mode",
+        default = AppUpdateDownloadMode.PROXY,
+    )
+
+    /** 更新下載鏡像代理（PROXY 模式生效） */
+    val appUpdateDownloadProxy by enumSetting(
+        name = "app_update_download_proxy",
+        default = AppUpdateDownloadProxy.GH_PROXY_COM,
+    )
+
     /** 定期自動備份 */
     val backupInterval by enumSetting(
         name = "backup_interval",
@@ -411,6 +436,8 @@ class AppSettingsRepository(store: SettingsStore) : SettingsRegistry(store, pref
         val favoriteSortModeOptions = FavoriteSortMode.entries.map { it to it.label }
         val favoriteUpdateIntervalOptions = FavoriteUpdateInterval.entries.map { it to it.label }
         val appUpdateLaunchCheckThresholdOptions = AppUpdateLaunchCheckThreshold.entries.map { it to it.label }
+        val appUpdateDownloadModeOptions = AppUpdateDownloadMode.entries.map { it to it.label }
+        val appUpdateDownloadProxyOptions = AppUpdateDownloadProxy.entries.map { it to it.label }
         val backupIntervalOptions = BackupInterval.entries.map { it to it.label }
         val signInModeOptions = SignInMode.entries.map { it to it.label }
         val signInReminderFrequencyOptions = SignReminderFrequency.entries.map { it to it.label }
