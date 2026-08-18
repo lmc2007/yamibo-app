@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.6.8",
-  "versionCode": 16,
+  "versionName": "0.7.7",
+  "versionCode": 17,
   "isReady": false,
-  "releaseNotes": "App 更新下载支持 GitHub 直连/镜像代理选择（gh-proxy.com / ghproxy.net / gh.dpik.top）",
+  "releaseNotes": "SAF 下载/备份文件夹授权丢失导致更新页闪退（SecurityException 降级 + 持久化授权校验）",
   "assets": []
 }

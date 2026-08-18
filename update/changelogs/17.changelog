@@ -1,0 +1,4 @@
+# stable-0.7.7
+
+修复 :
+- SAF 下载/备份文件夹授权丢失导致更新页闪退（SecurityException 降级 + 持久化授权校验）
