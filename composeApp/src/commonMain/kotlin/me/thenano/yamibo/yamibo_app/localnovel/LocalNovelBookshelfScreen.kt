@@ -30,6 +30,13 @@ import me.thenano.yamibo.yamibo_app.repository.LocalNovelInfo
 import me.thenano.yamibo.yamibo_app.repository.LocalNovelFileType
 import me.thenano.yamibo.yamibo_app.repository.localnovel.LocalNovelFileHandle
 import me.thenano.yamibo.yamibo_app.repository.localnovel.rememberLocalNovelFilePicker
+import io.github.littlesurvival.dto.value.ThreadId
+import io.github.littlesurvival.dto.value.UserId
+import me.thenano.yamibo.yamibo_app.repository.ReadHistoryRepository
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelImportResult
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelPackageImporter
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfEntry
+import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 
 @Serializable
@@ -63,9 +70,13 @@ fun LocalNovelBookshelfScreen() {
     val fileOps = LocalPlatformFileOperations.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val forumShelfRepository = LocalForumNovelShelfRepository.current
+    val readHistoryRepo = LocalReadHistoryRepository.current
 
     var novels by remember { mutableStateOf<List<LocalNovelInfo>>(emptyList()) }
     var progressMap by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
+    var forumNovels by remember { mutableStateOf<List<ForumNovelShelfEntry>>(emptyList()) }
+    var forumProgress by remember { mutableStateOf<Map<Long, String>>(emptyMap()) }
     var showDeleteConfirm by remember { mutableStateOf<LocalNovelInfo?>(null) }
     var manageMode by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
@@ -76,16 +87,24 @@ fun LocalNovelBookshelfScreen() {
             val result = withContext(Dispatchers.Default) {
                 val list = repository.getAllNovels()
                 val map = buildProgressMap(list, repository)
-                list to map
+                val shelf = forumShelfRepository.getAll()
+                val shelfProgress = buildForumNovelProgressMap(shelf, readHistoryRepo)
+                BookshelfData(list, map, shelf, shelfProgress)
             }
-            novels = result.first
-            progressMap = result.second
+            novels = result.novels
+            progressMap = result.progressMap
+            forumNovels = result.forumNovels
+            forumProgress = result.forumProgress
         }
     }
 
     val pickFile = rememberLocalNovelFilePicker { handle ->
         scope.launch {
-            importNovel(handle, repository, fileOps, snackbarHostState, navigator)
+            if (handle.name.endsWith(".zip", ignoreCase = true)) {
+                importForumNovelZip(handle, forumShelfRepository, fileOps, snackbarHostState)
+            } else {
+                importNovel(handle, repository, fileOps, snackbarHostState, navigator)
+            }
             reload()
         }
     }
@@ -110,7 +129,7 @@ fun LocalNovelBookshelfScreen() {
                     }
                 },
                 actions = {
-                    if (novels.isNotEmpty()) {
+                    if (novels.isNotEmpty() || forumNovels.isNotEmpty()) {
                         TextButton(onClick = {
                             manageMode = !manageMode
                             selectedIds = emptySet()
@@ -126,7 +145,7 @@ fun LocalNovelBookshelfScreen() {
         },
         snackbarHost = { me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost(hostState = snackbarHostState) },
     ) { padding ->
-        if (novels.isEmpty()) {
+        if (novels.isEmpty() && forumNovels.isEmpty()) {
             Box(
                 Modifier.fillMaxSize().padding(padding),
                 contentAlignment = Alignment.Center,
@@ -200,6 +219,32 @@ fun LocalNovelBookshelfScreen() {
                                 }
                             },
                             onDelete = { showDeleteConfirm = novel },
+                        )
+                    }
+                    items(forumNovels, key = { "forum_${it.id}" }) { entry ->
+                        ForumNovelShelfCard(
+                            entry = entry,
+                            progress = forumProgress[entry.id],
+                            onClick = {
+                                navigator.navigate(
+                                    IThreadReaderScreen(
+                                        tid = ThreadId(entry.tid.toInt()),
+                                        title = entry.title,
+                                        threadType = ReadHistoryRepository.ThreadEntryType.Novel,
+                                        authorId = entry.authorId?.let { UserId(it.toInt()) },
+                                        shelfNovelId = entry.id,
+                                    )
+                                )
+                            },
+                            onDelete = {
+                                scope.launch {
+                                    withContext(Dispatchers.Default) {
+                                        forumShelfRepository.delete(entry.id)
+                                    }
+                                    snackbarHostState.showSnackbar(i18n("已删除"))
+                                    reload()
+                                }
+                            },
                         )
                     }
                 }
@@ -461,6 +506,104 @@ private suspend fun importEpub(
             val coverDest = "${fileOps.getInternalFilesDir()}/covers/${novelId}"
             fileOps.copyFileToInternal(coverPath, coverDest)
             repository.updateCoverPath(novelId, coverDest)
+        }
+    }
+}
+
+private data class BookshelfData(
+    val novels: List<LocalNovelInfo>,
+    val progressMap: Map<Long, String>,
+    val forumNovels: List<ForumNovelShelfEntry>,
+    val forumProgress: Map<Long, String>,
+)
+
+private suspend fun buildForumNovelProgressMap(
+    entries: List<ForumNovelShelfEntry>,
+    readHistoryRepository: ReadHistoryRepository,
+): Map<Long, String> {
+    val map = mutableMapOf<Long, String>()
+    entries.forEach { entry ->
+        val history = runCatching {
+            readHistoryRepository.getPosition(
+                tid = ThreadId(entry.tid.toInt()),
+                threadType = ReadHistoryRepository.ThreadEntryType.Novel,
+                authorId = entry.authorId?.let { UserId(it.toInt()) },
+            )
+        }.getOrNull()
+        if (history != null) {
+            map[entry.id] = i18n("第 {} 页", history.page)
+        }
+    }
+    return map
+}
+
+private suspend fun importForumNovelZip(
+    handle: LocalNovelFileHandle,
+    shelfRepository: me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfRepository,
+    fileOps: me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations,
+    snackbarHostState: SnackbarHostState,
+) {
+    val importer = ForumNovelPackageImporter(shelfRepository, fileOps)
+    when (val result = importer.import(handle.uri)) {
+        is ForumNovelImportResult.Success -> snackbarHostState.showSnackbar(i18n("导入成功"))
+        is ForumNovelImportResult.Duplicate -> snackbarHostState.showSnackbar(i18n("已在书架中"))
+        is ForumNovelImportResult.Failure -> snackbarHostState.showSnackbar(i18n("导入失败：{}", result.message))
+    }
+}
+
+@Composable
+private fun ForumNovelShelfCard(
+    entry: ForumNovelShelfEntry,
+    progress: String?,
+    onClick: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = colors.creamSurface),
+        shape = RoundedCornerShape(8.dp),
+    ) {
+        Row(
+            Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    entry.title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.textDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        i18n("论坛小说"),
+                        fontSize = 11.sp,
+                        color = colors.brownPrimary,
+                    )
+                    if (!progress.isNullOrEmpty()) {
+                        Text(
+                            progress,
+                            fontSize = 11.sp,
+                            color = colors.brownPrimary,
+                        )
+                    }
+                }
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    YamiboIcons.Trashcan,
+                    contentDescription = i18n("删除"),
+                    tint = colors.textOnBackground,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

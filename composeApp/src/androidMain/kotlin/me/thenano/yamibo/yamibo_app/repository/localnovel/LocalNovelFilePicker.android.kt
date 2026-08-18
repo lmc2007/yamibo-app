@@ -47,6 +47,7 @@ actual fun rememberLocalNovelFilePicker(
             arrayOf(
                 "text/plain",
                 "application/epub+zip",
+                "application/zip",
                 "application/octet-stream",
             )
         )

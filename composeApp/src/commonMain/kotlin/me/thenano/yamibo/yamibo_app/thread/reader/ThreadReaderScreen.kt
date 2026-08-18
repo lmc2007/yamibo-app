@@ -72,6 +72,9 @@ import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.repository.download.ThreadPageDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.InAppLinkContext
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonDisplayMode
+import kotlinx.serialization.json.Json
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelPackageManifest
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.withResolvedImageUrls
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonJumpTarget
 import me.thenano.yamibo.yamibo_app.repository.settings.ThreadReaderMode
 import me.thenano.yamibo.yamibo_app.thread.detail.novel.components.ThreadErrorContent
@@ -608,6 +611,7 @@ internal fun ThreadReaderScreen(
     authorId: UserId? = null,
     initialPage: Int = 1,
     targetPid: PostId? = null,
+    shelfNovelId: Long? = null,
     catalogCoverTargetType: ContentCoverRepository.TargetType? = null,
     catalogCoverTargetId: Long? = null,
     catalogTagId: TagId? = null,
@@ -624,6 +628,9 @@ internal fun ThreadReaderScreen(
     val novelSettingsRepository = LocalNovelReaderSettingsRepository.current
     val threadRepository = LocalThreadRepository.current
     val downloadRepository = LocalDownloadRepository.current
+    val forumNovelShelfRepository = LocalForumNovelShelfRepository.current
+    val platformFileOps = LocalPlatformFileOperations.current
+    val importedPackageJson = remember { Json { ignoreUnknownKeys = true; isLenient = true } }
     val downloadQueue by downloadRepository.queue.collectAsState()
     val favoriteRepository = LocalFavoriteRepository.current
     val favoriteSyncRepository = LocalFavoriteSyncRepository.current
@@ -2739,6 +2746,40 @@ internal fun ThreadReaderScreen(
             }
         }
 
+
+        suspend fun loadFromImportedPackage(): Boolean {
+            val novelId = shelfNovelId ?: return false
+            val entry = forumNovelShelfRepository.getById(novelId) ?: return false
+            val contentDir = entry.contentDir ?: return false
+            val pagePath = "$contentDir/pages/$page.json"
+            if (!platformFileOps.localFileExists(pagePath)) return false
+            val raw = runCatching { platformFileOps.readLocalFileText(pagePath) }.getOrNull() ?: return false
+            val decoded = runCatching { importedPackageJson.decodeFromString<ThreadPage>(raw) }.getOrNull() ?: return false
+            val manifestPath = "$contentDir/manifest.json"
+            val imageBySourceUrl = if (platformFileOps.localFileExists(manifestPath)) {
+                runCatching {
+                    importedPackageJson.decodeFromString<ForumNovelPackageManifest>(
+                        platformFileOps.readLocalFileText(manifestPath),
+                    )
+                }.getOrNull()?.images?.associate { image -> image.sourceUrl to image.fileName }.orEmpty()
+            } else {
+                emptyMap()
+            }
+            val resolved = decoded.withResolvedImageUrls { sourceUrl ->
+                val fileName = imageBySourceUrl[sourceUrl]
+                    ?: imageBySourceUrl[sourceUrl.removePrefix("https://bbs.yamibo.com/")]
+                    ?: return@withResolvedImageUrls null
+                "file://$contentDir/images/$fileName"
+            }
+            loadedPostsByPage[page] = resolved.posts
+            rebuildPosts()
+            threadInfo = resolved.thread
+            totalPages = resolved.pageNav?.totalPages ?: 1
+            loadedPages = loadedPages + page
+            failedAutoLoadPages.remove(page)
+            markPageLoadSucceeded()
+            return true
+        }
         suspend fun loadFromDownload(): Boolean {
             val downloadKey = ThreadPageDownloadKey(tid.value, page, authorId?.value)
             val downloaded = downloadRepository.getDownloadedPage(downloadKey)
@@ -2795,6 +2836,10 @@ internal fun ThreadReaderScreen(
                 }
             }
         } else {
+            if (loadFromImportedPackage()) {
+                isLoadingNextPage = false
+                return true
+            }
             if (loadFromDownload()) {
                 isLoadingNextPage = false
                 return true

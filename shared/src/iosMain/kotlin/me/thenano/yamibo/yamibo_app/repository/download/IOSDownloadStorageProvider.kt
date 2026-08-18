@@ -49,6 +49,12 @@ class IOSDownloadStorageProvider(
         return fileSystem.source(path).buffer().use { it.readByteArray() }
     }
 
+    override suspend fun readThreadPageImage(key: ThreadPageDownloadKey, fileName: String): ByteArray? {
+        val path = rootDir() / key.stableId / "images" / fileName
+        if (!fileSystem.exists(path)) return null
+        return fileSystem.source(path).buffer().use { it.readByteArray() }
+    }
+
     override suspend fun resolveImageUri(key: ThreadPageDownloadKey, fileName: String): String? {
         val path = rootDir() / key.stableId / "images" / fileName
         return path.takeIf(fileSystem::exists)?.let { "file://$it" }

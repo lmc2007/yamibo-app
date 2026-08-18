@@ -68,6 +68,14 @@ class AndroidDownloadStorageProvider(
         return resolver.openInputStream(file)?.use { it.readBytes() }
     }
 
+    override suspend fun readThreadPageImage(key: ThreadPageDownloadKey, fileName: String): ByteArray? {
+        val treeUri = selectedTreeUri() ?: return null
+        val pageDir = findChild(treeUri, downloadsRoot(treeUri) ?: return null, key.stableId) ?: return null
+        val imagesDir = findChild(treeUri, pageDir, IMAGES_DIR) ?: return null
+        val file = findChild(treeUri, imagesDir, fileName) ?: return null
+        return resolver.openInputStream(file)?.use { it.readBytes() }
+    }
+
     override suspend fun resolveImageUri(key: ThreadPageDownloadKey, fileName: String): String? {
         val treeUri = selectedTreeUri() ?: return null
         val pageDir = findChild(treeUri, downloadsRoot(treeUri) ?: return null, key.stableId) ?: return null

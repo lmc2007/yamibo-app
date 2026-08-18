@@ -23,6 +23,7 @@ private data class ThreadReaderRestorePayload(
     val authorId: Int? = null,
     val initialPage: Int = 1,
     val targetPid: Int? = null,
+    val shelfNovelId: Long? = null,
     val catalogCoverTargetTypeName: String? = null,
     val catalogCoverTargetId: Long? = null,
     val catalogTagId: Int? = null,
@@ -43,6 +44,7 @@ class IThreadReaderScreen(
     val authorId: UserId? = null,
     val initialPage: Int = 1,
     val targetPid: PostId? = null,
+    val shelfNovelId: Long? = null,
     val catalogCoverTargetType: ContentCoverRepository.TargetType? = null,
     val catalogCoverTargetId: Long? = null,
     val catalogTagId: TagId? = null,
@@ -59,6 +61,7 @@ class IThreadReaderScreen(
         authorId?.value ?: "all",
         catalogCoverTargetType?.name ?: "none",
         catalogCoverTargetId ?: "none",
+          shelfNovelId ?: "none",
     )
     override val restoreDecoder = Decoder
 
@@ -70,6 +73,7 @@ class IThreadReaderScreen(
             threadTypeName = threadType.name,
             authorId = authorId?.value,
             initialPage = initialPage,
+              shelfNovelId = shelfNovelId,
             targetPid = targetPid?.value,
             catalogCoverTargetTypeName = catalogCoverTargetType?.name,
             catalogCoverTargetId = catalogCoverTargetId,
@@ -91,6 +95,7 @@ class IThreadReaderScreen(
             threadType = threadType,
             authorId = authorId,
             initialPage = initialPage,
+              shelfNovelId = shelfNovelId,
             targetPid = targetPid,
             catalogCoverTargetType = catalogCoverTargetType,
             catalogCoverTargetId = catalogCoverTargetId,
@@ -113,6 +118,7 @@ class IThreadReaderScreen(
                 threadType = ReadHistoryRepository.ThreadEntryType.valueOf(data.threadTypeName),
                 authorId = data.authorId?.let(::UserId),
                 initialPage = data.initialPage,
+                  shelfNovelId = data.shelfNovelId,
                 targetPid = data.targetPid?.let(::PostId),
                 catalogCoverTargetType = data.catalogCoverTargetTypeName
                     ?.let(ContentCoverRepository.TargetType::valueOf),

@@ -27,6 +27,7 @@ import me.thenano.yamibo.yamibo_app.profile.settings.sign.IOSSignReminderSchedul
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.localnovel.IOSLocalNovelRepository
 import me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.IOSForumNovelShelfRepository
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.pancloud.PanCloudAccountRepository
 import me.thenano.yamibo.yamibo_app.repository.pancloud.PanCloudApiClient
@@ -273,6 +274,7 @@ fun MainViewController() = ComposeUIViewController {
     val themeRepository = remember { IOSThemeRepository() }
     val localNovelRepository = remember { IOSLocalNovelRepository(dbFactory) }
     val platformFileOps = remember { PlatformFileOperations() }
+    val forumNovelShelfRepository = remember { IOSForumNovelShelfRepository(dbFactory) }
     val signReminderScheduler = remember { IOSSignReminderScheduler() }
     val appUpdateRepository = remember {
         DefaultAppUpdateRepository(
@@ -323,6 +325,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalThemeRepository provides themeRepository,
         LocalLocalNovelRepository provides localNovelRepository,
         LocalPlatformFileOperations provides platformFileOps,
+        LocalForumNovelShelfRepository provides forumNovelShelfRepository,
         LocalTagRepository provides tagRepository,
         LocalAppSettingsRepository provides appSettingsRepository,
         LocalDiskCacheFactory provides diskCacheFactory,

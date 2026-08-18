@@ -1,0 +1,11 @@
+CREATE TABLE ForumNovelShelf (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    source TEXT NOT NULL DEFAULT 'imported',
+    tid INTEGER NOT NULL,
+    authorId INTEGER,
+    title TEXT NOT NULL,
+    contentDir TEXT,
+    createdAt INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX ForumNovelShelf_unique_tid_author ON ForumNovelShelf(tid, authorId);

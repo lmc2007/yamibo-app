@@ -1,0 +1,20 @@
+getAll:
+SELECT * FROM ForumNovelShelf
+ORDER BY createdAt DESC, id DESC;
+
+getById:
+SELECT * FROM ForumNovelShelf
+WHERE id = ?
+LIMIT 1;
+
+getByTidAndAuthor:
+SELECT * FROM ForumNovelShelf
+WHERE tid = ? AND authorId IS ?
+LIMIT 1;
+
+insert:
+INSERT INTO ForumNovelShelf(source, tid, authorId, title, contentDir, createdAt)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteById:
+DELETE FROM ForumNovelShelf WHERE id = ?;

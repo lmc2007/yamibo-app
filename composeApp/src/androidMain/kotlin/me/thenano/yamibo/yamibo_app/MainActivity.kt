@@ -68,6 +68,7 @@ import me.thenano.yamibo.yamibo_app.repository.font.DefaultFontRepository
 import me.thenano.yamibo.yamibo_app.repository.inapplinknavigation.DefaultInAppLinkNavigationRepository
 import me.thenano.yamibo.yamibo_app.repository.rss.RssSearchSubscriptionRepositoryImpl
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
+import me.thenano.yamibo.yamibo_app.repository.forumnovel.AndroidForumNovelShelfRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.MangaReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.NovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.SettingsImageReaderModeOverrideRepository
@@ -385,6 +386,7 @@ class MainActivity : ComponentActivity() {
             val themeRepository = remember { AndroidThemeRepository() }
             val localNovelRepository = remember { AndroidLocalNovelRepository(dbFactory) }
             val platformFileOps = remember { PlatformFileOperations(context) }
+            val forumNovelShelfRepository = remember { AndroidForumNovelShelfRepository(dbFactory) }
             val appUpdateRepository = remember {
                 DefaultAppUpdateRepository(
                     appSettingsRepository = appSettingsRepository,
@@ -434,6 +436,7 @@ class MainActivity : ComponentActivity() {
                 LocalThemeRepository provides themeRepository,
                 LocalLocalNovelRepository provides localNovelRepository,
                 LocalPlatformFileOperations provides platformFileOps,
+                LocalForumNovelShelfRepository provides forumNovelShelfRepository,
                 LocalTagRepository provides tagRepository,
                 LocalAppSettingsRepository provides appSettingsRepository,
                 LocalDiskCacheFactory provides diskCacheFactory,
