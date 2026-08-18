@@ -25,4 +25,17 @@ class AndroidDownloadStorageProviderTest {
         assertTrue(missing.isMissingDocumentFailure())
         assertFalse(IllegalArgumentException("Invalid document id").isMissingDocumentFailure())
     }
+
+    @Test
+    fun storagePermissionLossIsTransientAndMustNotBubbleToUi() {
+        assertTrue(SecurityException("Permission Denial: opening provider").isTransientStorageFailure())
+        assertTrue(IllegalArgumentException("Invalid document id").isTransientStorageFailure())
+        assertTrue(
+            IllegalArgumentException(
+                "Failed to determine document relationship",
+                FileNotFoundException("Missing file"),
+            ).isTransientStorageFailure(),
+        )
+        assertFalse(IllegalStateException("unexpected").isTransientStorageFailure())
+    }
 }

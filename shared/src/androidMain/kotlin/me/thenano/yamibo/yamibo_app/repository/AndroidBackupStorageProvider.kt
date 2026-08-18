@@ -6,6 +6,7 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupStorageProvider
+import me.thenano.yamibo.yamibo_app.repository.download.isTransientStorageFailure
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 
 class AndroidBackupStorageProvider(
@@ -27,13 +28,22 @@ class AndroidBackupStorageProvider(
     @SuppressLint("UseKtx")
     override suspend fun setSelectedFolder(uri: String): Result<Unit> = backupResult("setSelectedFolder") {
         val parsed = Uri.parse(uri)
-        runCatching {
-            resolver.takePersistableUriPermission(
-                parsed,
-                IntentFlags.READ_WRITE,
-            )
-        }.onFailure {
-            Logger.d(TAG, "Failed to take persistable URI permission", it)
+        val alreadyGranted = resolver.persistedUriPermissions.any {
+            it.uri == parsed && it.isReadPermission && it.isWritePermission
+        }
+        if (!alreadyGranted) {
+            runCatching {
+                resolver.takePersistableUriPermission(
+                    parsed,
+                    IntentFlags.READ_WRITE,
+                )
+            }.getOrElse { error ->
+                // 授權無法持久化：即使現在可用，重啟後也會失效並在 UI 執行緒拋
+                // SecurityException 閃退，因此拒絕接受此資料夾而不是殘留一個失效 URI。
+                throw IllegalStateException(
+                    "無法長期保存此資料夾的存取權限（${error.message ?: error::class.simpleName}），請改用其他資料夾",
+                )
+            }
         }
         appSettingsRepository.backupFolderUri.setValue(uri)
     }.map { }
@@ -68,37 +78,43 @@ class AndroidBackupStorageProvider(
 
     override suspend fun listBackupFiles(): List<BackupRepository.BackupFileInfo> {
         val treeUri = selectedTreeUri() ?: return emptyList()
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
-            treeUri,
-            DocumentsContract.getTreeDocumentId(treeUri),
-        )
-        val projection = arrayOf(
-            DocumentsContract.Document.COLUMN_DOCUMENT_ID,
-            DocumentsContract.Document.COLUMN_DISPLAY_NAME,
-            DocumentsContract.Document.COLUMN_SIZE,
-            DocumentsContract.Document.COLUMN_LAST_MODIFIED,
-        )
-        val items = mutableListOf<BackupRepository.BackupFileInfo>()
-        resolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
-            val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
-            val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-            val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
-            val modifiedIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
-            while (cursor.moveToNext()) {
-                val name = cursor.getString(nameIndex).orEmpty()
-                if (!name.endsWith(BACKUP_EXTENSION)) continue
-                val docId = cursor.getString(idIndex)
-                val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
-                items += BackupRepository.BackupFileInfo(
-                    name = name,
-                    bytes = cursor.getLongOrZero(sizeIndex),
-                    uri = fileUri.toString(),
-                    automatic = name.endsWith(AUTO_BACKUP_SUFFIX),
-                    modifiedAt = cursor.getLongOrNull(modifiedIndex),
-                )
+        return try {
+            val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
+                treeUri,
+                DocumentsContract.getTreeDocumentId(treeUri),
+            )
+            val projection = arrayOf(
+                DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+                DocumentsContract.Document.COLUMN_DISPLAY_NAME,
+                DocumentsContract.Document.COLUMN_SIZE,
+                DocumentsContract.Document.COLUMN_LAST_MODIFIED,
+            )
+            val items = mutableListOf<BackupRepository.BackupFileInfo>()
+            resolver.query(childrenUri, projection, null, null, null)?.use { cursor ->
+                val idIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
+                val nameIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+                val sizeIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_SIZE)
+                val modifiedIndex = cursor.getColumnIndex(DocumentsContract.Document.COLUMN_LAST_MODIFIED)
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIndex).orEmpty()
+                    if (!name.endsWith(BACKUP_EXTENSION)) continue
+                    val docId = cursor.getString(idIndex)
+                    val fileUri = DocumentsContract.buildDocumentUriUsingTree(treeUri, docId)
+                    items += BackupRepository.BackupFileInfo(
+                        name = name,
+                        bytes = cursor.getLongOrZero(sizeIndex),
+                        uri = fileUri.toString(),
+                        automatic = name.endsWith(AUTO_BACKUP_SUFFIX),
+                        modifiedAt = cursor.getLongOrNull(modifiedIndex),
+                    )
+                }
             }
+            items
+        } catch (error: Exception) {
+            if (!error.isTransientStorageFailure()) throw error
+            Logger.w(TAG, "Storage unavailable while listing backup files uri=$treeUri", error)
+            emptyList()
         }
-        return items
     }
 
     override suspend fun getBackupStorageBytes(): Long =
@@ -109,18 +125,33 @@ class AndroidBackupStorageProvider(
         DocumentsContract.deleteDocument(resolver, Uri.parse(fileInfo.uri))
     }.map { }
 
-    private fun selectedTreeUri(): Uri? =
-        appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() }?.let(Uri::parse)
+    /**
+     * 回傳使用者選擇的資料夾 URI；若持久化授權已失效（重裝/還原後 URI 殘留、
+     * 授權遺失），視同未選擇，避免 SAF 查詢拋 SecurityException 閃退。
+     */
+    private fun selectedTreeUri(): Uri? {
+        val value = appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() } ?: return null
+        val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return null
+        val hasPersistedGrant = resolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission && it.isWritePermission
+        }
+        if (!hasPersistedGrant) {
+            Logger.w(TAG, "Selected backup folder lost its URI grant; treating as unselected uri=$uri")
+            return null
+        }
+        return uri
+    }
 
     private fun rootDocumentUri(treeUri: Uri): Uri =
         DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
 
-    private fun queryDisplayName(uri: Uri): String? {
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-        return resolver.query(uri, projection, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        }
-    }
+    private fun queryDisplayName(uri: Uri): String? =
+        runCatching {
+            val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            resolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull()
 
     private fun android.database.Cursor.getLongOrZero(index: Int): Long =
         if (index >= 0 && !isNull(index)) getLong(index) else 0L

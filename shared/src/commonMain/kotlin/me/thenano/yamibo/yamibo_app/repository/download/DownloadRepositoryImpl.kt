@@ -569,6 +569,7 @@ class DownloadRepositoryImpl(
 
     override suspend fun markThreadUpdateAvailable(tid: ThreadId, authorId: UserId?) {
         initialized.await()
+        if (!storageProvider.isReady()) return
         storageProvider.listManifests()
             .filter { it.key.tid == tid.value && it.key.authorId == authorId?.value }
             .forEach { manifest ->
