@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.6.7",
-  "versionCode": 15,
+  "versionName": "0.6.8",
+  "versionCode": 16,
   "isReady": false,
-  "releaseNotes": "论坛小说分享/导入书架与HTML阅读器离线读包（composeApp）",
+  "releaseNotes": "App 更新下载支持 GitHub 直连/镜像代理选择（gh-proxy.com / ghproxy.net / gh.dpik.top）",
   "assets": []
 }

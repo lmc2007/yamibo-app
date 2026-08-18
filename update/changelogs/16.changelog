@@ -1,0 +1,7 @@
+# stable-0.6.8
+
+新增 :
+- App 更新下载支持 GitHub 直连/镜像代理选择（gh-proxy.com / ghproxy.net / gh.dpik.top）
+
+修复 :
+- FakeDownloadRepository 补齐 DownloadRepository 新增接口方法（修复 composeApp 单元测试编译）
