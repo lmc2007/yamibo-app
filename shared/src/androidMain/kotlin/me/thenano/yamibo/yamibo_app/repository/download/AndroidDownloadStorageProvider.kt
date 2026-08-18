@@ -20,12 +20,7 @@ class AndroidDownloadStorageProvider(
     override suspend fun getSelectedFolderLabel(): String? =
         selectedTreeUri()?.let { queryDisplayName(rootDocumentUri(it)) }
 
-    override suspend fun isReady(): Boolean =
-        selectedTreeUri()?.let { uri ->
-            resolver.persistedUriPermissions.any {
-                it.uri == uri && it.isReadPermission && it.isWritePermission
-            }
-        } == true
+    override suspend fun isReady(): Boolean = selectedTreeUri() != null
 
     override suspend fun writeThreadPage(
         key: ThreadPageDownloadKey,
@@ -285,8 +280,23 @@ class AndroidDownloadStorageProvider(
         deleteChildByName(treeUri, root, "rss_$subscriptionId")
     }
 
-    private fun selectedTreeUri(): Uri? =
-        appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() }?.let(Uri::parse)
+    /**
+     * 回傳使用者選擇的資料夾 URI；若持久化授權已失效（例如重裝/還原備份後
+     * URI 設定殘留但授權遺失），視同未選擇，避免 SAF 查詢拋
+     * SecurityException 在 UI 執行緒上未捕獲而閃退。
+     */
+    private fun selectedTreeUri(): Uri? {
+        val value = appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() } ?: return null
+        val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return null
+        val hasPersistedGrant = resolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission && it.isWritePermission
+        }
+        if (!hasPersistedGrant) {
+            Logger.w(TAG, "Selected storage folder lost its URI grant; treating as unselected uri=$uri")
+            return null
+        }
+        return uri
+    }
 
     private fun rootDocumentUri(treeUri: Uri): Uri =
         DocumentsContract.buildDocumentUriUsingTree(treeUri, DocumentsContract.getTreeDocumentId(treeUri))
@@ -379,18 +389,19 @@ class AndroidDownloadStorageProvider(
                 }
             }
         } catch (error: Exception) {
-            if (!error.isMissingDocumentFailure()) throw error
-            Logger.d(TAG, "Document disappeared while listing children uri=$parent", error)
+            if (!error.isTransientStorageFailure()) throw error
+            Logger.w(TAG, "Storage unavailable while listing children uri=$parent", error)
         }
         return items
     }
 
-    private fun queryDisplayName(uri: Uri): String? {
-        val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
-        return resolver.query(uri, projection, null, null, null)?.use { cursor ->
-            if (cursor.moveToFirst()) cursor.getString(0) else null
-        }
-    }
+    private fun queryDisplayName(uri: Uri): String? =
+        runCatching {
+            val projection = arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            resolver.query(uri, projection, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+        }.getOrNull()
 
     private data class DocumentChild(val name: String, val uri: Uri)
 
@@ -414,3 +425,10 @@ internal fun Throwable.isMissingDocumentFailure(): Boolean {
     }
     return false
 }
+
+/**
+ * SAF 環境性失敗（文件消失 / 授權遺失 / tree URI 失效）不應冒泡到 UI 執行緒，
+ * 一律按「目前無法存取」降級處理；其餘異常仍照常拋出。
+ */
+internal fun Throwable.isTransientStorageFailure(): Boolean =
+    isMissingDocumentFailure() || this is SecurityException || this is IllegalArgumentException
