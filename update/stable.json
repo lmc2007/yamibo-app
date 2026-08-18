@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.7.6",
-  "versionCode": 14,
+  "versionName": "0.6.7",
+  "versionCode": 15,
   "isReady": false,
-  "releaseNotes": "更换更新检测镜像并设置分源超时（代理5s/GitHub10s）",
+  "releaseNotes": "论坛小说分享/导入书架与HTML阅读器离线读包（composeApp）",
   "assets": []
 }
