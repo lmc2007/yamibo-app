@@ -309,6 +309,21 @@ class DownloadRepositoryImpl(
         }
     }
 
+    override suspend fun getDownloadedRawPage(key: ThreadPageDownloadKey): ThreadPage? {
+        initialized.await()
+        return withContext(Dispatchers.Default) {
+            val bytes = storageProvider.readThreadPage(key) ?: return@withContext null
+            runCatching { json.decodeFromString<ThreadPage>(bytes.decodeToString()) }
+                .onFailure { Logger.d(TAG, "Failed to decode raw downloaded thread page key=${key.stableId}", it) }
+                .getOrNull()
+        }
+    }
+
+    override suspend fun getThreadPageImageBytes(key: ThreadPageDownloadKey, fileName: String): ByteArray? {
+        initialized.await()
+        return storageProvider.readThreadPageImage(key, fileName)
+    }
+
     override suspend fun getManifest(key: ThreadPageDownloadKey): ThreadPageDownloadManifest? =
         initialized.await().let { storageProvider.readManifest(key) }
 

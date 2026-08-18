@@ -707,6 +707,7 @@ class DownloadRepositoryTest {
         }
 
         override suspend fun readThreadPage(key: ThreadPageDownloadKey): ByteArray? = pages[key]
+        override suspend fun readThreadPageImage(key: ThreadPageDownloadKey, fileName: String): ByteArray? = null
         override suspend fun resolveImageUri(key: ThreadPageDownloadKey, fileName: String): String? =
             imageUris[key to fileName]
         override suspend fun readManifest(key: ThreadPageDownloadKey): ThreadPageDownloadManifest? = manifests[key]

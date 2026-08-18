@@ -10,6 +10,7 @@ interface DownloadStorageProvider {
         images: List<PendingDownloadedImage>,
     )
     suspend fun readThreadPage(key: ThreadPageDownloadKey): ByteArray?
+    suspend fun readThreadPageImage(key: ThreadPageDownloadKey, fileName: String): ByteArray?
     suspend fun resolveImageUri(key: ThreadPageDownloadKey, fileName: String): String?
     suspend fun readManifest(key: ThreadPageDownloadKey): ThreadPageDownloadManifest?
     suspend fun listManifests(): List<ThreadPageDownloadManifest>
