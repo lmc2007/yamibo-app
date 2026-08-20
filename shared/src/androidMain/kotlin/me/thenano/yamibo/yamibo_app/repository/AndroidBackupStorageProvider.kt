@@ -1,9 +1,14 @@
 package me.thenano.yamibo.yamibo_app.repository
 
 import android.annotation.SuppressLint
+import android.content.ContentUris
+import android.content.ContentValues
 import android.content.Context
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.MediaStore
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.repository.backup.BackupStorageProvider
 import me.thenano.yamibo.yamibo_app.repository.download.isTransientStorageFailure
@@ -20,9 +25,10 @@ class AndroidBackupStorageProvider(
         runCatching(block)
             .onFailure { Logger.e(TAG, "$operation failed", it) }
 
-    override suspend fun getSelectedFolderLabel(): String? {
-        val uri = selectedTreeUri() ?: return null
-        return queryDisplayName(rootDocumentUri(uri)) ?: "YamiboApp"
+    override suspend fun getSelectedFolderLabel(): String? = when (val location = resolveLocation()) {
+        is BackupLocation.Tree -> queryDisplayName(rootDocumentUri(location.uri)) ?: "YamiboApp"
+        BackupLocation.DefaultFolder -> DEFAULT_FOLDER_LABEL
+        null -> null
     }
 
     @SuppressLint("UseKtx")
@@ -52,22 +58,12 @@ class AndroidBackupStorageProvider(
         fileName: String,
         bytes: ByteArray,
     ): Result<BackupRepository.BackupFileInfo> = backupResult("writeBackupFile fileName=$fileName") {
-        val treeUri = selectedTreeUri() ?: error("尚未選擇備份資料夾")
-        val fileUri = DocumentsContract.createDocument(
-            resolver,
-            rootDocumentUri(treeUri),
-            BACKUP_MIME_TYPE,
-            fileName,
-        ) ?: error("無法建立備份檔案")
-        resolver.openOutputStream(fileUri, "wt")?.use { it.write(bytes) }
-            ?: error("無法寫入備份檔案")
-        BackupRepository.BackupFileInfo(
-            name = fileName,
-            bytes = bytes.size.toLong(),
-            uri = fileUri.toString(),
-            automatic = fileName.endsWith(AUTO_BACKUP_SUFFIX),
-            modifiedAt = null,
-        )
+        when (val location = resolveLocation()) {
+            is BackupLocation.Tree -> writeToTree(location.uri, fileName, bytes)
+            BackupLocation.DefaultFolder -> writeToDefaultFolder(fileName, bytes)
+                ?: error("無法寫入預設備份資料夾（$DEFAULT_FOLDER_LABEL）")
+            null -> error("尚未選擇備份資料夾")
+        }
     }
 
     @SuppressLint("UseKtx")
@@ -76,8 +72,90 @@ class AndroidBackupStorageProvider(
             ?: error("無法讀取備份檔案")
     }
 
-    override suspend fun listBackupFiles(): List<BackupRepository.BackupFileInfo> {
-        val treeUri = selectedTreeUri() ?: return emptyList()
+    override suspend fun listBackupFiles(): List<BackupRepository.BackupFileInfo> = when (val location = resolveLocation()) {
+        is BackupLocation.Tree -> listFromTree(location.uri)
+        BackupLocation.DefaultFolder -> listFromDefaultFolder()
+        null -> emptyList()
+    }
+
+    override suspend fun getBackupStorageBytes(): Long =
+        listBackupFiles().sumOf { it.bytes }
+
+    override suspend fun deleteBackupFile(fileInfo: BackupRepository.BackupFileInfo): Result<Unit> =
+        backupResult("deleteBackupFile name=${fileInfo.name}") {
+            deleteFileByUri(fileInfo)
+        }.map { }
+
+    /**
+     * 回傳使用者選擇的資料夾 URI；若持久化授權已失效（重裝/還原後 URI 殘留、
+     * 授權遺失），視同未選擇，避免 SAF 查詢拋 SecurityException 閃退。
+     */
+    private fun selectedTreeUri(): Uri? {
+        val value = appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() } ?: return null
+        val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return null
+        val hasPersistedGrant = resolver.persistedUriPermissions.any {
+            it.uri == uri && it.isReadPermission && it.isWritePermission
+        }
+        if (!hasPersistedGrant) {
+            Logger.w(TAG, "Selected backup folder lost its URI grant; treating as unselected uri=$uri")
+            return null
+        }
+        return uri
+    }
+
+    /**
+     * 解析當前有效備份位置：優先使用者透過 SAF 選擇的資料夾；未選擇（或授權失效）時
+     * 回退到預設公共下載目錄 Download/Yamibo（API 29+，MediaStore 會自動建立目錄）。
+     */
+    private fun resolveLocation(): BackupLocation? {
+        selectedTreeUri()?.let { return BackupLocation.Tree(it) }
+        return if (isDefaultFolderSupported()) BackupLocation.DefaultFolder else null
+    }
+
+    private fun writeToTree(
+        treeUri: Uri,
+        fileName: String,
+        bytes: ByteArray,
+    ): BackupRepository.BackupFileInfo {
+        val fileUri = DocumentsContract.createDocument(
+            resolver,
+            rootDocumentUri(treeUri),
+            BACKUP_MIME_TYPE,
+            fileName,
+        ) ?: error("無法建立備份檔案")
+        resolver.openOutputStream(fileUri, "wt")?.use { it.write(bytes) }
+            ?: error("無法寫入備份檔案")
+        return BackupRepository.BackupFileInfo(
+            name = fileName,
+            bytes = bytes.size.toLong(),
+            uri = fileUri.toString(),
+            automatic = fileName.endsWith(AUTO_BACKUP_SUFFIX),
+            modifiedAt = null,
+        )
+    }
+
+    private fun writeToDefaultFolder(
+        fileName: String,
+        bytes: ByteArray,
+    ): BackupRepository.BackupFileInfo? {
+        if (!isDefaultFolderSupported()) return null
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, BACKUP_MIME_TYPE)
+            put(MediaStore.MediaColumns.RELATIVE_PATH, DEFAULT_RELATIVE_PATH)
+        }
+        val fileUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
+        resolver.openOutputStream(fileUri, "wt")?.use { it.write(bytes) } ?: return null
+        return BackupRepository.BackupFileInfo(
+            name = fileName,
+            bytes = bytes.size.toLong(),
+            uri = fileUri.toString(),
+            automatic = fileName.endsWith(AUTO_BACKUP_SUFFIX),
+            modifiedAt = null,
+        )
+    }
+
+    private fun listFromTree(treeUri: Uri): List<BackupRepository.BackupFileInfo> {
         return try {
             val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(
                 treeUri,
@@ -117,29 +195,61 @@ class AndroidBackupStorageProvider(
         }
     }
 
-    override suspend fun getBackupStorageBytes(): Long =
-        listBackupFiles().sumOf { it.bytes }
-
-    @SuppressLint("UseKtx")
-    override suspend fun deleteBackupFile(fileInfo: BackupRepository.BackupFileInfo): Result<Unit> = backupResult("deleteBackupFile name=${fileInfo.name}") {
-        DocumentsContract.deleteDocument(resolver, Uri.parse(fileInfo.uri))
-    }.map { }
-
-    /**
-     * 回傳使用者選擇的資料夾 URI；若持久化授權已失效（重裝/還原後 URI 殘留、
-     * 授權遺失），視同未選擇，避免 SAF 查詢拋 SecurityException 閃退。
-     */
-    private fun selectedTreeUri(): Uri? {
-        val value = appSettingsRepository.backupFolderUri.getValue().takeIf { it.isNotBlank() } ?: return null
-        val uri = runCatching { Uri.parse(value) }.getOrNull() ?: return null
-        val hasPersistedGrant = resolver.persistedUriPermissions.any {
-            it.uri == uri && it.isReadPermission && it.isWritePermission
+    private fun listFromDefaultFolder(): List<BackupRepository.BackupFileInfo> {
+        if (!isDefaultFolderSupported()) return emptyList()
+        return try {
+            val projection = arrayOf(
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+            )
+            val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} = ?"
+            val selectionArgs = arrayOf(DEFAULT_RELATIVE_PATH)
+            val items = mutableListOf<BackupRepository.BackupFileInfo>()
+            resolver.query(
+                MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                projection,
+                selection,
+                selectionArgs,
+                null,
+            )?.use { cursor ->
+                val idIndex = cursor.getColumnIndex(MediaStore.MediaColumns._ID)
+                val nameIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+                val sizeIndex = cursor.getColumnIndex(MediaStore.MediaColumns.SIZE)
+                val modifiedIndex = cursor.getColumnIndex(MediaStore.MediaColumns.DATE_MODIFIED)
+                while (cursor.moveToNext()) {
+                    val name = cursor.getString(nameIndex).orEmpty()
+                    if (!name.endsWith(BACKUP_EXTENSION)) continue
+                    val fileUri = ContentUris.withAppendedId(
+                        MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                        cursor.getLong(idIndex),
+                    )
+                    items += BackupRepository.BackupFileInfo(
+                        name = name,
+                        bytes = cursor.getLongOrZero(sizeIndex),
+                        uri = fileUri.toString(),
+                        automatic = name.endsWith(AUTO_BACKUP_SUFFIX),
+                        // MediaStore DATE_MODIFIED 以秒為單位，轉換為毫秒與 SAF 一致
+                        modifiedAt = cursor.getLongOrNull(modifiedIndex)?.times(1000L),
+                    )
+                }
+            }
+            items
+        } catch (error: Exception) {
+            if (!error.isTransientStorageFailure()) throw error
+            Logger.w(TAG, "Storage unavailable while listing default backup folder", error)
+            emptyList()
         }
-        if (!hasPersistedGrant) {
-            Logger.w(TAG, "Selected backup folder lost its URI grant; treating as unselected uri=$uri")
-            return null
+    }
+
+    private fun deleteFileByUri(fileInfo: BackupRepository.BackupFileInfo) {
+        val uri = Uri.parse(fileInfo.uri)
+        if (uri.authority == MediaStore.AUTHORITY) {
+            resolver.delete(uri, null, null)
+        } else {
+            DocumentsContract.deleteDocument(resolver, uri)
         }
-        return uri
     }
 
     private fun rootDocumentUri(treeUri: Uri): Uri =
@@ -165,10 +275,23 @@ class AndroidBackupStorageProvider(
                 android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
     }
 
-    private companion object {
-        const val TAG = "AndroidBackupStorageProvider"
-        const val BACKUP_EXTENSION = ".yamibobak"
-        const val AUTO_BACKUP_SUFFIX = "-autobackup.yamibobak"
-        const val BACKUP_MIME_TYPE = "application/octet-stream"
+    private sealed interface BackupLocation {
+        data class Tree(val uri: Uri) : BackupLocation
+        data object DefaultFolder : BackupLocation
+    }
+
+    companion object {
+        /** 預設備份資料夾是否可用（MediaStore Downloads 集合需要 API 29+） */
+        fun isDefaultFolderSupported(): Boolean =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q
+
+        private const val TAG = "AndroidBackupStorageProvider"
+        private const val BACKUP_EXTENSION = ".yamibobak"
+        private const val AUTO_BACKUP_SUFFIX = "-autobackup.yamibobak"
+        private const val BACKUP_MIME_TYPE = "application/octet-stream"
+        const val DEFAULT_FOLDER_LABEL = "Download/Yamibo"
+
+        /** 公共下載目錄中的預設備份資料夾（尾斜杠與 MediaStore RELATIVE_PATH 格式一致） */
+        val DEFAULT_RELATIVE_PATH: String = Environment.DIRECTORY_DOWNLOADS + "/Yamibo/"
     }
 }
