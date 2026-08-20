@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.6.10",
-  "versionCode": 19,
+  "versionName": "0.6.11",
+  "versionCode": 20,
   "isReady": false,
-  "releaseNotes": "论坛小说分享 zip 的 FileProvider 缺少 cache/forum_novel_share 路径映射（分享失败修复）",
+  "releaseNotes": "分享文件到微信等应用时 URI 授权丢失（ClipData 显式授权 + chooser 重复 grant flag）",
   "assets": []
 }
