@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.6.9",
-  "versionCode": 18,
+  "versionName": "0.6.10",
+  "versionCode": 19,
   "isReady": false,
-  "releaseNotes": "文件\t变更 AndroidDownloadStorageProvider.kt\tlistChildren/queryDisplayName 对 SecurityException/IllegalArgumentException 降级不冒泡；selectedTreeUri 校验持久化授权，失效视同未选择 AndroidBackupStorageProvider.kt\t同样加固 + setSelectedFolder 授权无法持久化时拒绝接受（不再残留失效 URI） DownloadRepositoryImpl.kt\tmarkThreadUpdateAvailable 增加 isReady() 守卫 AndroidDownloadStorageProviderTest.kt\t新增 isTransientStorageFailure 用例",
+  "releaseNotes": "论坛小说分享 zip 的 FileProvider 缺少 cache/forum_novel_share 路径映射（分享失败修复）",
   "assets": []
 }

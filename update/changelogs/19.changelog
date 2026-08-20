@@ -1,0 +1,4 @@
+# stable-0.6.10
+
+修复 :
+- 论坛小说分享 zip 的 FileProvider 缺少 cache/forum_novel_share 路径映射（分享失败修复）
