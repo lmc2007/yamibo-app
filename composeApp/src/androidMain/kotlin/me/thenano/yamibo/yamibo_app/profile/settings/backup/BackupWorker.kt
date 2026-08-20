@@ -8,6 +8,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.repository.AndroidBackupStorageProvider
 import me.thenano.yamibo.yamibo_app.repository.BackupRepository
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSettingsRepository
 import me.thenano.yamibo.yamibo_app.store.settings.AndroidSettingsStore
@@ -39,7 +40,10 @@ class BackupWorker(
 
             val file = when (resolveAutomaticBackupTarget(cloudEnabled, cloudLoggedIn)) {
                 AutomaticBackupTarget.LOCAL -> {
-                    if (settings.backupFolderUri.getValue().isBlank()) {
+                    // 未選擇資料夾時回退到預設公共下載目錄 Download/Yamibo（API 29+）；兩者皆不可用才失敗
+                    if (!AndroidBackupStorageProvider.isDefaultFolderSupported() &&
+                        settings.backupFolderUri.getValue().isBlank()
+                    ) {
                         notifications.showFailed(i18n("尚未選擇備份資料夾"))
                         return Result.failure()
                     }

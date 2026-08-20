@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import me.thenano.yamibo.yamibo_app.Logger
+import me.thenano.yamibo.yamibo_app.util.publishShareFileToDownloads
 import java.io.File
 
 @Composable
@@ -28,11 +29,13 @@ actual fun rememberForumNovelShareActions(
         shareZip = { zipPath, fileName ->
             runCatching {
                 val shareFile = File(zipPath)
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    shareFile,
-                )
+                // 优先发布到公共下载目录（微信等应用可读取 MediaStore URI），失败回退 FileProvider 私有目录授权
+                val uri = publishShareFileToDownloads(context, shareFile, fileName, "application/zip")
+                    ?: FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        shareFile,
+                    )
                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/zip"
                     putExtra(Intent.EXTRA_STREAM, uri)

@@ -110,6 +110,7 @@ enum class AppUpdateDownloadProxy(val label: String) {
     GH_PROXY_COM("gh-proxy.com"),
     GHPROXY_NET("ghproxy.net"),
     GH_DPIK_TOP("gh.dpik.top"),
+    GIT_MULENG_DPDNS_ORG("git.muleng.dpdns.org"),
 }
 
 enum class BackupInterval(
