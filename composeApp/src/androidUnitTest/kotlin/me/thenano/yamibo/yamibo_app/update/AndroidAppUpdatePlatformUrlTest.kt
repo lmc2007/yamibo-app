@@ -47,6 +47,18 @@ class AndroidAppUpdatePlatformUrlTest {
     }
 
     @Test
+    fun proxyModeUsesGitMulengDpdnsOrg() {
+        assertEquals(
+            listOf("https://git.muleng.dpdns.org/$releaseUrl", releaseUrl),
+            resolveApkDownloadUrls(
+                releaseUrl,
+                AppUpdateDownloadMode.PROXY,
+                AppUpdateDownloadProxy.GIT_MULENG_DPDNS_ORG,
+            ),
+        )
+    }
+
+    @Test
     fun directModeStaysDirectOnly() {
         assertEquals(
             listOf(releaseUrl),

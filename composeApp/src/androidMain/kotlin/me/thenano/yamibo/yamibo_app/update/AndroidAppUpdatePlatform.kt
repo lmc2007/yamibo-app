@@ -194,12 +194,14 @@ class AndroidAppUpdatePlatform(
  * - ghproxy.net：https://ghproxy.net/<url>
  * - gh.dpik.top：github.akams.cn 站點默認使用的自營代理節點（該站本身是
  *   前端聚合頁，不直接提供前綴代理；以其默認節點保證請求可用）。
+ * - git.muleng.dpdns.org：自營 GitHub 加速代理節點。
  */
 internal val AppUpdateDownloadProxy.baseUrl: String
     get() = when (this) {
         AppUpdateDownloadProxy.GH_PROXY_COM -> "https://gh-proxy.com/"
         AppUpdateDownloadProxy.GHPROXY_NET -> "https://ghproxy.net/"
         AppUpdateDownloadProxy.GH_DPIK_TOP -> "https://gh.dpik.top/"
+        AppUpdateDownloadProxy.GIT_MULENG_DPDNS_ORG -> "https://git.muleng.dpdns.org/"
     }
 
 /**

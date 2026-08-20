@@ -551,6 +551,7 @@ private fun appUpdateDownloadProxyLabel(option: AppUpdateDownloadProxy): String 
     AppUpdateDownloadProxy.GH_PROXY_COM -> "gh-proxy.com"
     AppUpdateDownloadProxy.GHPROXY_NET -> "ghproxy.net"
     AppUpdateDownloadProxy.GH_DPIK_TOP -> "gh.dpik.top"
+    AppUpdateDownloadProxy.GIT_MULENG_DPDNS_ORG -> "git.muleng.dpdns.org"
 }
 
 private fun AppUpdateCheckResult.Preparing.displayVersionLabel(): String = "$channel-v$versionName"
