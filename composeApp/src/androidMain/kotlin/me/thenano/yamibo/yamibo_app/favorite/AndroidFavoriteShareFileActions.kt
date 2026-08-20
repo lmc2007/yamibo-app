@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.util.publishShareFileToDownloads
 import java.io.File
 
 @Composable
@@ -69,11 +70,13 @@ actual fun rememberFavoriteShareFileActions(
                 val shareFile = File(shareDir, safeFileName).apply {
                     writeText(jsonText, Charsets.UTF_8)
                 }
-                val uri = FileProvider.getUriForFile(
-                    context,
-                    "${context.packageName}.fileprovider",
-                    shareFile,
-                )
+                // 优先发布到公共下载目录（微信等应用可读取 MediaStore URI），失败回退 FileProvider 私有目录授权
+                val uri = publishShareFileToDownloads(context, shareFile, safeFileName, "application/json")
+                    ?: FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        shareFile,
+                    )
                 val sendIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/json"
                     putExtra(Intent.EXTRA_STREAM, uri)
