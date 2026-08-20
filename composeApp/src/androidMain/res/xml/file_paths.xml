@@ -3,4 +3,5 @@
     <cache-path name="shared_images" path="images/"/>
     <cache-path name="updates" path="updates/"/>
     <cache-path name="favorite_share" path="favorite_share/"/>
+    <cache-path name="forum_novel_share" path="forum_novel_share/"/>
 </paths>
