@@ -1,6 +1,7 @@
 package me.thenano.yamibo.yamibo_app.favorite
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -78,9 +79,13 @@ actual fun rememberFavoriteShareFileActions(
                     putExtra(Intent.EXTRA_STREAM, uri)
                     putExtra(Intent.EXTRA_SUBJECT, safeFileName)
                     putExtra(Intent.EXTRA_TITLE, safeFileName)
+                    // 显式声明 URI 授权，确保目标应用能读取 app 私有目录中的文件
+                    clipData = ClipData.newRawUri(safeFileName, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 val chooser = Intent.createChooser(sendIntent, i18n("分享收藏夾")).apply {
+                    // 部分 ROM 的 chooser 不会把 grant flag 转发给最终目标应用，重复声明以兼容微信等
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(chooser)
