@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.6.11",
-  "versionCode": 20,
+  "versionName": "0.6.12",
+  "versionCode": 21,
   "isReady": false,
-  "releaseNotes": "分享文件到微信等应用时 URI 授权丢失（ClipData 显式授权 + chooser 重复 grant flag）",
+  "releaseNotes": "更新下载代理新增 git.muleng.dpdns.org（前缀代理 + UI 选项 + 单测）",
   "assets": []
 }
