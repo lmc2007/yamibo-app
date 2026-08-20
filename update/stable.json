@@ -1,0 +1,17 @@
+{
+  "channel": "stable",
+  "versionName": "0.6.12",
+  "versionCode": 21,
+  "isReady": true,
+  "releaseNotes": "# stable-0.6.12\n\n新增 :\n- 更新下载代理新增 git.muleng.dpdns.org（前缀代理 + UI 选项 + 单测）\n- 本地备份未选择目录时默认使用 Download/Yamibo（MediaStore 自动创建）\n\n修复 :\n- 分享文件到微信等应用时读取失败（发布到公共下载目录 MediaStore + ClipData 显式授权）\n",
+  "assets": [
+    {
+      "platform": "android",
+      "type": "universal-apk",
+      "url": "https://github.com/lmc2007/yamibo-app/releases/download/21/yamibo-stable-v0.6.12.apk",
+      "sha256": "f338e7d8756246d4b667e89d14a02302ac11f8ce632f378061c0cee6996b7b32",
+      "size": 19415971
+    }
+  ],
+  "releaseUrl": "https://github.com/lmc2007/yamibo-app/releases/tag/21"
+}
