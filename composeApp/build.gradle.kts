@@ -11,8 +11,8 @@ plugins {
     id("local.i18n-auto-merge")
 }
 
-val yamiboAppVersionCode = 21
-val yamiboAppVersionName = "0.6.12"
+val yamiboAppVersionCode = 22
+val yamiboAppVersionName = "0.7.0"
 val yamiboAppApplicationId = "muleng.yamibo.yamibo_app"
 val generatedDebugWafResources = layout.buildDirectory.dir("generated/wafSimulatorResources/debug")
 val localProperties = Properties().apply {
