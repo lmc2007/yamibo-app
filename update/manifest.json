@@ -1,0 +1,17 @@
+{
+  "channel": "stable",
+  "versionName": "0.7.0",
+  "versionCode": 22,
+  "isReady": true,
+  "releaseNotes": "# stable-0.7.0\n\n新增 :\n- add periodic message notifications\n- show download options after adding favorites\n- centralize download and backup folder settings\n\n修复 :\n- include nested collection favorites in update scope\n\n更改 :\n- speed up favorites and history loading\n\n其他 :\n- Route local-novel and pan-cloud feedback through the app feedback contract\n- Declare fork-local domains and cloud credentials as non-portable after 0.0.7 merge\n- prepare stable 0.0.7\n- Make AppSync capacity recovery self-healing\n- Add durable AppSync recovery and portability\n- Create 8.changelog\n- Sanitize threadCover and migrate legacy outbox\n",
+  "assets": [
+    {
+      "platform": "android",
+      "type": "universal-apk",
+      "url": "https://github.com/lmc2007/yamibo-app/releases/download/22/yamibo-stable-v0.7.0.apk",
+      "sha256": "772b7ccbe935d96d6961e66476f53f8cb089f0fce3e1aa4270e8b5abd107e5f2",
+      "size": 19579811
+    }
+  ],
+  "releaseUrl": "https://github.com/lmc2007/yamibo-app/releases/tag/22"
+}
