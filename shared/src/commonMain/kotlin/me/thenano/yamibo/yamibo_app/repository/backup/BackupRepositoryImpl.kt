@@ -9,6 +9,7 @@ import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 import me.thenano.yamibo.yamibo_app.util.time.currentLocalDateKeyAt
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
 import me.thenano.yamibo.yamibo_app.repository.appsync.operation.SyncIdentityGenerator
+import me.thenano.yamibo.yamibo_app.repository.appsync.AppSyncPortabilityPolicy
 import me.thenano.yamibo.yamibo_app.repository.rss.rssSearchSubscriptionSyncId
 
 class BackupRepositoryImpl(
@@ -1191,7 +1192,8 @@ class BackupRepositoryImpl(
             "pancloudpassword",
         )
         val normalized = key.replace(".", "").lowercase()
-        return blockedSuffixes.any(normalized::endsWith)
+        return blockedSuffixes.any(normalized::endsWith) ||
+            !AppSyncPortabilityPolicy.includeSettingInLocalBackup(key)
     }
 
     private fun backupFileName(nowMillis: Long, automatic: Boolean, customName: String? = null): String {

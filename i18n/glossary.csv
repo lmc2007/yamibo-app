@@ -910,3 +910,21 @@ GitHub 直連,GitHub direct,GitHub 直連,GitHub 直连
 鏡像代理失敗時自動回退 GitHub 直連。,Falls back to GitHub direct when the mirror proxy fails.,鏡像代理失敗時自動回退 GitHub 直連。,镜像代理失败时自动回退 GitHub 直连。
 代理伺服器,Proxy server,代理伺服器,代理服务器
 僅在「鏡像代理」模式下生效。,Only applies in mirror proxy mode.,僅在「鏡像代理」模式下生效。,仅在“镜像代理”模式下生效。
+收藏後顯示下載選項,Show download options after favoriting,收藏後顯示下載選項,收藏后显示下载选项
+開啟後，新增收藏完成時會顯示適用的下載選項。,"When enabled, applicable download options appear after a favorite is added.",開啟後，新增收藏完成時會顯示適用的下載選項。,开启后，新增收藏完成时会显示适用的下载选项。
+不要再詢問,Don't ask again,不要再詢問,不再询问
+可在收藏設定重新開啟。,You can enable this again in Favorite settings.,可在收藏設定重新開啟。,可在收藏设置中重新开启。
+找不到剛新增的收藏,The newly added favorite could not be found.,找不到剛新增的收藏,找不到刚新增的收藏
+下載資料夾,Download folder,下載資料夾,下载文件夹
+下載與備份資料夾,Download and backup folder,下載與備份資料夾,下载与备份文件夹
+下載內容與本地備份共用此資料夾；點擊可選擇或變更位置。,Downloads and local backups share this folder; tap to select or change its location.,下載內容與本地備份共用此資料夾；點擊可選擇或變更位置。,下载内容与本地备份共用此文件夹；点击可选择或更改位置。
+下載內容與本地備份共用此資料夾,Downloads and local backups share this folder,下載內容與本地備份共用此資料夾,下载内容与本地备份共用此文件夹
+選擇資料夾,Select folder,選擇資料夾,选择文件夹
+變更資料夾,Change folder,變更資料夾,更改文件夹
+下載與備份資料夾由儲存空間設定統一管理。,The download and backup folder is managed in Storage settings.,下載與備份資料夾由儲存空間設定統一管理。,下载与备份文件夹由存储空间设置统一管理。
+前往儲存空間,Go to Storage,前往儲存空間,前往存储空间
+尚未設定下載資料夾，請先前往儲存空間選擇位置。,No download folder is set. Go to Storage to choose a location.,尚未設定下載資料夾，請先前往儲存空間選擇位置。,尚未设置下载文件夹，请先前往存储空间选择位置。
+尚未選擇資料夾,No folder selected,尚未選擇資料夾,尚未选择文件夹
+已選擇下載與備份資料夾,Download and backup folder selected,已選擇下載與備份資料夾,已选择下载与备份文件夹
+無法選擇資料夾,Unable to select folder,無法選擇資料夾,无法选择文件夹
+下載、備份資料夾與緩存清理設定,"Download and backup folder, and cache cleanup settings",下載、備份資料夾與緩存清理設定,下载、备份文件夹与缓存清理设置

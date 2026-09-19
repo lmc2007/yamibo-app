@@ -4,6 +4,7 @@ import me.thenano.yamibo.yamibo_app.store.settings.SettingsStore
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import me.thenano.yamibo.yamibo_app.util.time.FixedScheduleInterval
 
 class AppSettingsRepositoryTest {
@@ -13,6 +14,19 @@ class AppSettingsRepositoryTest {
 
         assertFalse(repository.favoriteUpdateAutoDownload.getValue())
         assertFalse(repository.downloadedContentRefreshAutoUpdate.getValue())
+    }
+
+    @Test
+    fun favoriteAddDownloadPromptDefaultsEnabledAndPersists() {
+        val store = AppSettingsMemoryStore()
+        val repository = AppSettingsRepository(store)
+
+        assertTrue(repository.favoriteAddDownloadPromptEnabled.getValue())
+        repository.favoriteAddDownloadPromptEnabled.setValue(false)
+
+        assertFalse(AppSettingsRepository(store).favoriteAddDownloadPromptEnabled.getValue())
+        repository.favoriteAddDownloadPromptEnabled.setValue(true)
+        assertTrue(AppSettingsRepository(store).favoriteAddDownloadPromptEnabled.getValue())
     }
 
     @Test
@@ -52,6 +66,19 @@ class AppSettingsRepositoryTest {
         val recreated = AppSettingsRepository(store)
         assertEquals(AppUpdateDownloadMode.DIRECT, recreated.appUpdateDownloadMode.getValue())
         assertEquals(AppUpdateDownloadProxy.GH_DPIK_TOP, recreated.appUpdateDownloadProxy.getValue())
+    }
+
+    @Test
+    fun messageNotificationsDefaultEnabledAtThreeHoursAndTwiceDaily() {
+        val repository = AppSettingsRepository(AppSettingsMemoryStore())
+
+        assertTrue(repository.messageNotificationEnabled.getValue())
+        assertEquals(FixedScheduleInterval.Hours3, repository.messageNotificationInterval.getValue())
+        assertEquals(MessageNotificationDailyLimit.TWICE, repository.messageNotificationDailyLimit.getValue())
+        assertEquals((1..6).toList(), MessageNotificationDailyLimit.entries.mapNotNull { it.maxPerDay })
+        assertEquals(null, MessageNotificationDailyLimit.UNLIMITED.maxPerDay)
+        assertEquals(10, MessageNotificationIntervals.size)
+        assertTrue(FixedScheduleInterval.Hours3 in MessageNotificationIntervals)
     }
 }
 
