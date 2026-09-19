@@ -50,7 +50,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import me.thenano.yamibo.yamibo_app.LocalAppCoroutineScope
 import me.thenano.yamibo.yamibo_app.LocalAppSyncService
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalAppFeedbackController
 import me.thenano.yamibo.yamibo_app.LocalPanCloudAccountRepository
 import me.thenano.yamibo.yamibo_app.LocalAppSyncBackgroundScheduler
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
@@ -335,10 +334,11 @@ private fun BackendSelectionSection() {
 private fun CloudAccountSection() {
     val colors = YamiboTheme.colors
     val accountRepository = LocalPanCloudAccountRepository.current
-    val feedbackController = LocalAppFeedbackController.current
     val scope = rememberCoroutineScope()
     val status by accountRepository.sessionState.collectAsState()
     var showLogin by remember { mutableStateOf(false) }
+    // Account feedback stays on this page instead of raising a global snackbar.
+    var accountNotice by remember { mutableStateOf<CloudSyncNotice?>(null) }
 
     LaunchedEffect(accountRepository) {
         accountRepository.restoreSession()
@@ -369,7 +369,10 @@ private fun CloudAccountSection() {
                 SmallBackupButton(text = i18n("登出"), onClick = {
                     scope.launch {
                         accountRepository.logout()
-                        feedbackController.post(i18n("已登出網盤"))
+                        accountNotice = CloudSyncNotice(
+                            text = i18n("已登出網盤"),
+                            severity = CloudSyncNoticeSeverity.Success,
+                        )
                     }
                 })
             }
@@ -401,6 +404,11 @@ private fun CloudAccountSection() {
         }
     }
 
+    accountNotice?.let { notice ->
+        Spacer(Modifier.height(8.dp))
+        CloudSyncInlineNotice(notice)
+    }
+
     if (showLogin) {
         CloudLoginDialog(
             working = false,
@@ -413,9 +421,17 @@ private fun CloudAccountSection() {
                         CloudAuthMode.Register -> accountRepository.register(username.trim(), password)
                     }
                     result
-                        .onSuccess { feedbackController.post(i18n("已登入網盤：{}", username.trim())) }
+                        .onSuccess {
+                            accountNotice = CloudSyncNotice(
+                                text = i18n("已登入網盤：{}", username.trim()),
+                                severity = CloudSyncNoticeSeverity.Success,
+                            )
+                        }
                         .onFailure { error ->
-                            feedbackController.post(error.message ?: i18n("網盤操作失敗"))
+                            accountNotice = CloudSyncNotice(
+                                text = error.message ?: i18n("網盤操作失敗"),
+                                severity = CloudSyncNoticeSeverity.Error,
+                            )
                         }
                 }
             },
@@ -510,8 +526,9 @@ private fun CloudSyncInlineNotice(notice: CloudSyncNotice) {
         CloudSyncNoticeSeverity.Warning -> colors.orangeAccent
         CloudSyncNoticeSeverity.Error -> colors.redAccent
     }
+    val text = notice.text ?: notice.message?.let(::appSyncStatusMessageText) ?: return
     Text(
-        text = appSyncStatusMessageText(notice.message),
+        text = text,
         color = color,
         fontSize = 12.sp,
         modifier = Modifier

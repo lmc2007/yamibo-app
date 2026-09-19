@@ -69,7 +69,7 @@ fun LocalNovelBookshelfScreen() {
     val repository = LocalLocalNovelRepository.current
     val fileOps = LocalPlatformFileOperations.current
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val feedbackController = LocalAppFeedbackController.current
     val forumShelfRepository = LocalForumNovelShelfRepository.current
     val readHistoryRepo = LocalReadHistoryRepository.current
 
@@ -101,9 +101,9 @@ fun LocalNovelBookshelfScreen() {
     val pickFile = rememberLocalNovelFilePicker { handle ->
         scope.launch {
             if (handle.name.endsWith(".zip", ignoreCase = true)) {
-                importForumNovelZip(handle, forumShelfRepository, fileOps, snackbarHostState)
+                importForumNovelZip(handle, forumShelfRepository, fileOps, feedbackController)
             } else {
-                importNovel(handle, repository, fileOps, snackbarHostState, navigator)
+                importNovel(handle, repository, fileOps, feedbackController, navigator)
             }
             reload()
         }
@@ -143,7 +143,6 @@ fun LocalNovelBookshelfScreen() {
                 },
             )
         },
-        snackbarHost = { me.thenano.yamibo.yamibo_app.components.theme.YamiboSnackbarHost(hostState = snackbarHostState) },
     ) { padding ->
         if (novels.isEmpty() && forumNovels.isEmpty()) {
             Box(
@@ -241,7 +240,7 @@ fun LocalNovelBookshelfScreen() {
                                     withContext(Dispatchers.Default) {
                                         forumShelfRepository.delete(entry.id)
                                     }
-                                    snackbarHostState.showSnackbar(i18n("已删除"))
+                                    feedbackController.post(i18n("已删除"))
                                     reload()
                                 }
                             },
@@ -266,7 +265,7 @@ fun LocalNovelBookshelfScreen() {
                             repository.deleteNovel(novel.id)
                             novel.epubExtractDir?.let { fileOps.deleteDirectory(it) }
                         }
-                        snackbarHostState.showSnackbar(i18n("已刪除"))
+                        feedbackController.post(i18n("已刪除"))
                         reload()
                     }
                     showDeleteConfirm = null
@@ -298,7 +297,7 @@ fun LocalNovelBookshelfScreen() {
                                 novel?.epubExtractDir?.let { fileOps.deleteDirectory(it) }
                             }
                         }
-                        snackbarHostState.showSnackbar(i18n("已刪除 {} 項", selectedIds.size))
+                        feedbackController.post(i18n("已刪除 {} 項", selectedIds.size))
                         selectedIds = emptySet()
                         manageMode = false
                         reload()
@@ -429,7 +428,7 @@ private suspend fun importNovel(
     handle: LocalNovelFileHandle,
     repository: me.thenano.yamibo.yamibo_app.repository.LocalNovelRepository,
     fileOps: me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations,
-    snackbarHostState: SnackbarHostState,
+    feedbackController: me.thenano.yamibo.yamibo_app.feedback.AppFeedbackController,
     navigator: me.thenano.yamibo.yamibo_app.navigation.ComposableNavigator,
 ) {
     val name = handle.name
@@ -437,7 +436,7 @@ private suspend fun importNovel(
     val isTxt = name.endsWith(".txt", ignoreCase = true)
 
     if (!isEpub && !isTxt) {
-        snackbarHostState.showSnackbar(i18n("不支援的檔案格式，請選擇 TXT 或 EPUB"))
+        feedbackController.post(i18n("不支援的檔案格式，請選擇 TXT 或 EPUB"))
         return
     }
 
@@ -449,9 +448,9 @@ private suspend fun importNovel(
                 importTxt(handle, name, repository, fileOps)
             }
         }
-        snackbarHostState.showSnackbar(i18n("導入成功"))
+        feedbackController.post(i18n("導入成功"))
     } catch (e: Exception) {
-        snackbarHostState.showSnackbar(i18n("導入失敗：{}", e.message ?: "未知錯誤"))
+        feedbackController.post(i18n("導入失敗：{}", e.message ?: "未知錯誤"))
     }
 }
 
@@ -541,13 +540,13 @@ private suspend fun importForumNovelZip(
     handle: LocalNovelFileHandle,
     shelfRepository: me.thenano.yamibo.yamibo_app.repository.forumnovel.ForumNovelShelfRepository,
     fileOps: me.thenano.yamibo.yamibo_app.repository.localnovel.PlatformFileOperations,
-    snackbarHostState: SnackbarHostState,
+    feedbackController: me.thenano.yamibo.yamibo_app.feedback.AppFeedbackController,
 ) {
     val importer = ForumNovelPackageImporter(shelfRepository, fileOps)
     when (val result = importer.import(handle.uri)) {
-        is ForumNovelImportResult.Success -> snackbarHostState.showSnackbar(i18n("导入成功"))
-        is ForumNovelImportResult.Duplicate -> snackbarHostState.showSnackbar(i18n("已在书架中"))
-        is ForumNovelImportResult.Failure -> snackbarHostState.showSnackbar(i18n("导入失败：{}", result.message))
+        is ForumNovelImportResult.Success -> feedbackController.post(i18n("导入成功"))
+        is ForumNovelImportResult.Duplicate -> feedbackController.post(i18n("已在书架中"))
+        is ForumNovelImportResult.Failure -> feedbackController.post(i18n("导入失败：{}", result.message))
     }
 }
 

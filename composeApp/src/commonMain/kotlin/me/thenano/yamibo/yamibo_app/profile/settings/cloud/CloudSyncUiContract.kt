@@ -47,9 +47,14 @@ internal enum class CloudSyncNoticeSeverity {
     Error,
 }
 
+/**
+ * A page-local notice. Sync state carries a typed [AppSyncStatusMessage], while account
+ * operations (pan-cloud login/logout) supply already-localized [text] instead.
+ */
 internal data class CloudSyncNotice(
-    val message: AppSyncStatusMessage,
-    val severity: CloudSyncNoticeSeverity,
+    val message: AppSyncStatusMessage? = null,
+    val severity: CloudSyncNoticeSeverity = CloudSyncNoticeSeverity.Info,
+    val text: String? = null,
 )
 
 internal enum class CloudSyncDetailLabel {
