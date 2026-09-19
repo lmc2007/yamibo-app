@@ -50,7 +50,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import me.thenano.yamibo.yamibo_app.LocalAppCoroutineScope
 import me.thenano.yamibo.yamibo_app.LocalAppSyncService
 import me.thenano.yamibo.yamibo_app.LocalAppSettingsRepository
-import me.thenano.yamibo.yamibo_app.LocalAppFeedbackController
 import me.thenano.yamibo.yamibo_app.LocalPanCloudAccountRepository
 import me.thenano.yamibo.yamibo_app.LocalAppSyncBackgroundScheduler
 import me.thenano.yamibo.yamibo_app.components.controls.YamiboActionChip
@@ -335,10 +334,11 @@ private fun BackendSelectionSection() {
 private fun CloudAccountSection() {
     val colors = YamiboTheme.colors
     val accountRepository = LocalPanCloudAccountRepository.current
-    val feedbackController = LocalAppFeedbackController.current
     val scope = rememberCoroutineScope()
     val status by accountRepository.sessionState.collectAsState()
     var showLogin by remember { mutableStateOf(false) }
+    // Account feedback stays on this page instead of raising a global snackbar.
+    var accountNotice by remember { mutableStateOf<CloudSyncNotice?>(null) }
 
     LaunchedEffect(accountRepository) {
         accountRepository.restoreSession()
@@ -369,7 +369,10 @@ private fun CloudAccountSection() {
                 SmallBackupButton(text = i18n("登出"), onClick = {
                     scope.launch {
                         accountRepository.logout()
-                        feedbackController.post(i18n("已登出網盤"))
+                        accountNotice = CloudSyncNotice(
+                            text = i18n("已登出網盤"),
+                            severity = CloudSyncNoticeSeverity.Success,
+                        )
                     }
                 })
             }
@@ -401,6 +404,11 @@ private fun CloudAccountSection() {
         }
     }
 
+    accountNotice?.let { notice ->
+        Spacer(Modifier.height(8.dp))
+        CloudSyncInlineNotice(notice)
+    }
+
     if (showLogin) {
         CloudLoginDialog(
             working = false,
@@ -413,9 +421,17 @@ private fun CloudAccountSection() {
                         CloudAuthMode.Register -> accountRepository.register(username.trim(), password)
                     }
                     result
-                        .onSuccess { feedbackController.post(i18n("已登入網盤：{}", username.trim())) }
+                        .onSuccess {
+                            accountNotice = CloudSyncNotice(
+                                text = i18n("已登入網盤：{}", username.trim()),
+                                severity = CloudSyncNoticeSeverity.Success,
+                            )
+                        }
                         .onFailure { error ->
-                            feedbackController.post(error.message ?: i18n("網盤操作失敗"))
+                            accountNotice = CloudSyncNotice(
+                                text = error.message ?: i18n("網盤操作失敗"),
+                                severity = CloudSyncNoticeSeverity.Error,
+                            )
                         }
                 }
             },
@@ -485,7 +501,7 @@ private fun CloudStatusRow(
         }
         IconButton(
             onClick = onRefresh,
-            enabled = state.actionsAvailable && !state.isBusy,
+            enabled = state.refreshAvailable,
             modifier = Modifier
                 .size(48.dp)
                 .testTag("app_sync_refresh"),
@@ -494,7 +510,7 @@ private fun CloudStatusRow(
                 imageVector = YamiboIcons.Reload,
                 contentDescription = i18n("重新檢查雲端備份"),
                 tint = colors.brownPrimary.copy(
-                    alpha = if (state.actionsAvailable && !state.isBusy) 1f else 0.35f,
+                    alpha = if (state.refreshAvailable) 1f else 0.35f,
                 ),
             )
         }
@@ -510,8 +526,9 @@ private fun CloudSyncInlineNotice(notice: CloudSyncNotice) {
         CloudSyncNoticeSeverity.Warning -> colors.orangeAccent
         CloudSyncNoticeSeverity.Error -> colors.redAccent
     }
+    val text = notice.text ?: notice.message?.let(::appSyncStatusMessageText) ?: return
     Text(
-        text = appSyncStatusMessageText(notice.message),
+        text = text,
         color = color,
         fontSize = 12.sp,
         modifier = Modifier
@@ -989,6 +1006,14 @@ private fun cloudSyncStatusHeadline(phase: AppSyncServicePhase?): String = when 
     AppSyncServicePhase.PausedProvider -> i18n("雲端暫時無法使用")
     AppSyncServicePhase.Quarantined -> i18n("有資料需要檢查")
     AppSyncServicePhase.RetryPending -> i18n("等待重試")
+    AppSyncServicePhase.RecoveryClassifying -> i18n("正在分析舊同步資料")
+    AppSyncServicePhase.RecoveryStaging -> i18n("正在建立安全復原資料")
+    AppSyncServicePhase.RecoveryUploadingSegments -> i18n("正在分段上傳復原資料")
+    AppSyncServicePhase.RecoveryPublishingRoot -> i18n("正在驗證復原索引根")
+    AppSyncServicePhase.RecoveryCommittingIndex -> i18n("正在提交雲端索引")
+    AppSyncServicePhase.RecoveryActivatingLocal -> i18n("正在套用已驗證復原結果")
+    AppSyncServicePhase.RecoveryCleaning -> i18n("正在安全清理舊同步資料")
+    AppSyncServicePhase.RecoveryNeedsAttention -> i18n("復原需要處理")
 }
 
 private fun appSyncStatusMessageText(message: AppSyncStatusMessage): String = when (message) {
@@ -1039,7 +1064,12 @@ private fun appSyncStatusMessageText(message: AppSyncStatusMessage): String = wh
         )
     AppSyncStatusMessage.SyncAlreadyRunning -> i18n("已有同步工作執行中")
     AppSyncStatusMessage.AuthenticationExpired -> i18n("登入狀態已過期，請先刷新登入狀態")
-    // External values are provider/engine diagnostics; surface them for troubleshooting.
+    AppSyncStatusMessage.RecoveryInProgress ->
+        i18n("正在自動修復過大的舊同步資料；可稍後重試，進度不會遺失")
+    is AppSyncStatusMessage.RecoveryNeedsAttention ->
+        i18n("{} 的資料無法安全轉移，請保留本機資料並查看復原詳情", message.domain)
+    // External values are provider/engine diagnostics. This fork surfaces them on purpose so
+    // failures can be diagnosed in the field; they are never treated as localization keys.
     is AppSyncStatusMessage.External -> i18n("同步失敗：{}", message.value)
 }
 
@@ -1050,6 +1080,7 @@ private fun cloudSyncDetailValueText(value: CloudSyncDetailValue): String = when
     is CloudSyncDetailValue.Count -> value.value.toString()
     is CloudSyncDetailValue.Journal -> appSyncJournalRetirementText(value.value)
     is CloudSyncDetailValue.StatusMessage -> appSyncStatusMessageText(value.value)
+    is CloudSyncDetailValue.Text -> value.value
     CloudSyncDetailValue.NoRecord -> i18n("尚無紀錄")
 }
 
@@ -1062,6 +1093,14 @@ private fun cloudSyncPhaseText(phase: AppSyncServicePhase): String = when (phase
     AppSyncServicePhase.PausedProvider -> i18n("供應端暫停")
     AppSyncServicePhase.Quarantined -> i18n("隔離")
     AppSyncServicePhase.RetryPending -> i18n("等待重試")
+    AppSyncServicePhase.RecoveryClassifying -> i18n("分析中")
+    AppSyncServicePhase.RecoveryStaging -> i18n("準備中")
+    AppSyncServicePhase.RecoveryUploadingSegments -> i18n("分段上傳中")
+    AppSyncServicePhase.RecoveryPublishingRoot -> i18n("發布根索引中")
+    AppSyncServicePhase.RecoveryCommittingIndex -> i18n("提交索引中")
+    AppSyncServicePhase.RecoveryActivatingLocal -> i18n("本機啟用中")
+    AppSyncServicePhase.RecoveryCleaning -> i18n("安全清理中")
+    AppSyncServicePhase.RecoveryNeedsAttention -> i18n("需要處理")
 }
 
 private fun appSyncJournalRetirementText(message: AppSyncJournalRetirementMessage): String =
