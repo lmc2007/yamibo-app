@@ -148,6 +148,8 @@ class PortableBackupCoverageContractTest {
             "appupdateignoredversioncode",
             "backupfolderuri",
             "backuplastautobackupat",
+            "pancloudrefreshtoken",
+            "pancloudpassword",
         )
     }
 }

@@ -58,6 +58,10 @@ internal object AppSyncPortabilityPolicy {
         local("appsynccapacityautomaticlegacyrecoveryenabled"),
         local("appsynccapacitycleanupdryrun"),
         local("appsynccapacitycleanupdeletionenabled"),
+        // Cloud-drive credentials are device-local secrets; they must never leave the device,
+        // neither through AppSync nor through a local backup file.
+        local("pancloudrefreshtoken"),
+        local("pancloudpassword"),
     )
 
     val fieldDeclarations: List<AppSyncFieldPortability> = listOf(
