@@ -74,6 +74,7 @@ fun ProfilePage(
     hasNewMessage: Boolean = false,
     onNewMessageStatusChange: (Boolean) -> Unit = {},
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val authRepository = LocalAuthRepository.current
     val downloadRepository = LocalDownloadRepository.current
     val signRepository = LocalSignRepository.current
@@ -216,7 +217,7 @@ fun ProfilePage(
                                                     snackbarMessage = result.value.message
                                                 }
 
-                                                else -> snackbarMessage = result.signActionFeedbackMessage()
+                                                else -> snackbarMessage = errorMessages.resolve(result.signActionFeedbackMessage())
                                             }
                                             if (shouldEmitSignStatusChanged(result)) {
                                                 AppEventBus.emit(SignStatusChangedEvent)

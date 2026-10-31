@@ -14,7 +14,7 @@ ksoup = "0.2.6"
 ktor = "3.5.2"
 coil3 = "3.5.0"
 securityCrypto = "1.1.0"
-yamiboApi = "1.1.27"
+yamiboApi = "1.1.29"
 androidx-work = "2.11.2"
 sqldelight = "2.3.2"
 okio = "3.18.1"
@@ -43,7 +43,6 @@ coil3-svg = { module = "io.coil-kt.coil3:coil-svg", version.ref = "coil3" }
 yamibo-api = { module = "io.github.littlesurvival:yamibo-api", version.ref = "yamiboApi" }
 sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
 sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
-sqldelight-sqlite-driver = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
 okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 opencc4j = { module = "com.github.houbb:opencc4j", version.ref = "opencc4j" }

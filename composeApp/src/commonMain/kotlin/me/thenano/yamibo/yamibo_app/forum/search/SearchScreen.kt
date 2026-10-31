@@ -30,10 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.core.flatMapSuccess
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.SearchPage
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
@@ -76,6 +78,7 @@ private data class SavedRssFavorite(
 
 @Composable
 fun SearchScreen(fid: ForumId?) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val authRepository = LocalAuthRepository.current
@@ -92,6 +95,7 @@ fun SearchScreen(fid: ForumId?) {
     var state by remember { mutableStateOf<SearchState>(SearchState.Idle) }
     var currentPage by remember { mutableIntStateOf(1) }
     var currentSearchId by remember { mutableStateOf<SearchId?>(null) }
+    var searchJob by remember { mutableStateOf<Job?>(null) }
     val pageHistory = remember { mutableStateListOf<SearchPageSnapshot>() }
     var pendingRssFavorite by remember { mutableStateOf<PendingRssFavorite?>(null) }
     var favoriteDialogCategories by remember {
@@ -124,6 +128,7 @@ fun SearchScreen(fid: ForumId?) {
     }
 
     fun doSearch(page: Int = 1, recordHistory: Boolean = false) {
+        if (searchJob?.isActive == true) return
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return
 
@@ -135,7 +140,7 @@ fun SearchScreen(fid: ForumId?) {
 
         state = SearchState.Loading
         currentPage = page
-        scope.launch {
+        searchJob = scope.launch {
             val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
             if (page == 1 && looksLikeUrl) {
                 state = SearchState.Idle
@@ -143,15 +148,15 @@ fun SearchScreen(fid: ForumId?) {
                 return@launch
             }
 
-            val formHash = authRepository.currentUser()?.formHash
-            if (formHash == null) {
-                state = SearchState.Error(i18n("請先登入後再搜尋"))
-                return@launch
-            }
-
             val result = if (page == 1 || currentSearchId == null) {
-                forumRepository.fetchSearch(trimmed, fid, formHash)
+                authRepository.refreshFormHash().flatMapSuccess { formHash ->
+                    forumRepository.fetchSearch(trimmed, fid, formHash)
+                }
             } else {
+                if (authRepository.currentUser() == null) {
+                    state = SearchState.Error(i18n("請先登入後再搜尋"))
+                    return@launch
+                }
                 forumRepository.fetchSearchById(trimmed, currentSearchId!!, page)
             }
             state = when (result) {
@@ -164,7 +169,7 @@ fun SearchScreen(fid: ForumId?) {
                     }
                 }
 
-                else -> SearchState.Error(i18n(result.message()))
+                else -> SearchState.Error(i18n(errorMessages.resolve(result)))
             }
         }
     }
@@ -306,6 +311,7 @@ fun SearchScreen(fid: ForumId?) {
                     Spacer(Modifier.width(6.dp))
                     Surface(
                         onClick = { doSearch(1) },
+                        enabled = state !is SearchState.Loading,
                         shape = RoundedCornerShape(12.dp),
                         color = colors.orangeAccent,
                     ) {
@@ -465,7 +471,10 @@ private fun SearchResultContent(
 ) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
+    val topScrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+    me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop { topScrollState.scrollToItem(0) }
     LazyColumn(
+        state = topScrollState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),

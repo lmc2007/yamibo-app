@@ -2,6 +2,9 @@
 
 package me.thenano.yamibo.yamibo_app
 
+import me.thenano.yamibo.yamibo_app.repository.servernotice.ForumErrorMessageResolver
+import me.thenano.yamibo.yamibo_app.repository.servernotice.DefaultServerNoticeRepository
+import me.thenano.yamibo.yamibo_app.repository.servernotice.ServerNoticeStore
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -69,6 +72,14 @@ import me.thenano.yamibo.yamibo_app.appsync.detachIOSAppSyncLifecycle
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */
     val navigator = rememberRestorableNavigator()
+    DisposableEffect(navigator) {
+        me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.onBack = { navigator.dispatchBack() }
+        me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.canGoBack = { navigator.stack.size > 1 }
+        onDispose {
+            me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.onBack = null
+            me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.canGoBack = null
+        }
+    }
     val appCoroutineScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     val appFeedbackController = remember { AppFeedbackController() }
     val appConfirmationController = remember(appCoroutineScope) {
@@ -90,6 +101,13 @@ fun MainViewController() = ComposeUIViewController {
     val userStore = remember { IOSUserStore() }
     val forumFavoriteStore = remember { IOSForumFavoriteStore() }
     val rawSettingsStore = remember { IOSSettingsStore() }
+    val errorMessages = remember {
+        ForumErrorMessageResolver(
+            DefaultServerNoticeRepository(
+                ServerNoticeStore(rawSettingsStore),
+            ),
+        )
+    }
 
     /** Repository Logic */
     val yamiboClient = remember { IOSYamiboClientProvider.get(cookieStore) }
@@ -298,6 +316,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalAppSyncService provides appSyncService,
         LocalAppSyncBackgroundScheduler provides appSyncBackgroundScheduler,
         LocalAppUpdateRepository provides appUpdateRepository,
+        LocalForumErrorMessageResolver provides errorMessages,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
         LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
@@ -341,11 +360,6 @@ fun MainViewController() = ComposeUIViewController {
         val messageNotificationEnabled = appSettingsRepository.messageNotificationEnabled.state()
         val messageNotificationInterval = appSettingsRepository.messageNotificationInterval.state()
 
-        androidx.compose.runtime.LaunchedEffect(Unit) {
-            if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
-                diskCacheFactory.clearAllCache()
-            }
-        }
         androidx.compose.runtime.LaunchedEffect(messageNotificationEnabled, messageNotificationInterval) {
             messageNotificationScheduler.setEnabled(
                 enabled = messageNotificationEnabled,

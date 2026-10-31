@@ -39,12 +39,10 @@ kotlin {
             implementation(libs.ktor.client.darwin)
             implementation(libs.sqldelight.native.driver)
         }
+        // Fork-owned tests only; upstream archived its full suite on `archived-tests`.
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.ktor.client.mock)
-        }
-        androidUnitTest.dependencies {
-            implementation(libs.sqldelight.sqlite.driver)
         }
     }
 }
