@@ -928,3 +928,37 @@ GitHub 直連,GitHub direct,GitHub 直連,GitHub 直连
 已選擇下載與備份資料夾,Download and backup folder selected,已選擇下載與備份資料夾,已选择下载与备份文件夹
 無法選擇資料夾,Unable to select folder,無法選擇資料夾,无法选择文件夹
 下載、備份資料夾與緩存清理設定,"Download and backup folder, and cache cleanup settings",下載、備份資料夾與緩存清理設定,下载、备份文件夹与缓存清理设置
+更新小說詳情中,Updating novel details,更新小說詳情中,更新小说详情中
+收藏更新完成，部分項目失敗,Favorite update completed with failures,收藏更新完成，部分項目失敗,收藏更新完成，部分项目失败
+無法取得搜尋校驗碼，請刷新個人資料後重試,Unable to get the search verification token. Refresh your profile and try again.,無法取得搜尋校驗碼，請刷新個人資料後重試,无法获取搜索校验码，请刷新个人资料后重试
+搜尋目錄或輸入樓層#,Search catalog or floor#,搜尋目錄或輸入樓層#,搜索目录或输入楼层#
+清除搜尋,Clear search,清除搜尋,清除搜索
+跳至頁碼,Go to page,跳至頁碼,跳至页码
+已載入的目錄中沒有符合項目,No matches in loaded catalog entries,已載入的目錄中沒有符合項目,已加载的目录中没有符合项目
+找不到此樓層,Floor not found,找不到此樓層,找不到此楼层
+此頁找不到此樓層,Floor not found on this page,此頁找不到此樓層,此页找不到此楼层
+載入失敗，點擊重試,Loading failed. Tap to retry.,載入失敗，點擊重試,加载失败，点击重试
+載入此頁,Load this page,載入此頁,加载此页
+首頁資料不完整，請重試；若持續發生，請回報下方診斷代碼。,Homepage data is incomplete. Retry; if it persists please report the diagnostic code below.,首頁資料不完整，請重試；若持續發生，請回報下方診斷代碼。,首页数据不完整，请重试；若持续发生，请反馈下方诊断代码。
+字體樣式,Font style,字體樣式,字体样式
+預設粗體,Default bold,預設粗體,默认粗体
+將閱讀器正文預設顯示為粗體,Show reader body text in bold by default,將閱讀器正文預設顯示為粗體,将阅读器正文默认显示为粗体
+預設斜體,Default italic,預設斜體,默认斜体
+將閱讀器正文預設顯示為斜體,Show reader body text in italic by default,將閱讀器正文預設顯示為斜體,将阅读器正文默认显示为斜体
+首行縮排,First-line indent,首行縮排,首行缩进
+統一段首縮排，取代原文的段首空白,Replace original leading whitespace with a consistent paragraph indent,統一段首縮排，取代原文的段首空白,统一段首缩进，取代原文的段首空白
+縮排字元寬度,Indent width in characters,縮排字元寬度,缩进字符宽度
+字,characters,字,字
+<p>這是小說閱讀器的段落排版預覽。</p><p>調整設定後，可以在這裡立即查看顯示效果。</p>,<p>This is a paragraph layout preview for the novel reader.</p><p>Changes to the settings are shown here immediately.</p>,<p>這是小說閱讀器的段落排版預覽。</p><p>調整設定後，可以在這裡立即查看顯示效果。</p>,<p>这是小说阅读器的段落排版预览。</p><p>调整设置后，可以在这里立即查看显示效果。</p>
+訊息已送出，但更新對話失敗，請重新整理,Message sent but the conversation could not be refreshed. Please refresh.,訊息已送出，但更新對話失敗，請重新整理,消息已发送，但更新对话失败，请刷新
+更新對話失敗，請重新整理：{},Could not refresh the conversation. Please refresh: {},更新對話失敗，請重新整理：{},更新对话失败，请刷新：{}
+今日剩餘評分：{},Rating points left today: {},今日剩餘評分：{},今日剩余评分：{}
+今日剩餘評分：暫無資料,Rating points left today: unavailable,今日剩餘評分：暫無資料,今日剩余评分：暂无资料
+今日剩餘評分：載入中,Rating points left today: loading,今日剩餘評分：載入中,今日剩余评分：载入中
+查看完整帖子與所有回覆,Read the full thread and all replies,查看完整帖子與所有回覆,查看完整帖子与所有回复
+此處按發文順序顯示本樓到下一篇作者發文間的回覆，不代表回覆所討論的章節。,Replies are grouped by posting order between author posts. They may discuss other chapters.,此處按發文順序顯示本樓到下一篇作者發文間的回覆，不代表回覆所討論的章節。,此处按发文顺序显示本楼到下一篇作者发文间的回复，不代表回复所讨论的章节。
+無法儲存圖片：請在系統設定允許加入相簿,Cannot save image. Allow adding photos in system settings.,無法儲存圖片：請在系統設定允許加入相簿,无法保存图片：请在系统设置允许加入相册
+載入失敗，請重試,Could not load. Please try again.,載入失敗，請重試,载入失败，请重试
+圖片操作失敗，請重試,Image action failed. Please try again.,圖片操作失敗，請重試,图片操作失败，请重试
+明確引用會歸回對應章節；其餘按發文順序顯示，不代表所討論章節。尚未讀取的頁面可能有更多回覆。,Explicit references link replies to chapters. Other replies use posting order and may discuss another chapter. Unread pages may contain more replies.,明確引用會歸回對應章節；其餘按發文順序顯示，不代表所討論章節。尚未讀取的頁面可能有更多回覆。,明确引用会归回对应章节；其余按发文顺序显示，不代表所讨论章节。尚未读取的页面可能有更多回复。
+讀取更多帖子頁面與引用回覆,Load more thread pages and referenced replies,讀取更多帖子頁面與引用回覆,读取更多帖子页面与引用回复

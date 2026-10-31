@@ -1,5 +1,7 @@
 package me.thenano.yamibo.yamibo_app
 
+import me.thenano.yamibo.yamibo_app.repository.servernotice.ForumErrorMessageResolver
+import me.thenano.yamibo.yamibo_app.network.AndroidServerNoticeProvider
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
@@ -172,6 +174,11 @@ class MainActivity : ComponentActivity() {
             val userStore = remember { AndroidUserStore(context) }
             val forumFavoriteStore = remember { AndroidForumFavoriteStore(context) }
             val rawSettingsStore = remember { AndroidSettingsStore(context) }
+            val errorMessages = remember {
+                ForumErrorMessageResolver(
+                    AndroidServerNoticeProvider.get(context),
+                )
+            }
 
             /** Repository Logic */
             val yamiboClient = remember { AndroidYamiboClientProvider.get(context) }
@@ -275,7 +282,7 @@ class MainActivity : ComponentActivity() {
                     prepareRemoteAccess = {
                         when (val result = remoteFavoriteRepository.fetchFavorites()) {
                             is YamiboResult.Success -> null
-                            else -> i18n(result.message())
+                            else -> i18n(errorMessages.resolve(result))
                         }
                     },
                 )
@@ -289,7 +296,7 @@ class MainActivity : ComponentActivity() {
                     prepareRemoteAccess = {
                         when (val result = remoteFavoriteRepository.fetchFavorites()) {
                             is YamiboResult.Success -> null
-                            else -> i18n(result.message())
+                            else -> i18n(errorMessages.resolve(result))
                         }
                     },
                 )
@@ -414,6 +421,7 @@ class MainActivity : ComponentActivity() {
                 LocalAppSyncService provides appSyncService,
                 LocalAppSyncBackgroundScheduler provides appSyncBackgroundScheduler,
                 LocalAppUpdateRepository provides appUpdateRepository,
+                LocalForumErrorMessageResolver provides errorMessages,
                 LocalForumRepository provides forumRepository,
                 LocalThreadRepository provides threadRepository,
                 LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
@@ -460,12 +468,6 @@ class MainActivity : ComponentActivity() {
                 val messageNotificationEnabled = appSettingsRepository.messageNotificationEnabled.state()
                 val messageNotificationInterval = appSettingsRepository.messageNotificationInterval.state()
                 
-                LaunchedEffect(Unit) {
-                    if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
-                        delay(1_200.milliseconds)
-                        diskCacheFactory.clearAllCache()
-                    }
-                }
                 LaunchedEffect(favoriteUpdateInterval) {
                     delay(1_200.milliseconds)
                     favoriteUpdateRunner.schedulePeriodicUpdate(favoriteUpdateInterval)

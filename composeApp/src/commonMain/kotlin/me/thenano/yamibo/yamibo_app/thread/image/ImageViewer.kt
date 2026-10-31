@@ -44,8 +44,8 @@ internal interface ReaderImagePainterCache {
     val size: Int
 }
 
-internal fun createReaderImagePainterCache(maxEntries: Int = 24): ReaderImagePainterCache =
-    LruReaderImagePainterCache(maxEntries)
+internal fun createReaderImagePainterCache(maxEntries: Int = 24, maxPixels: Long = 8_000_000L): ReaderImagePainterCache =
+    LruReaderImagePainterCache(maxEntries, maxPixels)
 
 internal val LocalReaderImagePainterCache = compositionLocalOf<ReaderImagePainterCache?> { null }
 val LocalImageClickListener = compositionLocalOf<(() -> Unit)?> { null }
@@ -57,12 +57,16 @@ val LocalImageActionMessageListener = compositionLocalOf<((String) -> Unit)?> { 
 
 private class LruReaderImagePainterCache(
     private val maxEntries: Int,
+    private val maxPixels: Long = 8_000_000L,
 ) : ReaderImagePainterCache {
     private val painters = mutableMapOf<String, Painter>()
     private val accessOrder = ArrayDeque<String>()
+    private val pixelsByUrl = mutableMapOf<String, Long>()
+    private var retainedPixels = 0L
 
     init {
         require(maxEntries > 0)
+        require(maxPixels > 0)
     }
 
     override val size: Int get() = painters.size
@@ -73,16 +77,29 @@ private class LruReaderImagePainterCache(
     }
 
     override fun put(url: String, painter: Painter) {
+        retainedPixels -= pixelsByUrl.remove(url) ?: 0L
+        painters.remove(url)
+        accessOrder.remove(url)
+        val size = painter.intrinsicSize
+        val pixels = if (size.width.isFinite() && size.height.isFinite()) {
+            (size.width.toDouble() * size.height.toDouble()).toLong().coerceAtLeast(0)
+        } else 0L
+        // A single giant scan must not keep tens/hundreds of MB alive after scrolling away.
+        if (pixels > maxPixels) return
+        pixelsByUrl[url] = pixels
+        retainedPixels += pixels
         painters[url] = painter
         accessOrder.remove(url)
         accessOrder.addLast(url)
-        while (accessOrder.size > maxEntries) {
-            painters.remove(accessOrder.removeFirst())
+        while (accessOrder.size > maxEntries || retainedPixels > maxPixels) {
+            val removed = accessOrder.removeFirst()
+            painters.remove(removed)
+            retainedPixels -= pixelsByUrl.remove(removed) ?: 0L
         }
     }
 }
 
-private object ReaderImagePainterMemoryCache : ReaderImagePainterCache by LruReaderImagePainterCache(24)
+private object ReaderImagePainterMemoryCache : ReaderImagePainterCache by LruReaderImagePainterCache(8, 2_000_000L)
 
 /**
  * A unified image viewer for posts and manga reading.
@@ -110,6 +127,7 @@ fun ImageViewer(
     imageVerticalPadding: Dp = 1.dp,
     showLoadingPlaceholder: Boolean = true,
     suppressLoadingPlaceholderWhenCached: Boolean = false,
+    reuseCachedPainterWhileLoading: Boolean = false,
     onRenderedHeightChanged: ((Int) -> Unit)? = null,
     onRenderedAspectRatioChanged: ((Float) -> Unit)? = null,
 ) {
@@ -119,8 +137,8 @@ fun ImageViewer(
     var localRetryKey by remember { mutableIntStateOf(0) }
     var showMenu by remember { mutableStateOf(false) }
     val retryKey = localRetryKey + externalRetryKey
-    var hasReportedSuccess by remember(url, retryKey) { mutableStateOf(false) }
-    var hasReportedError by remember(url, retryKey) { mutableStateOf(false) }
+    var hasReportedSuccess by remember(fullUrl, localRetryKey, externalRetryKey) { mutableStateOf(false) }
+    var hasReportedError by remember(fullUrl, localRetryKey, externalRetryKey) { mutableStateOf(false) }
 
     val colors = YamiboTheme.colors
     val isOverlayOpen = LocalReaderOverlayVisible.current
@@ -152,8 +170,12 @@ fun ImageViewer(
             .size(sizeResolver)
             .build()
     }
-    val painter = rememberAsyncImagePainter(model = sizedImageRequest)
-    val painterState by painter.state.collectAsState()
+    // Coil's default model equality ignores cache policies, so changing the request alone
+    // does not restart a failed load. Each retry owns a fresh painter and request job.
+    val painter = key(fullUrl, localRetryKey, externalRetryKey) {
+        rememberAsyncImagePainter(model = sizedImageRequest)
+    }
+    val painterState by key(painter) { painter.state.collectAsState() }
     val sharedPainterCache = LocalReaderImagePainterCache.current
     var lastSuccessfulPainter by remember(fullUrl) {
         mutableStateOf(sharedPainterCache?.get(fullUrl) ?: ReaderImagePainterMemoryCache[fullUrl])
@@ -226,7 +248,7 @@ fun ImageViewer(
                 when (val state = painterState) {
                     is AsyncImagePainter.State.Loading, is AsyncImagePainter.State.Empty -> {
                         val cachedPainter = lastSuccessfulPainter
-                        if (suppressLoadingPlaceholderWhenCached && cachedPainter != null) {
+                        if ((suppressLoadingPlaceholderWhenCached || reuseCachedPainterWhileLoading) && cachedPainter != null) {
                             Image(
                                 painter = cachedPainter,
                                 contentDescription = contentDescription ?: "Yamibo Image",
@@ -249,7 +271,7 @@ fun ImageViewer(
                             fullUrl,
                         )
 
-                        LaunchedEffect(fullUrl, retryKey, errorMsg) {
+                        LaunchedEffect(fullUrl, localRetryKey, externalRetryKey, errorMsg) {
                             if (!hasReportedError) {
                                 hasReportedError = true
                                 debugPerfLog("image_error|url=$diagnosticUrl|retryKey=$retryKey|msg=$errorMsg")
@@ -281,7 +303,7 @@ fun ImageViewer(
                             sharedPainterCache?.put(fullUrl, state.painter)
                             ReaderImagePainterMemoryCache.put(fullUrl, state.painter)
                         }
-                        LaunchedEffect(fullUrl, retryKey, onSuccess) {
+                        LaunchedEffect(fullUrl, localRetryKey, externalRetryKey, onSuccess) {
                             if (!hasReportedSuccess) {
                                 hasReportedSuccess = true
                                 debugPerfLog("image_success|url=$diagnosticUrl|retryKey=$retryKey")
@@ -384,7 +406,8 @@ private fun ImageErrorContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(reservedHeight)
+            // Error details and the retry button must not be squeezed into a loading placeholder.
+            .heightIn(min = reservedHeight)
             .padding(16.dp)
             .background(errorBgColor, RoundedCornerShape(12.dp))
             .padding(24.dp),
