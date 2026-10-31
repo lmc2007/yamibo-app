@@ -1,0 +1,17 @@
+{
+  "channel": "stable",
+  "versionName": "0.10.0",
+  "versionCode": 23,
+  "isReady": true,
+  "releaseNotes": "# stable-0.10.0\n\n新增 :\n- allow swiping snackbars away\n- resolve forum 524 messages through shared server notice repository\n- publish timed forum outage notices without replacing update feeds\n- attribute chapter comments through explicit references\n- add first-line indentation setting\n- add default bold and italic settings\n\n修复 :\n- resolve catalog jumps after page composition\n- bound image prefetch to the reading window\n- remove novel forum and immersive mode preference\n- load novel details from saved pages and refresh in background\n- clear owned caches and report actual storage use\n- speed up local readers and content management\n- inset reader track beyond window drag region\n- reset stabilized progress at measured page starts\n- preserve author-only pagination and reject mixed snapshots\n- place iOS imports after the package declaration\n- cover link errors and retain private message diagnostics\n- quote publication summary as a YAML block\n- translate partial favorite update notification\n- bound quote traversal without caching path-dependent failures\n- release scroll ownership while native screens cover the reader\n- preserve forum origin port while resolving reference links\n- give status bar one scroll owner and inset reader touch track\n- import managed Skia resource extension from impl package\n- handle optional thread pagination metadata in validation\n- isolate native cookies and reject invalid thread snapshots\n- restore production reader improvements with Skia resource import\n- show newest download requests first\n- resume favorite updates without background foreground-service starts\n- replace default notification icon with Yamibo lily\n- suppress duplicate sign reminder during notification navigation\n- apply Yamibo colors to message input states\n- prevent post-send refresh from cancelling itself\n- keep OpenSpec ignored across older branches\n- align scroll bounds and restore image retries\n- refresh formhash before new searches\n- derive system bar contrast from active screen backgrounds\n- prevent competing image page animations\n- reject empty homepage successes and invalid caches\n- retry text on fresh page before character fallback\n- resolve static post targets and novel owners\n- make indentation configurable without adding blank lines\n- scope thread link context to target\n- isolate app identity and local signing config\n\n更改 :\n- isolate thread helpers and forum metadata\n- consolidate screen content and group cards\n- use inline YamiboResult transformations\n\n其他 :\n- prepare stable 0.0.10 (11)\n- organize GitHub helpers by purpose\n- add reusable manual validation and English guide\n- archive tests and keep main production-only\n- clean up ThreadReaderScreen import\n- prepare stable 0.0.9 (10)\n- add stable 0.0.9 changelog\n- Update branch-naming.md\n- prepare stable 0.0.8 (9)\n- Update 9.changelog\n- Add compact reader catalog search and page navigation\n- Update .gitignore\n- 9.changelog temp\n",
+  "assets": [
+    {
+      "platform": "android",
+      "type": "universal-apk",
+      "url": "https://github.com/lmc2007/yamibo-app/releases/download/23/yamibo-stable-v0.10.0.apk",
+      "sha256": "5669bb222be3ff7cc855248a78daf5a47758c1924fe327230c3cb244a056217e",
+      "size": 19735459
+    }
+  ],
+  "releaseUrl": "https://github.com/lmc2007/yamibo-app/releases/tag/23"
+}
