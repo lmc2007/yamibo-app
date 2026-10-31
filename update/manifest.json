@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.7.0",
-  "versionCode": 22,
+  "versionName": "0.10.0",
+  "versionCode": 23,
   "isReady": false,
-  "releaseNotes": "add periodic message notifications",
+  "releaseNotes": "allow swiping snackbars away",
   "assets": []
 }

@@ -11,8 +11,8 @@ plugins {
     id("local.i18n-auto-merge")
 }
 
-val yamiboAppVersionCode = 22
-val yamiboAppVersionName = "0.7.0"
+val yamiboAppVersionCode = 23
+val yamiboAppVersionName = "0.10.0"
 val yamiboAppApplicationId = "muleng.yamibo.yamibo_app"
 val localProperties = Properties().apply {
     val file = rootProject.layout.projectDirectory.file("local.properties").asFile
