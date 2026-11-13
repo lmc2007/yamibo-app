@@ -58,6 +58,11 @@ interface SignRepository {
 
     suspend fun runAutoSign(allowRepair: Boolean): YamiboResult<ActionResult>
 
+    suspend fun runAutoSignSilently(
+        allowRepair: Boolean,
+        pageInfo: SignPageInfo,
+    ): YamiboResult<ActionResult>
+
     suspend fun getTodayRecord(): DailyRecord?
 
     fun getKnownSignedToday(): Boolean?

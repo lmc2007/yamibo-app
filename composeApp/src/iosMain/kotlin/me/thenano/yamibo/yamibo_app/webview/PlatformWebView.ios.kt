@@ -29,6 +29,7 @@ class PlatformNavigationDelegate(
     private val onHtmlAvailable: (String, String) -> Unit,
     private val onLoadError: (String?, String) -> Unit,
     private val authCookieSync: () -> Unit,
+    private val isSessionActive: () -> Boolean,
 ) : NSObject(), WKNavigationDelegateProtocol {
 
     @ObjCSignatureOverride
@@ -38,17 +39,19 @@ class PlatformNavigationDelegate(
 
     @ObjCSignatureOverride
     override fun webView(webView: WKWebView, didFinishNavigation: WKNavigation?) {
+        if (!isSessionActive()) return
         onLoadingChanged(false)
         val currentUrl = webView.URL?.absoluteString ?: return
         onUrlChanged(currentUrl)
         webView.title?.let { onTitleChanged(it) }
 
-        val notifyPageFinished = {
+        val notifyPageFinished = notify@{
+            if (!isSessionActive()) return@notify
             onPageFinished(currentUrl)
             if (captureHtml) {
                 webView.evaluateJavaScript("document.documentElement.outerHTML") { result, _ ->
                     val html = result as? String ?: return@evaluateJavaScript
-                    if (html.isNotBlank()) {
+                    if (isSessionActive() && html.isNotBlank()) {
                         onHtmlAvailable(currentUrl, html)
                     }
                 }
@@ -62,8 +65,10 @@ class PlatformNavigationDelegate(
             WKWebViewCookieBridge.bridgeToNSHTTPCookieStorage(
                 store = webView.configuration.websiteDataStore.httpCookieStore,
             ) {
-                authCookieSync()
-                notifyPageFinished()
+                if (isSessionActive()) {
+                    authCookieSync()
+                    notifyPageFinished()
+                }
             }
         } else {
             notifyPageFinished()
@@ -97,6 +102,7 @@ actual fun PlatformWebViewContent(
     url: String,
     syncAuthCookies: Boolean,
     captureHtml: Boolean,
+    registerNavigation: Boolean,
     onTitleChanged: (String) -> Unit,
     onUrlChanged: (String) -> Unit,
     onLoadingChanged: (Boolean) -> Unit,
@@ -110,6 +116,11 @@ actual fun PlatformWebViewContent(
 ) {
     val authRepo = LocalAuthRepository.current
     var webViewInstance by remember { mutableStateOf<WKWebView?>(null) }
+    val released = remember { booleanArrayOf(false) }
+    val initialUid = remember { authRepo.currentUser()?.uid }
+
+    fun isSessionActive() = !released[0] &&
+        (registerNavigation || authRepo.currentUser()?.uid == initialUid)
 
     val delegate = remember {
         PlatformNavigationDelegate(
@@ -122,20 +133,23 @@ actual fun PlatformWebViewContent(
             onHtmlAvailable = onHtmlAvailable,
             onLoadError = onLoadError,
             authCookieSync = { authRepo.syncCookieFromWebView() },
+            isSessionActive = ::isSessionActive,
         )
     }
 
-    RegisterPlatformWebViewNavigation(
-        controllerKey = webViewInstance,
-        canGoBack = { webViewInstance?.canGoBack() == true },
-        goBack = { webViewInstance?.goBack() },
-        canGoForward = { webViewInstance?.canGoForward() == true },
-        goForward = { webViewInstance?.goForward() },
-        reload = { webViewInstance?.reload() },
-        onBack = onBack,
-        onForward = onForward,
-        onReload = onReload,
-    )
+    if (registerNavigation) {
+        RegisterPlatformWebViewNavigation(
+            controllerKey = webViewInstance,
+            canGoBack = { webViewInstance?.canGoBack() == true },
+            goBack = { webViewInstance?.goBack() },
+            canGoForward = { webViewInstance?.canGoForward() == true },
+            goForward = { webViewInstance?.goForward() },
+            reload = { webViewInstance?.reload() },
+            onBack = onBack,
+            onForward = onForward,
+            onReload = onReload,
+        )
+    }
     
     UIKitView(
         modifier = Modifier.fillMaxSize(),
@@ -143,9 +157,13 @@ actual fun PlatformWebViewContent(
             WKWebView().apply {
                 webViewInstance = this
                 this.navigationDelegate = delegate
+                if (!registerNavigation) {
+                    userInteractionEnabled = false
+                    accessibilityElementsHidden = true
+                }
                 if (syncAuthCookies) {
                     authRepo.restoreCookiesToWebView {
-                        loadRequest(NSURLRequest(NSURL(string = url)))
+                        if (isSessionActive()) loadRequest(NSURLRequest(NSURL(string = url)))
                     }
                 } else {
                     loadRequest(NSURLRequest(NSURL(string = url)))
@@ -154,6 +172,11 @@ actual fun PlatformWebViewContent(
         },
         update = {
             webViewInstance = it
-        }
+        },
+        onRelease = {
+            released[0] = true
+            it.navigationDelegate = null
+            it.stopLoading()
+        },
     )
 }

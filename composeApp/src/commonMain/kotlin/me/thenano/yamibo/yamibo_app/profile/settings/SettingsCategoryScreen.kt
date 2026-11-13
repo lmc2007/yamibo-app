@@ -772,8 +772,8 @@ private fun SignSettingsContent() {
     SettingsToggleRow(
         title = i18n("自動進行補簽"),
         subtitle = when (signMode) {
-            SignInMode.FULL_MANUAL -> i18n("手動模式下只保存這個偏好；半自動模式才會真的自動補簽。")
-            SignInMode.SEMI_AUTOMATIC -> i18n("完成 Cloudflare 驗證後，程式會在簽到成功後一路補到不能再補。")
+            SignInMode.FULL_MANUAL -> i18n("手動模式下不會自動簽到；自動模式才會依補簽偏好執行補簽。")
+            SignInMode.SEMI_AUTOMATIC -> i18n("偵測到今天尚未簽到時，程式會在背景開啟簽到頁並自動嘗試簽到；啟用補簽後也會一併處理。")
         },
         checked = allowRepair,
         onCheckedChange = { appSettingsRepository.signInAllowRepair.setValue(it) },

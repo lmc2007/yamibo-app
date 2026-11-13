@@ -39,7 +39,7 @@ fun FavoriteUpdateInterval.localizedLabel(): String = when (this) {
 }
 
 fun SignInMode.localizedLabel(): String = when (this) {
-    SignInMode.SEMI_AUTOMATIC -> i18n("半自動簽到")
+    SignInMode.SEMI_AUTOMATIC -> i18n("全自動簽到")
     SignInMode.FULL_MANUAL -> i18n("全手動簽到")
 }
 

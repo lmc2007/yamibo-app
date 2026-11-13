@@ -25,6 +25,7 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme.colors
 import me.thenano.yamibo.yamibo_app.event.AppEventBus
 import me.thenano.yamibo.yamibo_app.event.AppEvent
 import me.thenano.yamibo.yamibo_app.event.events.LoginSuccessEvent
+import me.thenano.yamibo.yamibo_app.event.events.LogoutSuccessEvent
 import me.thenano.yamibo.yamibo_app.event.events.SignStatusChangedEvent
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.localnovel.ILocalNovelBookshelfScreen
@@ -156,6 +157,7 @@ fun ProfilePage(
                     coroutineScope.launch {
                         isLoading = true
                         authRepository.logOut()
+                        AppEventBus.emit(LogoutSuccessEvent)
                         userInfo = authRepository.currentUser()
                         signRefreshKey += 1
                         isLoading = false

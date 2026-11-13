@@ -53,6 +53,17 @@ class AppSettingsRepositoryTest {
         assertEquals(AppUpdateDownloadMode.DIRECT, recreated.appUpdateDownloadMode.getValue())
         assertEquals(AppUpdateDownloadProxy.GH_DPIK_TOP, recreated.appUpdateDownloadProxy.getValue())
     }
+
+    @Test
+    fun semiAutomaticModeNameRemainsCompatibleWithPersistedSettings() {
+        val store = AppSettingsMemoryStore()
+        store.putString("appsettings.signinmode", "SEMI_AUTOMATIC")
+
+        val repository = AppSettingsRepository(store)
+        assertEquals(SignInMode.SEMI_AUTOMATIC, repository.signInMode.getValue())
+        repository.signInMode.setValue(SignInMode.SEMI_AUTOMATIC)
+        assertEquals("SEMI_AUTOMATIC", store.getString("appsettings.signinmode", ""))
+    }
 }
 
 private class AppSettingsMemoryStore : SettingsStore {

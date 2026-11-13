@@ -2,6 +2,7 @@ package me.thenano.yamibo.yamibo_app.webview
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.view.View
 import android.webkit.*
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ actual fun PlatformWebViewContent(
     url: String,
     syncAuthCookies: Boolean,
     captureHtml: Boolean,
+    registerNavigation: Boolean,
     onTitleChanged: (String) -> Unit,
     onUrlChanged: (String) -> Unit,
     onLoadingChanged: (Boolean) -> Unit,
@@ -35,23 +37,36 @@ actual fun PlatformWebViewContent(
     val authRepo = LocalAuthRepository.current
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+    val released = remember { booleanArrayOf(false) }
 
-    RegisterPlatformWebViewNavigation(
-        controllerKey = webViewInstance,
-        canGoBack = { webViewInstance?.canGoBack() == true },
-        goBack = { webViewInstance?.goBack() },
-        canGoForward = { webViewInstance?.canGoForward() == true },
-        goForward = { webViewInstance?.goForward() },
-        reload = { webViewInstance?.reload() },
-        onBack = onBack,
-        onForward = onForward,
-        onReload = onReload,
-    )
+    if (registerNavigation) {
+        RegisterPlatformWebViewNavigation(
+            controllerKey = webViewInstance,
+            canGoBack = { webViewInstance?.canGoBack() == true },
+            goBack = { webViewInstance?.goBack() },
+            canGoForward = { webViewInstance?.canGoForward() == true },
+            goForward = { webViewInstance?.goForward() },
+            reload = { webViewInstance?.reload() },
+            onBack = onBack,
+            onForward = onForward,
+            onReload = onReload,
+        )
+    }
 
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
             WebView(context).apply {
+                val initialUid = authRepo.currentUser()?.uid
+                fun isSessionActive() = !released[0] &&
+                    (registerNavigation || authRepo.currentUser()?.uid == initialUid)
+                // The view remains attached for JavaScript, but cannot take input or accessibility focus.
+                if (!registerNavigation) {
+                    isFocusable = false
+                    isFocusableInTouchMode = false
+                    importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+                    setOnTouchListener { _, _ -> true }
+                }
                 webViewInstance = this
                 webViewClient = object : WebViewClient() {
                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -74,6 +89,7 @@ actual fun PlatformWebViewContent(
 
                     override fun onPageFinished(view: WebView?, url: String?) {
                         super.onPageFinished(view, url)
+                        if (!isSessionActive()) return
                         onLoadingChanged(false)
                         val currentUrl = url ?: return
                         onUrlChanged(currentUrl)
@@ -84,7 +100,7 @@ actual fun PlatformWebViewContent(
                         if (captureHtml) {
                             evaluateJavascript("(function(){return document.documentElement.outerHTML;})()") { value ->
                                 val html = decodeEvaluatedHtml(value)
-                                if (html.isNotBlank()) {
+                                if (isSessionActive() && html.isNotBlank()) {
                                     onHtmlAvailable(currentUrl, html)
                                 }
                             }
@@ -138,7 +154,7 @@ actual fun PlatformWebViewContent(
                     loadWithOverviewMode = true
                     builtInZoomControls = true
                     displayZoomControls = false
-                    javaScriptCanOpenWindowsAutomatically = true
+                    javaScriptCanOpenWindowsAutomatically = registerNavigation
 
                     cacheMode = WebSettings.LOAD_DEFAULT
                     userAgentString =
@@ -152,7 +168,7 @@ actual fun PlatformWebViewContent(
                 cookieManager.setAcceptThirdPartyCookies(this, true)
 
                 if (syncAuthCookies) {
-                    authRepo.restoreCookiesToWebView { loadUrl(url) }
+                    authRepo.restoreCookiesToWebView { if (isSessionActive()) loadUrl(url) }
                 } else {
                     loadUrl(url)
                 }
@@ -160,7 +176,14 @@ actual fun PlatformWebViewContent(
         },
         update = {
             webViewInstance = it
-        }
+        },
+        onRelease = { view ->
+            released[0] = true
+            view.stopLoading()
+            view.webViewClient = WebViewClient()
+            view.webChromeClient = null
+            view.destroy()
+        },
     )
 }
 

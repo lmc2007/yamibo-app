@@ -51,6 +51,12 @@ private class TrackingSignRepository(
     override suspend fun runAutoSign(allowRepair: Boolean): YamiboResult<SignRepository.ActionResult> =
         YamiboResult.Failure("Not used")
 
+    override suspend fun runAutoSignSilently(
+        allowRepair: Boolean,
+        pageInfo: SignRepository.SignPageInfo,
+    ): YamiboResult<SignRepository.ActionResult> =
+        YamiboResult.Failure("Not used")
+
     override suspend fun getTodayRecord(): SignRepository.DailyRecord? = null
     override fun getKnownSignedToday(): Boolean? = knownSignedToday
     override suspend fun isSignedToday(): Boolean = knownSignedToday == true
