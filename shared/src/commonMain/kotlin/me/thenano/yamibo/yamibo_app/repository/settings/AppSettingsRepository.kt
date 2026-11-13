@@ -130,6 +130,7 @@ enum class BackupInterval(
 }
 
 enum class SignInMode(val label: String) {
+    // Keep the persisted enum name compatible with existing installations and backups.
     SEMI_AUTOMATIC("semi_automatic"),
     FULL_MANUAL("full_manual"),
 }

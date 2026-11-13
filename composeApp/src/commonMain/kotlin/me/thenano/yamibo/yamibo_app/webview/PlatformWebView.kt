@@ -13,7 +13,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import me.thenano.yamibo.yamibo_app.Logger
 import me.thenano.yamibo.yamibo_app.profile.LoadingOverlay
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
@@ -26,6 +30,7 @@ expect fun PlatformWebViewContent(
     url: String,
     syncAuthCookies: Boolean,
     captureHtml: Boolean,
+    registerNavigation: Boolean,
     onTitleChanged: (String) -> Unit,
     onUrlChanged: (String) -> Unit,
     onLoadingChanged: (Boolean) -> Unit,
@@ -79,6 +84,39 @@ internal fun RegisterPlatformWebViewNavigation(
 }
 
 @Composable
+internal fun PlatformBackgroundWebViewContent(
+    url: String,
+    captureHtml: Boolean,
+    onPageFinished: (String) -> Unit,
+    onHtmlAvailable: (url: String, html: String) -> Unit,
+    onLoadError: (url: String?, description: String) -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(1.dp)
+            .alpha(0f)
+            .clearAndSetSemantics {},
+    ) {
+        PlatformWebViewContent(
+            url = url,
+            syncAuthCookies = true,
+            captureHtml = captureHtml,
+            registerNavigation = false,
+            onTitleChanged = {},
+            onUrlChanged = {},
+            onLoadingChanged = {},
+            onBack = {},
+            onForward = {},
+            onReload = {},
+            onPageFinished = onPageFinished,
+            onHtmlAvailable = onHtmlAvailable,
+            onLoadError = onLoadError,
+            shouldOverrideUrlLoading = { false },
+        )
+    }
+}
+
+@Composable
 internal fun PlatformWebViewScreen(
     initialUrl: String,
     initialTitle: String = "WebView",
@@ -127,6 +165,7 @@ internal fun PlatformWebViewScreen(
                     url = initialUrl,
                     syncAuthCookies = syncAuthCookies,
                     captureHtml = captureHtml,
+                    registerNavigation = true,
                     onTitleChanged = { currentTitle = it },
                     onUrlChanged = { currentUrl = it },
                     onLoadingChanged = { loading = it },

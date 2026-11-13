@@ -9,6 +9,7 @@ import io.github.littlesurvival.core.mapSuccess
 import io.github.littlesurvival.dto.page.SignActionResult
 import io.github.littlesurvival.dto.page.SignActionStatus
 import io.github.littlesurvival.dto.page.SignPage
+import io.github.littlesurvival.waf.WafRecoveryConfig
 import io.github.littlesurvival.parse.SignPageParser
 import kotlinx.coroutines.runBlocking
 import me.thenano.yamibo.yamibo_app.i18n.i18n
@@ -29,10 +30,34 @@ class SignRepositoryImpl(
     private val signPageParser = SignPageParser()
 
     override suspend fun fetchPageInfo(): YamiboResult<SignRepository.SignPageInfo> {
+        return fetchPageInfo(yamiboClient)
+    }
+
+    override suspend fun runAutoSignSilently(
+        allowRepair: Boolean,
+        pageInfo: SignRepository.SignPageInfo,
+    ): YamiboResult<SignRepository.ActionResult> {
+        val client = YamiboClient(timeoutMillis = 60_000L, wafRecoveryConfig = WafRecoveryConfig(enabled = false))
+        return try {
+            client.setCookie(authRepository.cookieStore.load().orEmpty(), importNox = true)
+            runAutoSign(allowRepair, client, pageInfo)
+        } finally {
+            client.close()
+        }
+    }
+
+    private suspend fun fetchPageInfo(
+        client: YamiboClient,
+        expectedUid: String? = null,
+    ): YamiboResult<SignRepository.SignPageInfo> {
         if (!authRepository.isLoggedIn()) return YamiboResult.NotLoggedIn
+        val uid = currentUid()
+        if (expectedUid != null && uid != expectedUid) return YamiboResult.NotLoggedIn
         val cookie = authRepository.cookieStore.load().orEmpty()
 
-        val result = yamiboClient.fetchSignPage(cookie).mapSuccess { page ->
+        val fetched = client.fetchSignPage(cookie)
+        if (currentUid() != uid) return YamiboResult.NotLoggedIn
+        val result = fetched.mapSuccess { page ->
             page.toAppModel().also { updateTodayRecord(it) }
         }
         return if (result is YamiboResult.Failure) {
@@ -41,7 +66,16 @@ class SignRepositoryImpl(
     }
 
     override suspend fun runAutoSign(allowRepair: Boolean): YamiboResult<SignRepository.ActionResult> {
-        val initialInfo = getCachedPageInfo() ?: when (val result = fetchPageInfo()) {
+        return runAutoSign(allowRepair, yamiboClient)
+    }
+
+    private suspend fun runAutoSign(
+        allowRepair: Boolean,
+        client: YamiboClient,
+        initialPageInfo: SignRepository.SignPageInfo? = null,
+    ): YamiboResult<SignRepository.ActionResult> {
+        val uid = currentUid()
+        val initialInfo = initialPageInfo ?: getCachedPageInfo() ?: when (val result = fetchPageInfo(client, uid)) {
             is YamiboResult.Success -> result.value
             is YamiboResult.NotLoggedIn -> return result
             is YamiboResult.NoPermission -> return result
@@ -62,7 +96,7 @@ class SignRepositoryImpl(
         if (!pageInfo.hasSignedToday) {
             val signUrl = pageInfo.signActionUrl
                 ?: return YamiboResult.Failure(i18n("已通過驗證，但找不到簽到按鈕，請改用手動模式。"))
-            val signAction = when (val action = executeAction(signUrl)) {
+            val signAction = when (val action = executeAction(signUrl, client, uid)) {
                 is YamiboResult.Success -> action.value
                 is YamiboResult.NotLoggedIn -> return action
                 is YamiboResult.NoPermission -> return action
@@ -73,7 +107,7 @@ class SignRepositoryImpl(
             lastMessage = signAction.message
             finalStatus = signAction.status
 
-            pageInfo = when (val refreshed = fetchPageInfo()) {
+            pageInfo = when (val refreshed = fetchPageInfo(client, uid)) {
                 is YamiboResult.Success -> {
                     if (signAction.status.isTodaySignedStatus()) {
                         optimisticSignedPageInfo(refreshed.value)
@@ -99,7 +133,7 @@ class SignRepositoryImpl(
                 seenRepairValues += repairOption.value
 
                 val repairUrl = buildAbsoluteUrl("$prefix${repairOption.value}")
-                val repairAction = when (val action = executeAction(repairUrl)) {
+                val repairAction = when (val action = executeAction(repairUrl, client, uid)) {
                     is YamiboResult.Success -> action.value
                     is YamiboResult.NotLoggedIn -> return action
                     is YamiboResult.NoPermission -> return action
@@ -111,7 +145,7 @@ class SignRepositoryImpl(
                 lastMessage = repairAction.message
                 finalStatus = repairAction.status
 
-                pageInfo = when (val refreshed = fetchPageInfo()) {
+                pageInfo = when (val refreshed = fetchPageInfo(client, uid)) {
                     is YamiboResult.Success -> refreshed.value
                     is YamiboResult.NotLoggedIn,
                     is YamiboResult.NoPermission,
@@ -127,6 +161,7 @@ class SignRepositoryImpl(
             repairCount > 0 -> i18n("{} 已完成 {} 次補簽。", lastMessage, repairCount)
             else -> lastMessage
         }
+        if (currentUid() != uid) return YamiboResult.NotLoggedIn
         updateTodayRecord(pageInfo, message)
         return YamiboResult.Success(
             SignRepository.ActionResult(
@@ -194,11 +229,16 @@ class SignRepositoryImpl(
         return info
     }
 
-    private suspend fun executeAction(url: String): YamiboResult<ParsedActionResult> {
+    private suspend fun executeAction(
+        url: String,
+        client: YamiboClient,
+        expectedUid: String,
+    ): YamiboResult<ParsedActionResult> {
+        if (currentUid() != expectedUid) return YamiboResult.NotLoggedIn
         val absoluteUrl = buildAbsoluteUrl(url)
         val cookie = authRepository.cookieStore.load().orEmpty()
 
-        val result = yamiboClient.fetchSignAction(absoluteUrl, cookie).mapSuccess { it.toAppModel() }
+        val result = client.fetchSignAction(absoluteUrl, cookie).mapSuccess { it.toAppModel() }
         return if (result is YamiboResult.Failure) {
             YamiboResult.Failure(toFriendlyFailure(result.reason), result.exception)
         } else result

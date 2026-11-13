@@ -189,6 +189,9 @@ tip：長按可詳細編輯收藏路徑,Tip: Long press to edit favorite path in
 匯入網站帖子,Importing website threads,匯入網站帖子,导入网站帖子
 區間,Interval,區間,区间
 半自動簽到,Semi-automatic sign-in,半自動簽到,半自动签到
+全自動簽到,Automatic sign-in,全自動簽到,全自动签到
+偵測到今天尚未簽到時，程式會在背景開啟簽到頁並自動嘗試簽到；啟用補簽後也會一併處理。,When today's sign-in is missing, the app opens the sign-in page in the background and attempts to complete sign-in; enabled make-up sign-ins are handled too.,偵測到今天尚未簽到時，程式會在背景開啟簽到頁並自動嘗試簽到；啟用補簽後也會一併處理。,检测到今天尚未签到时，程序会在后台打开签到页并自动尝试签到；启用补签后也会一并处理。
+手動模式下不會自動簽到；自動模式才會依補簽偏好執行補簽。,Manual mode does not sign in automatically; automatic mode follows the make-up sign-in preference.,手動模式下不會自動簽到；自動模式才會依補簽偏好執行補簽。,手动模式下不会自动签到；自动模式才会按补签偏好执行补签。
 反轉觸控區域,Reverse touch zones,反轉觸控區域,反转触控区域
 取得小說作者資訊,Loading novel author info,取得小說作者資訊,获取小说作者信息
 取消,Cancel,取消,取消

@@ -69,6 +69,7 @@ import me.thenano.yamibo.yamibo_app.message.MessageCenterTab
 import me.thenano.yamibo.yamibo_app.notification.messageNotificationNavigationTrigger
 import me.thenano.yamibo.yamibo_app.profile.settings.update.AppUpdatePromptContent
 import me.thenano.yamibo.yamibo_app.profile.sign.ISignWebView
+import me.thenano.yamibo.yamibo_app.profile.sign.AutomaticSignInHost
 import me.thenano.yamibo.yamibo_app.profile.sign.LaunchSignReminderState
 import me.thenano.yamibo.yamibo_app.profile.sign.shouldDismissSignReminderFor
 import me.thenano.yamibo.yamibo_app.profile.sign.shouldEmitSignStatusChanged
@@ -192,6 +193,7 @@ fun App() {
     val appFontId = appSettingsRepository.appFontId.state()
     val appFontFamily = remember(appFontId) { fontRepository.getFontFamily(appFontId) }
     val signLaunchReminderEnabled = appSettingsRepository.signInLaunchReminderEnabled.state()
+    val signInMode = appSettingsRepository.signInMode.state()
     val holder = rememberSaveableStateHolder()
     navigator.stateHolder = holder
     ChineseConversionModeSync()
@@ -335,6 +337,7 @@ fun App() {
                         }
                     }
                 }
+                AutomaticSignInHost()
                 AppFeedbackHost(
                     controller = feedbackController,
                     modifier = Modifier
@@ -386,8 +389,8 @@ fun App() {
         }
     }
 
-    LaunchedEffect(signLaunchReminderEnabled, appLanguage, signReminder.suppressed) {
-        if (!signLaunchReminderEnabled || signReminder.suppressed) {
+    LaunchedEffect(signLaunchReminderEnabled, signInMode, appLanguage, signReminder.suppressed) {
+        if (!signLaunchReminderEnabled || signInMode == SignInMode.SEMI_AUTOMATIC || signReminder.suppressed) {
             signReminder.dismiss()
             return@LaunchedEffect
         }
