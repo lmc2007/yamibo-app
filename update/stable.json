@@ -1,0 +1,17 @@
+{
+  "channel": "stable",
+  "versionName": "0.10.1",
+  "versionCode": 24,
+  "isReady": true,
+  "releaseNotes": "# stable-0.10.1\n\n新增 :\n- automate daily sign-in in background\n",
+  "assets": [
+    {
+      "platform": "android",
+      "type": "universal-apk",
+      "url": "https://github.com/lmc2007/yamibo-app/releases/download/24/yamibo-stable-v0.10.1.apk",
+      "sha256": "8fda50e1cccfb3e9e8c90ca8a67bf22b2da0c7a9e2baf6ca98dfe51758e045bc",
+      "size": 19747747
+    }
+  ],
+  "releaseUrl": "https://github.com/lmc2007/yamibo-app/releases/tag/24"
+}
