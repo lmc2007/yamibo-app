@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "versionName": "0.10.0",
-  "versionCode": 23,
+  "versionName": "0.10.1",
+  "versionCode": 24,
   "isReady": false,
-  "releaseNotes": "allow swiping snackbars away",
+  "releaseNotes": "automate daily sign-in in background",
   "assets": []
 }
