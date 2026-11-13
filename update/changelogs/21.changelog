@@ -1,0 +1,8 @@
+# stable-0.6.12
+
+新增 :
+- 更新下载代理新增 git.muleng.dpdns.org（前缀代理 + UI 选项 + 单测）
+- 本地备份未选择目录时默认使用 Download/Yamibo（MediaStore 自动创建）
+
+修复 :
+- 分享文件到微信等应用时读取失败（发布到公共下载目录 MediaStore + ClipData 显式授权）

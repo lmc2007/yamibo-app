@@ -24,7 +24,7 @@ import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.favorite.*
 import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
-import me.thenano.yamibo.yamibo_app.profile.settings.backup.IBackupSettingsScreen
+import me.thenano.yamibo.yamibo_app.profile.settings.ISettingsCategoryScreen
 import me.thenano.yamibo.yamibo_app.repository.*
 import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.thread.detail.components.*
@@ -48,6 +48,7 @@ internal fun TagDetailScreen(
     tagName: String,
     initialPage: Int? = null
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
     val tagRepository = LocalTagRepository.current
@@ -91,10 +92,12 @@ internal fun TagDetailScreen(
     var threadChapterStates by remember { mutableStateOf<Map<Long, ChapterStateRepository.Entry>>(emptyMap()) }
     var actionThread by remember { mutableStateOf<ThreadSummary?>(null) }
     var showDownloadSheet by remember { mutableStateOf(false) }
+    var downloadSheetOpenedAfterFavorite by remember { mutableStateOf(false) }
 
     val appSettingsRepo = LocalAppSettingsRepository.current
     val imageReaderModeOverrideRepository = LocalImageReaderModeOverrideRepository.current
     val isMangaMode = appSettingsRepo.isMangaMode.state()
+    val favoriteAddDownloadPromptEnabled = appSettingsRepo.favoriteAddDownloadPromptEnabled.state()
     val longStripModeEnabled by imageReaderModeOverrideRepository.observeTagLongStrip(tagId).collectAsState(false)
     val stackSize = navigator.stack.size
 
@@ -109,7 +112,7 @@ internal fun TagDetailScreen(
     suspend fun ensureDownloadStorageReady(): Boolean {
         if (downloadRepository.isStorageReady()) return true
         feedbackController.post(i18n("尚未設定下載資料夾"))
-        navigator.navigate(IBackupSettingsScreen())
+        navigator.navigate(ISettingsCategoryScreen("storage"))
         return false
     }
 
@@ -195,7 +198,7 @@ internal fun TagDetailScreen(
                     TagDetailState.Success(correctedTagPage)
                 }
 
-                else -> TagDetailState.Error(i18n(result.message()))
+                else -> TagDetailState.Error(i18n(errorMessages.resolve(result)))
             }
     }
 
@@ -260,9 +263,13 @@ internal fun TagDetailScreen(
             return
         }
 
-        favoriteRepository.saveFavorite(target)
+        val creationOutcome = favoriteRepository.saveFavoriteWithOutcome(target)
         favoriteRefreshToken += 1
         feedbackController.post(i18n("已加入收藏"))
+        if (creationOutcome == FavoriteCreationOutcome.Created && favoriteAddDownloadPromptEnabled) {
+            downloadSheetOpenedAfterFavorite = true
+            showDownloadSheet = true
+        }
     }
 
     LaunchedEffect(tagId, currentTagName, favoriteRefreshToken, canonicalCover?.resolvedUrl) {
@@ -468,7 +475,7 @@ internal fun TagDetailScreen(
 
                                     else -> {
                                         feedbackController.post(
-                                            message = i18n("重新整理標籤頁失敗：{}", i18n(result.message())),
+                                            message = i18n("重新整理標籤頁失敗：{}", i18n(errorMessages.resolve(result))),
                                             duration = me.thenano.yamibo.yamibo_app.feedback.AppFeedbackDuration.Short,
                                         )
                                     }
@@ -515,7 +522,10 @@ internal fun TagDetailScreen(
                                 shareText(platformContext, url, currentTagName)
                             },
                             showDownloadAction = isMangaMode,
-                            onDownload = { showDownloadSheet = true },
+                            onDownload = {
+                                downloadSheetOpenedAfterFavorite = false
+                                showDownloadSheet = true
+                            },
                             noteContent = detailNote?.content.orEmpty(),
                             onNoteClick = { showNoteDialog = true },
                             onPageChange = { page ->
@@ -565,10 +575,14 @@ internal fun TagDetailScreen(
         val currentPageHasDownloads = currentThreads.any { tagMangaDownloadEntries.containsKey(it.tid.value.toLong()) }
         CatalogDownloadActionSheet(
             title = i18n("標籤漫畫下載"),
-            onDismiss = { showDownloadSheet = false },
+            onDismiss = {
+                showDownloadSheet = false
+                downloadSheetOpenedAfterFavorite = false
+            },
             actions = buildList {
                 add(CatalogDownloadAction(i18n("下載目前分頁")) {
                     showDownloadSheet = false
+                    downloadSheetOpenedAfterFavorite = false
                     launchDownloadTask("current-page:$currentPage") {
                         if (!ensureDownloadStorageReady()) return@launchDownloadTask
                         downloadRepository.enqueueTagMangaCurrentPage(
@@ -584,6 +598,7 @@ internal fun TagDetailScreen(
                 })
                 add(CatalogDownloadAction(i18n("下載全部分頁")) {
                     showDownloadSheet = false
+                    downloadSheetOpenedAfterFavorite = false
                     launchDownloadTask("all-pages") {
                         if (!ensureDownloadStorageReady()) return@launchDownloadTask
                         downloadRepository.enqueueTagMangaAllPages(tagId, currentTagName)
@@ -596,6 +611,7 @@ internal fun TagDetailScreen(
                 if (currentPageHasDownloads) {
                     add(CatalogDownloadAction(i18n("清除目前分頁下載")) {
                         showDownloadSheet = false
+                        downloadSheetOpenedAfterFavorite = false
                         launchDownloadTask("clear-page:$currentPage") {
                             currentThreads.forEach { downloadRepository.clearTagMangaChapter(tagMangaKey(it)) }
                             feedbackController.post(i18n("已清除目前分頁下載"))
@@ -605,12 +621,23 @@ internal fun TagDetailScreen(
                 if (tagMangaDownloadEntries.isNotEmpty()) {
                     add(CatalogDownloadAction(i18n("清除整個標籤下載")) {
                         showDownloadSheet = false
+                        downloadSheetOpenedAfterFavorite = false
                         launchDownloadTask("clear-all") {
                             downloadRepository.clearTagManga(tagId)
                             feedbackController.post(i18n("已清除整個標籤下載"))
                         }
                     })
                 }
+            },
+            doNotAskAgain = if (downloadSheetOpenedAfterFavorite) {
+                !favoriteAddDownloadPromptEnabled
+            } else {
+                null
+            },
+            onDoNotAskAgainChange = if (downloadSheetOpenedAfterFavorite) {
+                { checked -> appSettingsRepo.favoriteAddDownloadPromptEnabled.setValue(!checked) }
+            } else {
+                null
             },
         )
     }
@@ -635,7 +662,7 @@ internal fun TagDetailScreen(
                 scope.launch {
                     val existing = favoriteRepository.findFavoriteItem(target)
                     if (existing == null) {
-                        favoriteRepository.saveFavorite(
+                        val creationOutcome = favoriteRepository.saveFavoriteWithOutcome(
                             target,
                             categoryIds = selectedCategories.toList(),
                             collectionIds = selectedCollections.toList()
@@ -643,6 +670,10 @@ internal fun TagDetailScreen(
                         showFavoriteDialog = false
                         favoriteRefreshToken += 1
                         feedbackController.post(i18n("已加入收藏"))
+                        if (creationOutcome == FavoriteCreationOutcome.Created && favoriteAddDownloadPromptEnabled) {
+                            downloadSheetOpenedAfterFavorite = true
+                            showDownloadSheet = true
+                        }
                     } else if (selectedCategories.isEmpty() && selectedCollections.isEmpty()) {
                         showFavoriteDialog = false
                         pendingFavoriteRemovalSelection = favoriteRepository.getFavoriteLocationSelection(target)
@@ -811,7 +842,7 @@ internal fun TagDetailScreen(
                     if (!ensureDownloadStorageReady()) return@launchDownloadTask
                     when (val result = downloadRepository.refreshTagMangaChapter(downloadKey)) {
                         is YamiboResult.Success -> feedbackController.post(i18n("已重新整理下載"))
-                        else -> feedbackController.post(i18n("重新整理下載失敗：{}", i18n(result.message())))
+                        else -> feedbackController.post(i18n("重新整理下載失敗：{}", i18n(errorMessages.resolve(result))))
                     }
                 }
             },

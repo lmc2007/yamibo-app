@@ -1,8 +1,11 @@
 package me.thenano.yamibo.yamibo_app.message
 
+import me.thenano.yamibo.yamibo_app.LocalForumErrorMessageResolver
 import YamiboIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -16,21 +19,28 @@ import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboRoute
 import io.github.littlesurvival.core.YamiboResult
 import io.github.littlesurvival.core.mapSuccess
+import io.github.littlesurvival.dto.model.PageNav
+import io.github.littlesurvival.dto.model.User
 import io.github.littlesurvival.dto.page.ProfilePage
 import io.github.littlesurvival.dto.page.UserSpaceNoticePage
 import io.github.littlesurvival.dto.page.UserSpacePrivateMessagePage
+import io.github.littlesurvival.dto.value.UserId
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.LocalAuthRepository
 import me.thenano.yamibo.yamibo_app.LocalUserSpaceRepository
+import me.thenano.yamibo.yamibo_app.components.feedback.YamiboEmptyContent
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboErrorContent
 import me.thenano.yamibo.yamibo_app.components.feedback.YamiboLoadingContent
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboMainTabTopBar
+import me.thenano.yamibo.yamibo_app.components.navigation.YamiboPageNavigation
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboScrollableTabRow
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBarIconAction
 import me.thenano.yamibo.yamibo_app.components.theme.YamiboTheme
 import me.thenano.yamibo.yamibo_app.components.user.UserAvatar
 import me.thenano.yamibo.yamibo_app.i18n.i18n
+import me.thenano.yamibo.yamibo_app.message.components.NoticeCard
+import me.thenano.yamibo.yamibo_app.message.components.PrivateMessageCard
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.webview.action.IActionWebView
@@ -46,7 +56,7 @@ private sealed interface MessageCenterState {
     data class Error(val message: String) : MessageCenterState
 }
 
-internal sealed interface MessageCenterContent {
+private sealed interface MessageCenterContent {
     data class PrivateMessages(val page: UserSpacePrivateMessagePage) : MessageCenterContent
     data class Notices(val page: UserSpaceNoticePage) : MessageCenterContent
 }
@@ -57,6 +67,7 @@ fun MessageCenterScreen(
     mainTabTopBar: Boolean = false,
     onPrivateMessageUnreadChange: (Boolean) -> Unit = {},
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val colors = YamiboTheme.colors
     val userSpaceRepository = LocalUserSpaceRepository.current
     val authRepository = LocalAuthRepository.current
@@ -69,6 +80,17 @@ fun MessageCenterScreen(
     var currentPage by remember { mutableIntStateOf(1) }
     var state by remember { mutableStateOf<MessageCenterState>(MessageCenterState.Loading) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var unreadMessages by remember(currentUser?.uid) { mutableStateOf(false) }
+    var unreadNotices by remember(currentUser?.uid) { mutableStateOf(false) }
+
+    suspend fun refreshUnreadTabs() {
+        val unread = me.thenano.yamibo.yamibo_app.repository.forum.ForumSupplementalMetadata
+            .messageUnread(authRepository.cookieStore.load().orEmpty()) ?: return
+        unread.messages?.let { unreadMessages = it }
+        if (selectedTab != MessageCenterTab.Notices || state !is MessageCenterState.Success) {
+            unread.notices?.let { unreadNotices = it }
+        }
+    }
 
     suspend fun loadTab(tab: MessageCenterTab, page: Int, preferCache: Boolean = true) {
         if (preferCache) {
@@ -77,6 +99,7 @@ fun MessageCenterScreen(
                 currentPage = page
                 state = MessageCenterState.Success(it)
                 if (it is MessageCenterContent.PrivateMessages) {
+                    unreadMessages = it.page.hasUnreadMessages()
                     onPrivateMessageUnreadChange(it.page.hasUnreadMessages())
                 }
                 return
@@ -89,17 +112,21 @@ fun MessageCenterScreen(
                 val content = result.value
                 currentPage = content.pageNumber() ?: page
                 if (content is MessageCenterContent.PrivateMessages) {
+                    unreadMessages = content.page.hasUnreadMessages()
                     onPrivateMessageUnreadChange(content.page.hasUnreadMessages())
+                } else if (content is MessageCenterContent.Notices) {
+                    unreadNotices = false
                 }
                 MessageCenterState.Success(content)
             }
-            else -> MessageCenterState.Error(i18n(result.message()))
+            else -> MessageCenterState.Error(i18n(errorMessages.resolve(result)))
         }
     }
 
     LaunchedEffect(selectedTab) {
         currentPage = 1
-        loadTab(selectedTab, 1)
+        launch { refreshUnreadTabs() }
+        loadTab(selectedTab, 1, preferCache = false)
     }
 
     Scaffold(
@@ -132,6 +159,8 @@ fun MessageCenterScreen(
         ) {
             MessageCenterTabRow(
                 selectedTab = selectedTab,
+                unreadMessages = unreadMessages,
+                unreadNotices = unreadNotices,
                 onSelect = { tab ->
                     if (tab != selectedTab) {
                         selectedTab = tab
@@ -155,9 +184,15 @@ fun MessageCenterScreen(
                         isRefreshing = isRefreshing,
                         onRefresh = {
                             isRefreshing = true
+                            val tab = selectedTab
+                            val page = currentPage
                             scope.launch {
-                                loadTab(selectedTab, currentPage, preferCache = false)
-                                isRefreshing = false
+                                launch { refreshUnreadTabs() }
+                                try {
+                                    loadTab(tab, page, preferCache = false)
+                                } finally {
+                                    if (selectedTab == tab) isRefreshing = false
+                                }
                             }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -233,6 +268,8 @@ private fun MessageCenterTopBar(
 @Composable
 private fun MessageCenterTabRow(
     selectedTab: MessageCenterTab,
+    unreadMessages: Boolean,
+    unreadNotices: Boolean,
     onSelect: (MessageCenterTab) -> Unit,
 ) {
     val colors = YamiboTheme.colors
@@ -244,12 +281,18 @@ private fun MessageCenterTabRow(
                 selected = tab == selectedTab,
                 onClick = { onSelect(tab) },
                 text = {
-                    Text(
-                        text = tab.title,
-                        color = colors.textOnSurface,
-                        fontSize = 14.sp,
-                        maxLines = 1,
-                    )
+                    BadgedBox(badge = {
+                        if (if (tab == MessageCenterTab.PrivateMessages) unreadMessages else unreadNotices) {
+                            Badge()
+                        }
+                    }) {
+                        Text(
+                            text = tab.title,
+                            color = colors.textOnSurface,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                        )
+                    }
                 },
             )
         }
@@ -298,4 +341,64 @@ private fun isMessageListUrl(url: String): Boolean {
         url.contains("mod=space") &&
         url.contains("do=pm") &&
         !url.contains("spacecp")
+}
+
+@Composable
+private fun MessageCenterMainContent(
+    content: MessageCenterContent,
+    selectedTab: MessageCenterTab,
+    currentPage: Int,
+    onPageChange: (Int) -> Unit,
+    onUserClick: (User) -> Unit,
+    onNoticeUserClick: (UserId) -> Unit,
+    onOpenPrivateMessage: (User) -> Unit,
+    onMessageAction: () -> Unit,
+) {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop { listState.scrollToItem(0) }
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        when (content) {
+            is MessageCenterContent.PrivateMessages -> {
+                if (content.page.messages.isEmpty()) item { MessageCenterEmptyListMessage(emptyMessage(selectedTab)) }
+                items(content.page.messages, key = { "${it.user.uid.value}_${it.timeInfo.text}" }) { message ->
+                    PrivateMessageCard(
+                        message,
+                        onUserClick = { onUserClick(message.user) },
+                        onAction = { onOpenPrivateMessage(message.user) },
+                    )
+                }
+                content.page.pageNav?.let { nav -> item { MessageCenterPageNavigation(nav, currentPage, onPageChange) } }
+            }
+            is MessageCenterContent.Notices -> {
+                if (content.page.notices.isEmpty()) item { MessageCenterEmptyListMessage(emptyMessage(selectedTab)) }
+                items(content.page.notices, key = { it.noticeId.value }) { notice ->
+                    NoticeCard(
+                        notice,
+                        onUserClick = onNoticeUserClick,
+                        onAction = onMessageAction,
+                    )
+                }
+                content.page.pageNav?.let { nav -> item { MessageCenterPageNavigation(nav, currentPage, onPageChange) } }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MessageCenterEmptyListMessage(message: String) {
+    YamiboEmptyContent(message = message, modifier = Modifier.padding(horizontal = 24.dp, vertical = 80.dp))
+}
+
+private fun emptyMessage(tab: MessageCenterTab): String = when (tab) {
+    MessageCenterTab.PrivateMessages -> i18n("沒有找到消息")
+    MessageCenterTab.Notices -> i18n("沒有找到提醒")
+}
+
+@Composable
+private fun MessageCenterPageNavigation(pageNav: PageNav, currentPage: Int, onPageChange: (Int) -> Unit) {
+    YamiboPageNavigation(pageNav = pageNav, currentPage = currentPage, onPageChange = onPageChange)
 }

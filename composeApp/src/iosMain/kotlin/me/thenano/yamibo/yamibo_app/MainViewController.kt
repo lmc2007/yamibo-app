@@ -2,6 +2,9 @@
 
 package me.thenano.yamibo.yamibo_app
 
+import me.thenano.yamibo.yamibo_app.repository.servernotice.ForumErrorMessageResolver
+import me.thenano.yamibo.yamibo_app.repository.servernotice.DefaultServerNoticeRepository
+import me.thenano.yamibo.yamibo_app.repository.servernotice.ServerNoticeStore
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
@@ -21,6 +24,8 @@ import me.thenano.yamibo.yamibo_app.i18n.i18n
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.navigation.rememberRestorableNavigator
 import me.thenano.yamibo.yamibo_app.network.IOSYamiboClientProvider
+import me.thenano.yamibo.yamibo_app.notification.IOSMessageNotificationScheduler
+import me.thenano.yamibo.yamibo_app.profile.settings.access.requestIOSNotificationAuthorizationIfNeeded
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IOSBackgroundAccessRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.backup.IOSBackupScheduler
 import me.thenano.yamibo.yamibo_app.profile.settings.sign.IOSSignReminderScheduler
@@ -57,6 +62,7 @@ import me.thenano.yamibo.yamibo_app.store.IOSUserStore
 import me.thenano.yamibo.yamibo_app.store.settings.IOSSettingsStore
 import me.thenano.yamibo.yamibo_app.update.IOSAppUpdatePlatform
 import me.thenano.yamibo.yamibo_app.task.AppTaskManager
+import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.confirmation.AppConfirmationController
 import me.thenano.yamibo.yamibo_app.appsync.IOSAppSyncBackgroundScheduler
 import me.thenano.yamibo.yamibo_app.appsync.AppSyncLifecycleController
@@ -66,6 +72,14 @@ import me.thenano.yamibo.yamibo_app.appsync.detachIOSAppSyncLifecycle
 fun MainViewController() = ComposeUIViewController {
     /** Navigator Logic */
     val navigator = rememberRestorableNavigator()
+    DisposableEffect(navigator) {
+        me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.onBack = { navigator.dispatchBack() }
+        me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.canGoBack = { navigator.stack.size > 1 }
+        onDispose {
+            me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.onBack = null
+            me.thenano.yamibo.yamibo_app.navigation.NativeNavigationBridge.canGoBack = null
+        }
+    }
     val appCoroutineScope = remember { CoroutineScope(SupervisorJob() + Dispatchers.Main) }
     val appFeedbackController = remember { AppFeedbackController() }
     val appConfirmationController = remember(appCoroutineScope) {
@@ -87,6 +101,13 @@ fun MainViewController() = ComposeUIViewController {
     val userStore = remember { IOSUserStore() }
     val forumFavoriteStore = remember { IOSForumFavoriteStore() }
     val rawSettingsStore = remember { IOSSettingsStore() }
+    val errorMessages = remember {
+        ForumErrorMessageResolver(
+            DefaultServerNoticeRepository(
+                ServerNoticeStore(rawSettingsStore),
+            ),
+        )
+    }
 
     /** Repository Logic */
     val yamiboClient = remember { IOSYamiboClientProvider.get(cookieStore) }
@@ -282,6 +303,7 @@ fun MainViewController() = ComposeUIViewController {
             platform = IOSAppUpdatePlatform(),
         )
     }
+    val messageNotificationScheduler = remember { IOSMessageNotificationScheduler() }
 
     /** Provide Repositories */
     CompositionLocalProvider(
@@ -294,6 +316,7 @@ fun MainViewController() = ComposeUIViewController {
         LocalAppSyncService provides appSyncService,
         LocalAppSyncBackgroundScheduler provides appSyncBackgroundScheduler,
         LocalAppUpdateRepository provides appUpdateRepository,
+        LocalForumErrorMessageResolver provides errorMessages,
         LocalForumRepository provides forumRepository,
         LocalThreadRepository provides threadRepository,
         LocalInAppLinkNavigationRepository provides inAppLinkNavigationRepository,
@@ -334,10 +357,15 @@ fun MainViewController() = ComposeUIViewController {
         LocalImageReaderModeOverrideRepository provides imageReaderModeOverrideRepository,
         LocalSignReminderScheduler provides signReminderScheduler,
     ) {
-        androidx.compose.runtime.LaunchedEffect(Unit) {
-            if (appSettingsRepository.clearCacheOnAppLaunch.getValue()) {
-                diskCacheFactory.clearAllCache()
-            }
+        val messageNotificationEnabled = appSettingsRepository.messageNotificationEnabled.state()
+        val messageNotificationInterval = appSettingsRepository.messageNotificationInterval.state()
+
+        androidx.compose.runtime.LaunchedEffect(messageNotificationEnabled, messageNotificationInterval) {
+            messageNotificationScheduler.setEnabled(
+                enabled = messageNotificationEnabled,
+                interval = messageNotificationInterval,
+            )
+            if (messageNotificationEnabled) requestIOSNotificationAuthorizationIfNeeded()
         }
         YamiboWafRecoveryRoot(yamiboClient) {
             App()

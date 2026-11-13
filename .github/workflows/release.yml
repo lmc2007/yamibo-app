@@ -169,7 +169,7 @@ jobs:
           ASSET_URL="${{ steps.meta.outputs.github_asset_url }}" \
           APK_SHA256="${{ steps.sign.outputs.sha256 }}" \
           APK_SIZE="${{ steps.sign.outputs.size }}" \
-            python3 .github/scripts/write-published-update-manifest.py
+            python3 .github/scripts/release/write-published-update-manifest.py
 
       - name: Validate published update manifests
         shell: bash

@@ -7,8 +7,15 @@ import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncJournalLoad
 import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncJournalPublishResult
 import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncJournalRemote
 import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncJournalRetirementRemoteResult
+import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncLegacyOperationClassification
+import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncLegacyRecoveryRemote
+import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncLegacyRecoveryResult
+import me.thenano.yamibo.yamibo_app.repository.appsync.engine.AppSyncSegmentedJournalRemote
+import me.thenano.yamibo.yamibo_app.repository.appsync.engine.LoadedAppSyncJournal
 import me.thenano.yamibo.yamibo_app.repository.appsync.model.AppSyncJournalRetirementIntent
 import me.thenano.yamibo.yamibo_app.repository.appsync.operation.SyncAccountBinding
+import me.thenano.yamibo.yamibo_app.repository.appsync.operation.SyncCausalContext
+import me.thenano.yamibo.yamibo_app.repository.appsync.operation.SyncOperationId
 import me.thenano.yamibo.yamibo_app.repository.settings.AppSyncBackend
 
 /**
@@ -21,7 +28,7 @@ internal class SwitchableAppSyncJournalRemote(
     private val forumRemote: AppSyncJournalRemote,
     private val panCloudRemoteProvider: () -> AppSyncJournalRemote?,
     private val backendProvider: () -> AppSyncBackend,
-) : AppSyncJournalRemote {
+) : AppSyncSegmentedJournalRemote, AppSyncLegacyRecoveryRemote {
 
     private val delegate: AppSyncJournalRemote
         get() {
@@ -74,4 +81,42 @@ internal class SwitchableAppSyncJournalRemote(
 
     override fun clearLinkCache(accountBinding: SyncAccountBinding): Int =
         delegate.clearLinkCache(accountBinding)
+
+    override suspend fun publishOwnJournalSegmented(
+        payload: AppSyncJournalPayload,
+        acknowledgementOperationIds: Set<SyncOperationId>,
+        activeJournals: List<LoadedAppSyncJournal>,
+        formHash: FormHash,
+    ): AppSyncJournalPublishResult {
+        val segmented = delegate as? AppSyncSegmentedJournalRemote ?: return AppSyncJournalPublishResult
+            .TerminalFailure(
+                "Segmented journal publication is unsupported by the active AppSync backend",
+            )
+        return segmented.publishOwnJournalSegmented(
+            payload,
+            acknowledgementOperationIds,
+            activeJournals,
+            formHash,
+        )
+    }
+
+    override suspend fun recoverLegacyOperations(
+        classifications: List<AppSyncLegacyOperationClassification>,
+        observed: SyncCausalContext,
+        checkpointAcknowledgements: List<AppSyncCheckpointAcknowledgement>,
+        activeJournals: List<LoadedAppSyncJournal>,
+        formHash: FormHash,
+    ): AppSyncLegacyRecoveryResult {
+        val recoveryRemote = delegate as? AppSyncLegacyRecoveryRemote
+            ?: return AppSyncLegacyRecoveryResult.NeedsAttention(
+                "Durable legacy capacity recovery is unsupported by the active AppSync backend",
+            )
+        return recoveryRemote.recoverLegacyOperations(
+            classifications,
+            observed,
+            checkpointAcknowledgements,
+            activeJournals,
+            formHash,
+        )
+    }
 }

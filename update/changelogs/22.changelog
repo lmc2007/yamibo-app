@@ -1,0 +1,21 @@
+# stable-0.7.0
+
+新增 :
+- add periodic message notifications
+- show download options after adding favorites
+- centralize download and backup folder settings
+
+修复 :
+- include nested collection favorites in update scope
+
+更改 :
+- speed up favorites and history loading
+
+其他 :
+- Route local-novel and pan-cloud feedback through the app feedback contract
+- Declare fork-local domains and cloud credentials as non-portable after 0.0.7 merge
+- prepare stable 0.0.7
+- Make AppSync capacity recovery self-healing
+- Add durable AppSync recovery and portability
+- Create 8.changelog
+- Sanitize threadCover and migrate legacy outbox

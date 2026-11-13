@@ -1,0 +1,4 @@
+# stable-0.6.11
+
+修复 :
+- 分享文件到微信等应用时 URI 授权丢失（ClipData 显式授权 + chooser 重复 grant flag）

@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import me.thenano.yamibo.yamibo_app.LocalNovelReaderSettingsRepository
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsSlider
+import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsToggleRow
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderChineseConversionOption
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonDisplayMode
 import me.thenano.yamibo.yamibo_app.repository.settings.ReaderScrollButtonJumpTarget
@@ -40,7 +41,7 @@ import me.thenano.yamibo.yamibo_app.util.state
 import kotlin.math.roundToInt
 
 private val PREVIEW_TEXT: String
-    get() = i18n("我是YamiboApp的作者TheNano，這是一個個人獨立開發的第三方開源App<br>")
+    get() = i18n("<p>這是小說閱讀器的段落排版預覽。</p><p>調整設定後，可以在這裡立即查看顯示效果。</p>")
 
 @Composable
 fun NovelReaderPreviewSetting() {
@@ -93,6 +94,56 @@ fun NovelLineSpacingSetting() {
         valueDisplay = { "${(it * 100f).roundToInt() / 100f}x" },
         onValueChange = { novelSettingsRepo.lineSpacing.setValue(it) }
     )
+}
+
+@Composable
+fun NovelDefaultBoldSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val enabled = novelSettingsRepo.defaultBold.state()
+
+    SettingsToggleRow(
+        title = i18n("預設粗體"),
+        subtitle = i18n("將閱讀器正文預設顯示為粗體"),
+        checked = enabled,
+        onCheckedChange = { novelSettingsRepo.defaultBold.setValue(it) },
+    )
+}
+
+@Composable
+fun NovelDefaultItalicSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val enabled = novelSettingsRepo.defaultItalic.state()
+
+    SettingsToggleRow(
+        title = i18n("預設斜體"),
+        subtitle = i18n("將閱讀器正文預設顯示為斜體"),
+        checked = enabled,
+        onCheckedChange = { novelSettingsRepo.defaultItalic.setValue(it) },
+    )
+}
+
+@Composable
+fun NovelFirstLineIndentSetting() {
+    val novelSettingsRepo = LocalNovelReaderSettingsRepository.current
+    val enabled = novelSettingsRepo.firstLineIndent.state()
+    val indentChars = novelSettingsRepo.firstLineIndentChars.state()
+
+    SettingsToggleRow(
+        title = i18n("首行縮排"),
+        subtitle = i18n("統一段首縮排，取代原文的段首空白"),
+        checked = enabled,
+        onCheckedChange = { novelSettingsRepo.firstLineIndent.setValue(it) },
+    )
+    if (enabled) {
+        SettingsSlider(
+            label = i18n("縮排字元寬度"),
+            value = indentChars,
+            valueRange = 0f..8f,
+            steps = 15,
+            valueDisplay = { "$it ${i18n("字")}" },
+            onValueChange = { novelSettingsRepo.firstLineIndentChars.setValue(it) },
+        )
+    }
 }
 
 @Composable

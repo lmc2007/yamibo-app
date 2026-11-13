@@ -1,0 +1,69 @@
+# stable-0.10.0
+
+新增 :
+- allow swiping snackbars away
+- resolve forum 524 messages through shared server notice repository
+- publish timed forum outage notices without replacing update feeds
+- attribute chapter comments through explicit references
+- add first-line indentation setting
+- add default bold and italic settings
+
+修复 :
+- resolve catalog jumps after page composition
+- bound image prefetch to the reading window
+- remove novel forum and immersive mode preference
+- load novel details from saved pages and refresh in background
+- clear owned caches and report actual storage use
+- speed up local readers and content management
+- inset reader track beyond window drag region
+- reset stabilized progress at measured page starts
+- preserve author-only pagination and reject mixed snapshots
+- place iOS imports after the package declaration
+- cover link errors and retain private message diagnostics
+- quote publication summary as a YAML block
+- translate partial favorite update notification
+- bound quote traversal without caching path-dependent failures
+- release scroll ownership while native screens cover the reader
+- preserve forum origin port while resolving reference links
+- give status bar one scroll owner and inset reader touch track
+- import managed Skia resource extension from impl package
+- handle optional thread pagination metadata in validation
+- isolate native cookies and reject invalid thread snapshots
+- restore production reader improvements with Skia resource import
+- show newest download requests first
+- resume favorite updates without background foreground-service starts
+- replace default notification icon with Yamibo lily
+- suppress duplicate sign reminder during notification navigation
+- apply Yamibo colors to message input states
+- prevent post-send refresh from cancelling itself
+- keep OpenSpec ignored across older branches
+- align scroll bounds and restore image retries
+- refresh formhash before new searches
+- derive system bar contrast from active screen backgrounds
+- prevent competing image page animations
+- reject empty homepage successes and invalid caches
+- retry text on fresh page before character fallback
+- resolve static post targets and novel owners
+- make indentation configurable without adding blank lines
+- scope thread link context to target
+- isolate app identity and local signing config
+
+更改 :
+- isolate thread helpers and forum metadata
+- consolidate screen content and group cards
+- use inline YamiboResult transformations
+
+其他 :
+- prepare stable 0.0.10 (11)
+- organize GitHub helpers by purpose
+- add reusable manual validation and English guide
+- archive tests and keep main production-only
+- clean up ThreadReaderScreen import
+- prepare stable 0.0.9 (10)
+- add stable 0.0.9 changelog
+- Update branch-naming.md
+- prepare stable 0.0.8 (9)
+- Update 9.changelog
+- Add compact reader catalog search and page navigation
+- Update .gitignore
+- 9.changelog temp

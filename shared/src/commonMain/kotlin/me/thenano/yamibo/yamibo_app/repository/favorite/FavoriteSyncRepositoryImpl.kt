@@ -1,7 +1,9 @@
 ﻿package me.thenano.yamibo.yamibo_app.repository.favorite
 
+import me.thenano.yamibo.yamibo_app.repository.servernotice.isForum524Failure
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.core.flatMapSuccess
 import io.github.littlesurvival.dto.page.FavoriteType
 import io.github.littlesurvival.dto.page.ThreadPage
 import io.github.littlesurvival.dto.value.FavoriteId
@@ -718,17 +720,9 @@ class FavoriteSyncRepositoryImpl(
 
     private suspend fun ensureFormHash(): YamiboResult<FormHash> {
         authRepository.currentUser()?.formHash?.let { return YamiboResult.Success(it) }
-        return when (val authResult = authRepository.fetchStatus()) {
-            is YamiboResult.Success -> {
-                authRepository.currentUser()?.formHash?.let { YamiboResult.Success(it) }
-                    ?: YamiboResult.Failure(i18n("登入狀態已更新，但仍無法取得 formHash。"))
-            }
-
-            is YamiboResult.NotLoggedIn,
-            is YamiboResult.NoPermission,
-            is YamiboResult.Maintenance,
-            is YamiboResult.WafChallenge,
-            is YamiboResult.Failure -> authResult
+        return authRepository.fetchStatus().flatMapSuccess {
+            authRepository.currentUser()?.formHash?.let { YamiboResult.Success(it) }
+                ?: YamiboResult.Failure(i18n("登入狀態已更新，但仍無法取得 formHash。"))
         }
     }
 
@@ -806,6 +800,7 @@ class FavoriteSyncRepositoryImpl(
         remoteItem: RemoteFavoriteItem,
         reason: String,
     ): String {
+        if (isForum524Failure(reason)) return reason
         return truncateFavoriteMessage(i18n("無法匯入帖子 {}：{}", formatPostLabel(remoteItem.threadId, remoteItem.title), reason))
     }
 
@@ -814,6 +809,7 @@ class FavoriteSyncRepositoryImpl(
         threadId: ThreadId,
         reason: String,
     ): String {
+        if (isForum524Failure(reason)) return reason
         return truncateFavoriteMessage(i18n("無法同步到百合會 {}：{}", formatPostLabel(threadId, title), reason))
     }
 

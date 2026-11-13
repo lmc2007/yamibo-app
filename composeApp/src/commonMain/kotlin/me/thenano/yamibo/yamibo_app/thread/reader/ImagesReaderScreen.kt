@@ -19,6 +19,7 @@ import androidx.compose.material3.ButtonDefaults.outlinedButtonColors
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -62,6 +63,7 @@ import me.thenano.yamibo.yamibo_app.repository.download.DownloadStatus
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadTaskKey
 import me.thenano.yamibo.yamibo_app.repository.download.RssMangaChapterDownloadKey
 import me.thenano.yamibo.yamibo_app.repository.download.TagMangaChapterDownloadKey
+import me.thenano.yamibo.yamibo_app.repository.thread.getDownloadedImagePage
 import me.thenano.yamibo.yamibo_app.repository.settings.EffectiveReadingModeSource
 import me.thenano.yamibo.yamibo_app.repository.settings.ReadingMode
 import me.thenano.yamibo.yamibo_app.repository.settings.TouchZoneLayout
@@ -76,6 +78,7 @@ import me.thenano.yamibo.yamibo_app.util.buildImageRequest
 import me.thenano.yamibo.yamibo_app.util.shareText
 import me.thenano.yamibo.yamibo_app.util.state
 import me.thenano.yamibo.yamibo_app.util.time.currentTimeMillis
+import kotlin.math.roundToInt
 import kotlin.math.abs
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -84,6 +87,7 @@ private data class ImageReaderPageTarget(
     val page: Int,
     val transitionSerial: Int,
     val directionOverride: Int = 0,
+    val snap: Boolean = false,
 )
 
 @Suppress("DuplicatedCode")
@@ -111,6 +115,7 @@ fun ImagesReaderScreen(
     rssTotalPages: Int? = null,
     rssThreads: List<ThreadSummary>? = null,
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     SystemBarsEffect(
         statusBarColor = Color.Black,
         navigationBarColor = Color.Black,
@@ -455,7 +460,7 @@ fun ImagesReaderScreen(
                         actualPostId = p.pid
                         val targetAuthorId = activeAuthorId ?: p.author.uid
                         val authorPosts = threadPage.posts.filter { it.author.uid == targetAuthorId }.take(2)
-                        actualImageList = authorPosts.flatMap { it.images }.map { it.url }
+                        actualImageList = authorPosts.flatMap { it.readerImageUrls() }
                         isDownloadedTagChapter = false
                         
                         // Coerce the initial page against the actual loaded bounds now
@@ -543,7 +548,10 @@ fun ImagesReaderScreen(
                 }
             }
 
-            val cachedPage = if (forceNetworkLoadTrigger == 0) threadRepository.getCachedThread(activeTid, null, 1) else null
+            val downloadedPage = if (forceNetworkLoadTrigger == 0) {
+                downloadRepository.getDownloadedImagePage(activeTid, activeAuthorId)
+            } else null
+            val cachedPage = downloadedPage ?: if (forceNetworkLoadTrigger == 0) threadRepository.getCachedThread(activeTid, null, 1) else null
             if (cachedPage != null) {
                 processThreadResult(cached = cachedPage)
             } else {
@@ -675,6 +683,25 @@ fun ImagesReaderScreen(
     var pageDragTarget by remember { mutableStateOf<Int?>(null) }
     var isPageDragSettling by remember { mutableStateOf(false) }
     var committedPageOverlay by remember { mutableStateOf<Int?>(null) }
+    var settlingCommitTarget by remember { mutableStateOf<Int?>(null) }
+    val pageAnimationOwner = remember { ImagePageAnimationOwner() }
+
+    fun clearPageDrag() {
+        pageDragOffset = 0f
+        pageDragTarget = null
+        committedPageOverlay = null
+        settlingCommitTarget = null
+        isPageDragSettling = false
+    }
+
+    fun cancelPageDrag() {
+        pageAnimationOwner.cancel()
+        clearPageDrag()
+    }
+
+    DisposableEffect(activeTid, readingMode, actualImageList) {
+        onDispose { cancelPageDrag() }
+    }
 
     LaunchedEffect(readingMode) {
         if (isScrollMode) {
@@ -731,6 +758,8 @@ fun ImagesReaderScreen(
         startAtLastPage: Boolean = false,
         startPageIndex: Int? = null,
     ) {
+        cancelPageDrag()
+        snapNextTransition = false
         scrollOverscrollY = 0f
         restoreHistoryForActiveThread = false
         startFromLastPage = startAtLastPage
@@ -746,6 +775,8 @@ fun ImagesReaderScreen(
     }
 
     fun setReaderPage(page: Int) {
+        cancelPageDrag()
+        snapNextTransition = false
         pageTurnDirection = 0
         currentPage = page
     }
@@ -764,14 +795,13 @@ fun ImagesReaderScreen(
     fun settleSameChapterDrag(targetPage: Int?, shouldCommit: Boolean) {
         val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
         if (axisSize <= 0 || targetPage == null || targetPage !in actualImageList.indices) {
-            pageDragOffset = 0f
-            pageDragTarget = null
-            isPageDragSettling = false
+            cancelPageDrag()
             return
         }
 
-        scope.launch {
-            isPageDragSettling = true
+        isPageDragSettling = true
+        settlingCommitTarget = targetPage.takeIf { shouldCommit }
+        pageAnimationOwner.launch(scope, onFinished = ::clearPageDrag) {
             val animation = Animatable(pageDragOffset)
             if (shouldCommit) {
                 val side = sameChapterPreviewSide(targetPage)
@@ -780,18 +810,19 @@ fun ImagesReaderScreen(
                 }
                 committedPageOverlay = targetPage
                 snapNextTransition = true
-                setReaderPage(targetPage)
+                // Commit without cancelling our own frame handoff.
+                pageTurnDirection = 0
+                currentPage = targetPage
+                settlingCommitTarget = null
                 resetZoom()
-                delay(360.milliseconds)
+                // Let the snapped base content render beneath the already-visible preview.
+                withFrameNanos { }
+                withFrameNanos { }
             } else {
                 animation.animateTo(0f, tween(180)) {
                     pageDragOffset = value
                 }
             }
-            pageDragOffset = 0f
-            pageDragTarget = null
-            committedPageOverlay = null
-            isPageDragSettling = false
         }
     }
 
@@ -975,7 +1006,16 @@ fun ImagesReaderScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { containerSize = it }
+                .then(
+                    if (isScrollMode) Modifier
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .clipToBounds()
+                    else Modifier
+                )
+                .onSizeChanged {
+                    if (containerSize != it) cancelPageDrag()
+                    containerSize = it
+                }
                 // 1. Unified Tap Handler
                 .pointerInput(touchZoneLayout, reverseTouchZones, readingMode, actualImageList.size) {
                     detectTapGestures(
@@ -996,22 +1036,45 @@ fun ImagesReaderScreen(
                     if (!isScrollMode) {
                         var dragAccX = 0f
                         var dragAccY = 0f
+                        var gestureDragX = 0f
+                        var gestureDragY = 0f
                         var swipeVelocityTracker = VelocityTracker()
                         detectDragGestures(
                             onDragStart = {
-                                dragAccX = 0f
-                                dragAccY = 0f
+                                pageAnimationOwner.cancel()
+                                if (committedPageOverlay != null) {
+                                    clearPageDrag()
+                                } else {
+                                    settlingCommitTarget?.let { target ->
+                                        // Honor the previous released swipe without jumping:
+                                        // swap base/preview and express the same position from
+                                        // the destination page before handling the next swipe.
+                                        val previous = currentPage
+                                        val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
+                                        pageDragOffset = rebaseImagePageDragOffset(
+                                            pageDragOffset, sameChapterPreviewSide(target), axisSize,
+                                        )
+                                        pageDragTarget = previous
+                                        pageTurnDirection = 0
+                                        snapNextTransition = true
+                                        currentPage = target
+                                        settlingCommitTarget = null
+                                    }
+                                }
+                                dragAccX = if (isVerticalMode) 0f else pageDragOffset
+                                dragAccY = if (isVerticalMode) pageDragOffset else 0f
+                                gestureDragX = 0f
+                                gestureDragY = 0f
                                 swipeVelocityTracker = VelocityTracker()
                                 isPageDragSettling = false
-                                pageDragOffset = 0f
-                                pageDragTarget = null
                             },
                             onDragEnd = {
                                 val sameChapterTarget = pageDragTarget
                                 var handledByPreviewAnimation = false
                                 val axisSize = if (isVerticalMode) containerSize.height else containerSize.width
                                 val velocity = swipeVelocityTracker.calculateVelocity()
-                                val axisDrag = if (isVerticalMode) dragAccY else dragAccX
+                                // The inherited visual offset is not movement by this finger.
+                                val axisDrag = if (isVerticalMode) gestureDragY else gestureDragX
                                 val axisVelocity = if (isVerticalMode) velocity.y else velocity.x
                                 val dir = if (!isVerticalMode && isRtl) -1 else 1
                                 val effectiveDrag = axisDrag * dir
@@ -1026,13 +1089,21 @@ fun ImagesReaderScreen(
                                         if (sameChapterTarget == currentPage + 1 && sameChapterTarget in actualImageList.indices) {
                                             handledByPreviewAnimation = true
                                             settleSameChapterDrag(sameChapterTarget, shouldCommit = true)
-                                        } else if (currentPage < maxPage()) { setReaderPage(currentPage + 1); resetZoom() }
+                                        } else if (currentPage < maxPage()) {
+                                            handledByPreviewAnimation = true
+                                            setReaderPage(currentPage + 1)
+                                            resetZoom()
+                                        }
                                         else if (currentPage == totalContentPages() && hasNextChapter) { launchNextChapter() }
                                     } else if (shouldTurnPage && wantsPrev) {
                                         if (sameChapterTarget == currentPage - 1 && sameChapterTarget in actualImageList.indices) {
                                             handledByPreviewAnimation = true
                                             settleSameChapterDrag(sameChapterTarget, shouldCommit = true)
-                                        } else if (currentPage > minPage()) { setReaderPage(currentPage - 1); resetZoom() }
+                                        } else if (currentPage > minPage()) {
+                                            handledByPreviewAnimation = true
+                                            setReaderPage(currentPage - 1)
+                                            resetZoom()
+                                        }
                                         else if (currentPage == minPage() && hasPrevChapter) { launchPrevChapter() }
                                     }
                                 }
@@ -1053,6 +1124,8 @@ fun ImagesReaderScreen(
                                 swipeVelocityTracker.addPosition(change.uptimeMillis, change.position)
                                 dragAccX += dragAmount.x
                                 dragAccY += dragAmount.y
+                                gestureDragX += dragAmount.x
+                                gestureDragY += dragAmount.y
                                 val target = if (actualImageList.isNotEmpty() && currentPage in actualImageList.indices) {
                                     if (isVerticalMode) {
                                         when {
@@ -1224,11 +1297,7 @@ fun ImagesReaderScreen(
                     state = scrollListState,
                     modifier = Modifier.fillMaxSize()
                         .nestedScroll(nestedScrollConnection),
-                    verticalArrangement = if (!isCatalogMode && actualImageList.size == 1) {
-                        Arrangement.Center
-                    } else {
-                        Arrangement.Top
-                    },
+                    verticalArrangement = Arrangement.Top,
                 ) {
                     if (isCatalogMode) {
                         item {
@@ -1273,7 +1342,7 @@ fun ImagesReaderScreen(
                             }
                         }
                     } else {
-                        itemsIndexed(actualImageList) { index, url ->
+                        itemsIndexed(actualImageList, key = { index, url -> "${activeTid.value}:$index:$url" }) { index, url ->
                             ImageViewer(
                                 url = url,
                                 contentDescription = i18n("第{}頁", index + 1),
@@ -1281,7 +1350,7 @@ fun ImagesReaderScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 enableContextMenu = false,
                                 isDarkTheme = true,
-                                imageVerticalPadding = if (readingMode == ReadingMode.SCROLL_CONTINUOUS) 0.dp else 1.dp,
+                                imageVerticalPadding = 0.dp,
                                 enableCrossfade = false
                             )
                             if (readingMode == ReadingMode.SCROLL_GAP && index < actualImageList.lastIndex) {
@@ -1380,6 +1449,7 @@ fun ImagesReaderScreen(
                                             isDarkTheme = true,
                                             enableCrossfade = false,
                                             showLoadingPlaceholder = showLoadingPlaceholder,
+                                            reuseCachedPainterWhileLoading = true,
                                         )
                                     }
                                 }
@@ -1403,15 +1473,14 @@ fun ImagesReaderScreen(
                             page = currentPage,
                             transitionSerial = pageTransitionSerial,
                             directionOverride = pageTurnDirection,
+                            snap = snapNextTransition,
                         ),
+                        contentKey = { Triple(it.threadId, it.page, it.transitionSerial) },
                         transitionSpec = {
                             val forcedDir = targetState.directionOverride.takeIf { it != 0 }
                             val dir = forcedDir ?: if (targetState.page > initialState.page) 1 else -1
 
-                            val snapDragCommit = committedPageOverlay != null &&
-                                committedPageOverlay == targetState.page
-                            if (snapDragCommit || snapNextTransition) {
-                                snapNextTransition = false
+                            if (targetState.snap) {
                                 EnterTransition.None togetherWith ExitTransition.None
                             } else if (isVerticalMode) {
                                 slideInVertically(tween(300)) { it * dir } togetherWith
@@ -1467,7 +1536,34 @@ fun ImagesReaderScreen(
             }
         }
 
+        me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop {
+            if (actualImageList.isNotEmpty()) {
+                setReaderPage(0)
+                resetZoom()
+                if (isScrollMode) scrollListState.scrollToItem(if (isCatalogMode) 1 else 0)
+            }
+        }
+
         /** Overlays (Not affected by graphicsLayer zoom) */
+
+        if (!showSettings && !showCatalog && actualImageList.isNotEmpty()) {
+            me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgressSlideBar(
+                progress = me.thenano.yamibo.yamibo_app.thread.reader.components.overlay.ReaderPageProgress(
+                    currentPage + 1, actualImageList.size,
+                    currentPage.toFloat() / actualImageList.lastIndex.coerceAtLeast(1),
+                ),
+                modifier = Modifier.align(Alignment.CenterEnd).systemBarsPadding().padding(bottom = 48.dp),
+                thumbColor = Color.White.copy(alpha = 0.65f),
+                onSeek = { fraction ->
+                    if (actualImageList.isNotEmpty()) {
+                        val page = (fraction * actualImageList.lastIndex).roundToInt().coerceIn(actualImageList.indices)
+                        setReaderPage(page)
+                        if (isScrollMode) scrollListState.scrollToItem(page + if (isCatalogMode) 1 else 0)
+                        resetZoom()
+                    }
+                },
+            )
+        }
 
         // Page Indicator
         if (!showOverlay && actualImageList.isNotEmpty()) {
@@ -1574,7 +1670,7 @@ fun ImagesReaderScreen(
                                             feedbackController.post(i18n("已重新整理下載"))
                                         }
                                         else -> {
-                                            feedbackController.post(i18n("重新整理下載失敗：{}", i18n(result.message())))
+                                            feedbackController.post(i18n("重新整理下載失敗：{}", i18n(errorMessages.resolve(result))))
                                         }
                                     }
                                     isLoadingImages = false

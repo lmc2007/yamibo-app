@@ -30,10 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.littlesurvival.YamiboForum
 import io.github.littlesurvival.core.YamiboResult
+import io.github.littlesurvival.core.flatMapSuccess
 import io.github.littlesurvival.dto.model.ThreadSummary
 import io.github.littlesurvival.dto.page.SearchPage
 import io.github.littlesurvival.dto.value.ForumId
 import io.github.littlesurvival.dto.value.SearchId
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.components.navigation.NavigationBackSymbol
@@ -49,6 +51,7 @@ import me.thenano.yamibo.yamibo_app.thread.detail.rss.IRssSearchSubscriptionDeta
 import me.thenano.yamibo.yamibo_app.thread.reader.IThreadReaderScreen
 import me.thenano.yamibo.yamibo_app.userspace.IUserSpaceScreen
 import me.thenano.yamibo.yamibo_app.repository.FavoriteStoreRepository as FavoriteStoreRepositoryType
+import me.thenano.yamibo.yamibo_app.util.state
 
 private sealed interface SearchState {
     data object Idle : SearchState
@@ -68,8 +71,14 @@ private data class PendingRssFavorite(
     val searchPage: SearchPage,
 )
 
+private data class SavedRssFavorite(
+    val target: FavoriteTargetPayload.RssSearch,
+    val creationOutcome: FavoriteCreationOutcome,
+)
+
 @Composable
 fun SearchScreen(fid: ForumId?) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val authRepository = LocalAuthRepository.current
@@ -78,6 +87,7 @@ fun SearchScreen(fid: ForumId?) {
     val navigator = LocalNavigator.current
     val scope = rememberCoroutineScope()
     val feedbackController = LocalAppFeedbackController.current
+    val appSettingsRepository = LocalAppSettingsRepository.current
     val focusRequester = remember { FocusRequester() }
     var searchFieldPlaced by remember { mutableStateOf(false) }
 
@@ -85,6 +95,7 @@ fun SearchScreen(fid: ForumId?) {
     var state by remember { mutableStateOf<SearchState>(SearchState.Idle) }
     var currentPage by remember { mutableIntStateOf(1) }
     var currentSearchId by remember { mutableStateOf<SearchId?>(null) }
+    var searchJob by remember { mutableStateOf<Job?>(null) }
     val pageHistory = remember { mutableStateListOf<SearchPageSnapshot>() }
     var pendingRssFavorite by remember { mutableStateOf<PendingRssFavorite?>(null) }
     var favoriteDialogCategories by remember {
@@ -95,6 +106,8 @@ fun SearchScreen(fid: ForumId?) {
     }
     var favoriteDialogCategorySelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var favoriteDialogCollectionSelection by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var favoritePostAddDownloadTarget by remember { mutableStateOf<FavoriteTargetPayload.RssSearch?>(null) }
+    val favoriteAddDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
 
     fun navigateThread(thread: ThreadSummary) {
         val isNovelThread = fid?.let { YamiboForum.isNovelForum(it) }
@@ -115,6 +128,7 @@ fun SearchScreen(fid: ForumId?) {
     }
 
     fun doSearch(page: Int = 1, recordHistory: Boolean = false) {
+        if (searchJob?.isActive == true) return
         val trimmed = query.trim()
         if (trimmed.isEmpty()) return
 
@@ -126,7 +140,7 @@ fun SearchScreen(fid: ForumId?) {
 
         state = SearchState.Loading
         currentPage = page
-        scope.launch {
+        searchJob = scope.launch {
             val looksLikeUrl = trimmed.startsWith("http://") || trimmed.startsWith("https://")
             if (page == 1 && looksLikeUrl) {
                 state = SearchState.Idle
@@ -134,15 +148,15 @@ fun SearchScreen(fid: ForumId?) {
                 return@launch
             }
 
-            val formHash = authRepository.currentUser()?.formHash
-            if (formHash == null) {
-                state = SearchState.Error(i18n("請先登入後再搜尋"))
-                return@launch
-            }
-
             val result = if (page == 1 || currentSearchId == null) {
-                forumRepository.fetchSearch(trimmed, fid, formHash)
+                authRepository.refreshFormHash().flatMapSuccess { formHash ->
+                    forumRepository.fetchSearch(trimmed, fid, formHash)
+                }
             } else {
+                if (authRepository.currentUser() == null) {
+                    state = SearchState.Error(i18n("請先登入後再搜尋"))
+                    return@launch
+                }
                 forumRepository.fetchSearchById(trimmed, currentSearchId!!, page)
             }
             state = when (result) {
@@ -155,7 +169,7 @@ fun SearchScreen(fid: ForumId?) {
                     }
                 }
 
-                else -> SearchState.Error(i18n(result.message()))
+                else -> SearchState.Error(i18n(errorMessages.resolve(result)))
             }
         }
     }
@@ -165,7 +179,7 @@ fun SearchScreen(fid: ForumId?) {
         searchPage: SearchPage,
         categoryIds: Set<Long> = emptySet(),
         collectionIds: Set<Long> = emptySet(),
-    ): Long? {
+    ): SavedRssFavorite? {
         val existingSubscription = rssRepository.findBySearch(keyword, fid)
         val result = rssRepository.createFromSearch(
             title = keyword,
@@ -184,16 +198,19 @@ fun SearchScreen(fid: ForumId?) {
             title = keyword,
             coverUrl = null,
         )
-        try {
+        val creationOutcome = try {
             val existingItem = favoriteRepository.findFavoriteItem(target)
             if (existingItem == null) {
-                favoriteRepository.saveFavorite(
+                favoriteRepository.saveFavoriteWithOutcome(
                     target = target,
                     categoryIds = categoryIds.toList(),
                     collectionIds = collectionIds.toList(),
                 )
             } else if (categoryIds.isNotEmpty() || collectionIds.isNotEmpty()) {
                 favoriteRepository.setItemLocations(existingItem.id, categoryIds, collectionIds)
+                FavoriteCreationOutcome.AlreadyExisted
+            } else {
+                FavoriteCreationOutcome.AlreadyExisted
             }
         } catch (error: Throwable) {
             Logger.e("SearchScreen", "Failed to save RSS favorite keyword=$keyword", error)
@@ -207,7 +224,15 @@ fun SearchScreen(fid: ForumId?) {
         feedbackController.post(
             if (existingSubscription == null) i18n("已收藏為 RSS 訂閱") else i18n("已收藏此 RSS 訂閱")
         )
-        return result.value
+        return SavedRssFavorite(target, creationOutcome)
+    }
+
+    fun handleSavedRssFavorite(saved: SavedRssFavorite) {
+        if (saved.creationOutcome == FavoriteCreationOutcome.Created && favoriteAddDownloadPromptEnabled) {
+            favoritePostAddDownloadTarget = saved.target
+        } else {
+            navigator.navigate(IRssSearchSubscriptionDetailScreen(saved.target.subscriptionId))
+        }
     }
 
     suspend fun openRssFavoritePicker(keyword: String, searchPage: SearchPage) {
@@ -286,6 +311,7 @@ fun SearchScreen(fid: ForumId?) {
                     Spacer(Modifier.width(6.dp))
                     Surface(
                         onClick = { doSearch(1) },
+                        enabled = state !is SearchState.Loading,
                         shape = RoundedCornerShape(12.dp),
                         color = colors.orangeAccent,
                     ) {
@@ -320,10 +346,7 @@ fun SearchScreen(fid: ForumId?) {
                                     feedbackController.post(i18n("保存失敗"))
                             } else {
                                 scope.launch {
-                                    val subscriptionId = saveRssFavorite(keyword, currentState.page)
-                                    if (subscriptionId != null) {
-                                        navigator.navigate(IRssSearchSubscriptionDetailScreen(subscriptionId))
-                                    }
+                                    saveRssFavorite(keyword, currentState.page)?.let(::handleSavedRssFavorite)
                                 }
                             }
                         },
@@ -356,17 +379,29 @@ fun SearchScreen(fid: ForumId?) {
             },
             onConfirm = { selectedCategories, selectedCollections ->
                 scope.launch {
-                    val subscriptionId = saveRssFavorite(
+                    val saved = saveRssFavorite(
                         keyword = pending.keyword,
                         searchPage = pending.searchPage,
                         categoryIds = selectedCategories,
                         collectionIds = selectedCollections,
                     )
                     pendingRssFavorite = null
-                    if (subscriptionId != null) {
-                        navigator.navigate(IRssSearchSubscriptionDetailScreen(subscriptionId))
-                    }
+                    saved?.let(::handleSavedRssFavorite)
                 }
+            },
+        )
+    }
+
+    favoritePostAddDownloadTarget?.let { target ->
+        FavoritePostAddDownloadSheet(
+            target = target,
+            doNotAskAgain = !favoriteAddDownloadPromptEnabled,
+            onDoNotAskAgainChange = { checked ->
+                appSettingsRepository.favoriteAddDownloadPromptEnabled.setValue(!checked)
+            },
+            onDismiss = {
+                favoritePostAddDownloadTarget = null
+                navigator.navigate(IRssSearchSubscriptionDetailScreen(target.subscriptionId))
             },
         )
     }
@@ -436,7 +471,10 @@ private fun SearchResultContent(
 ) {
     val colors = YamiboTheme.colors
     val navigator = LocalNavigator.current
+    val topScrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+    me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop { topScrollState.scrollToItem(0) }
     LazyColumn(
+        state = topScrollState,
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp),

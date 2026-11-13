@@ -29,6 +29,11 @@ enum class ThreadReaderMode(val label: String) {
 
 class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(store, prefix = "novelreadersettings") {
 
+    init {
+        val removedModeKey = "novelreadersettings.forumreadingmode"
+        if (store.hasKey(removedModeKey)) store.remove(removedModeKey)
+    }
+
     val fontSize by intSetting(
         name = "font_size",
         description = "novel_reader_font_size",
@@ -51,6 +56,32 @@ class NovelReaderSettingsRepository(store: SettingsStore) : SettingsRegistry(sto
         name = "reader_font_id",
         description = "novel_reader_font_id",
         default = "",
+    )
+
+    val defaultBold by boolSetting(
+        name = "default_bold",
+        description = "novel_reader_default_bold",
+        default = false,
+    )
+
+    val defaultItalic by boolSetting(
+        name = "default_italic",
+        description = "novel_reader_default_italic",
+        default = false,
+    )
+
+    val firstLineIndent by boolSetting(
+        name = "first_line_indent",
+        description = "novel_reader_first_line_indent",
+        default = false,
+    )
+
+    val firstLineIndentChars by floatSetting(
+        name = "first_line_indent_chars",
+        default = 2f,
+        min = 0f,
+        max = 8f,
+        interval = 0.5f,
     )
 
     val contentWidthFraction by floatSetting(

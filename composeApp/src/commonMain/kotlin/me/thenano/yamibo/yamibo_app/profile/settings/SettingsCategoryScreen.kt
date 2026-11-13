@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.CancellationException
 import me.thenano.yamibo.yamibo_app.*
 import me.thenano.yamibo.yamibo_app.components.navigation.YamiboTopBar
 import me.thenano.yamibo.yamibo_app.components.storage.YamiboStorageUsageOverview
@@ -27,8 +29,10 @@ import me.thenano.yamibo.yamibo_app.i18n.localizedLabel
 import me.thenano.yamibo.yamibo_app.navigation.LocalNavigator
 import me.thenano.yamibo.yamibo_app.profile.download.IDownloadQueueScreen
 import me.thenano.yamibo.yamibo_app.profile.settings.access.IBackgroundAccessSetupScreen
+import me.thenano.yamibo.yamibo_app.profile.settings.backup.rememberBackupFileActions
 import me.thenano.yamibo.yamibo_app.profile.settings.bound.*
 import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsChipRow
+import me.thenano.yamibo.yamibo_app.profile.settings.components.SettingsToggleRow
 import me.thenano.yamibo.yamibo_app.profile.settings.components.ThemeSelectorContent
 import me.thenano.yamibo.yamibo_app.repository.FavoriteSyncRepository.FavoriteSyncState
 import me.thenano.yamibo.yamibo_app.repository.download.DownloadedContentSummary
@@ -181,6 +185,12 @@ private fun NovelReaderContent() {
     ReaderFontSelectorSetting()
     Spacer(Modifier.height(24.dp))
 
+    SectionLabel(i18n("字體樣式"))
+    NovelDefaultBoldSetting()
+    NovelDefaultItalicSetting()
+    NovelFirstLineIndentSetting()
+    Spacer(Modifier.height(24.dp))
+
     SectionLabel(i18n("內容寬度"))
     NovelContentWidthSetting()
     Spacer(Modifier.height(24.dp))
@@ -225,6 +235,7 @@ private fun FavoriteSettingsContent(feedbackController: me.thenano.yamibo.yamibo
     val favoriteUpdateRunner = LocalFavoriteUpdateRunner.current
     val skipConfirm = appSettingsRepository.skipFavoriteRemovalConfirm.state()
     val addSyncPromptEnabled = appSettingsRepository.favoriteAddSyncPromptEnabled.state()
+    val addDownloadPromptEnabled = appSettingsRepository.favoriteAddDownloadPromptEnabled.state()
     val addSyncDefault = appSettingsRepository.favoriteAddSyncDefault.state()
     val removeSyncPromptEnabled = appSettingsRepository.favoriteRemoveSyncPromptEnabled.state()
     val removeSyncDefault = appSettingsRepository.favoriteRemoveSyncDefault.state()
@@ -332,6 +343,15 @@ private fun FavoriteSettingsContent(feedbackController: me.thenano.yamibo.yamibo
     Spacer(Modifier.height(24.dp))
 
     SectionLabel(i18n("收藏同步偏好"))
+
+    SettingsToggleRow(
+        title = i18n("收藏後顯示下載選項"),
+        subtitle = i18n("開啟後，新增收藏完成時會顯示適用的下載選項。"),
+        checked = addDownloadPromptEnabled,
+        onCheckedChange = { appSettingsRepository.favoriteAddDownloadPromptEnabled.setValue(it) },
+    )
+
+    Spacer(Modifier.height(18.dp))
     SettingsActionRow(
         title = i18n("通知與背景同步設定"),
         subtitle = i18n("檢查通知權限、電池最佳化與背景同步所需的系統設定。"),
@@ -471,38 +491,6 @@ private fun FavoriteSettingsContent(feedbackController: me.thenano.yamibo.yamibo
 }
 
 @Composable
-private fun SettingsToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val colors = YamiboTheme.colors
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-            ) { onCheckedChange(!checked) }
-            .padding(vertical = 16.dp, horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        SettingsRowDescription(title = title, subtitle = subtitle, colors = colors)
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = colors.brownDeep,
-                checkedTrackColor = colors.brownPrimary.copy(alpha = 0.5f),
-                uncheckedThumbColor = colors.textDark.copy(alpha = 0.5f),
-                uncheckedTrackColor = colors.brownLight.copy(alpha = 0.3f),
-            ),
-        )
-    }
-}
-
-@Composable
 private fun SettingsActionRow(
     title: String,
     subtitle: String,
@@ -527,6 +515,57 @@ private fun SettingsActionRow(
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
         )
+    }
+}
+
+@Composable
+private fun SharedStorageFolderCard(
+    folderLabel: String?,
+    onSelectFolder: () -> Unit,
+) {
+    val colors = YamiboTheme.colors
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = colors.creamSurface,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = i18n("下載與備份資料夾"),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = colors.textStrong,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = folderLabel ?: i18n("尚未選擇資料夾"),
+                fontSize = 13.sp,
+                color = colors.textDark.copy(alpha = 0.7f),
+            )
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = i18n("下載內容與本地備份共用此資料夾"),
+                    fontSize = 13.sp,
+                    color = colors.textDark.copy(alpha = 0.65f),
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(12.dp))
+                Surface(
+                    onClick = onSelectFolder,
+                    shape = RoundedCornerShape(8.dp),
+                    color = colors.brownLight.copy(alpha = 0.26f),
+                ) {
+                    Text(
+                        text = i18n(if (folderLabel == null) "選擇資料夾" else "變更資料夾"),
+                        fontSize = 13.sp,
+                        color = colors.brownDeep,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -559,24 +598,51 @@ private fun StorageContent(feedbackController: me.thenano.yamibo.yamibo_app.feed
     val appSettingsRepo = LocalAppSettingsRepository.current
     val diskCacheFactory = LocalDiskCacheFactory.current
     val downloadRepository = LocalDownloadRepository.current
+    val backupRepository = LocalBackupRepository.current
     val coroutineScope = rememberCoroutineScope()
 
     val clearOnLaunch = appSettingsRepo.clearCacheOnAppLaunch.state()
+    var folderLabel by remember { mutableStateOf<String?>(null) }
     var cacheSizeText by remember { mutableStateOf(i18n("正在計算中...")) }
     var cacheBreakdown by remember { mutableStateOf(CacheStorageBreakdown(rootPath = "", usages = emptyList())) }
     var downloadSummary by remember { mutableStateOf(DownloadedContentSummary()) }
+    var isClearingCache by remember { mutableStateOf(false) }
 
     suspend fun refreshCacheUsage() {
+        folderLabel = backupRepository.getSelectedFolderLabel()
         cacheBreakdown = diskCacheFactory.getCacheStorageBreakdown()
         downloadSummary = runCatching { downloadRepository.getDownloadedContentSummary() }
             .onFailure { Logger.w(TAG, "Failed to load downloaded content summary for storage settings", it) }
             .getOrDefault(DownloadedContentSummary())
-        cacheSizeText = formatStorageSize(cacheBreakdown.usages.sumOf { it.bytes })
+        cacheSizeText = formatStorageSize(cacheBreakdown.usages.filter { it.key != "backup" }.sumOf { it.bytes })
     }
+
+    val folderActions = rememberBackupFileActions(
+        onFolderSelected = { uri ->
+            coroutineScope.launch {
+                backupRepository.setSelectedFolder(uri)
+                    .onSuccess {
+                        refreshCacheUsage()
+                        feedbackController.post(i18n("已選擇下載與備份資料夾"))
+                    }
+                    .onFailure { error ->
+                        Logger.e(TAG, "Failed to select shared storage folder", error)
+                        feedbackController.post(error.message ?: i18n("無法選擇資料夾"))
+                    }
+            }
+        },
+        onBackupPicked = {},
+    )
 
     LaunchedEffect(Unit) {
         refreshCacheUsage()
     }
+
+    SharedStorageFolderCard(
+        folderLabel = folderLabel,
+        onSelectFolder = folderActions.selectFolder,
+    )
+    Spacer(Modifier.height(24.dp))
 
     Row(
         modifier = Modifier
@@ -629,16 +695,26 @@ private fun StorageContent(feedbackController: me.thenano.yamibo.yamibo_app.feed
     Spacer(Modifier.height(18.dp))
 
     SettingsActionRow(
-        title = i18n("立即清除所有緩存"),
+        title = if (isClearingCache) i18n("處理中...") else i18n("立即清除所有緩存"),
         subtitle = i18n("清除圖片、頁面與其他暫存資料，釋放目前已使用的儲存空間。") +
             "\n" +
             i18n("目前緩存大小：{}", cacheSizeText),
         onClick = {
+            if (isClearingCache) return@SettingsActionRow
+            isClearingCache = true
             coroutineScope.launch {
-                diskCacheFactory.clearAllCache()
-                cacheSizeText = "0 kB"
-                cacheBreakdown = cacheBreakdown.copy(usages = emptyList())
-                feedbackController.post(i18n("已清除所有緩存"))
+                try {
+                    diskCacheFactory.clearAllCache()
+                    refreshCacheUsage()
+                    feedbackController.post(i18n("已清除所有緩存"))
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    Logger.e(TAG, "Failed to clear caches", error)
+                    feedbackController.post(i18n("清除失敗"))
+                } finally {
+                    isClearingCache = false
+                }
             }
         },
     )

@@ -1,5 +1,6 @@
 package me.thenano.yamibo.yamibo_app.home
 
+import me.thenano.yamibo.yamibo_app.LocalForumErrorMessageResolver
 import YamiboIcons
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -59,10 +60,15 @@ import yamibo_app.composeapp.generated.resources.logo_homepage
 import kotlin.time.Duration.Companion.milliseconds
 
 /** Sealed state for the home page */
-private sealed interface HomeState {
+internal sealed interface HomeState {
     data object Loading : HomeState
     data class Success(val page: HomePage) : HomeState
     data class Error(val message: String) : HomeState
+}
+
+internal fun HomeState.afterRefresh(result: YamiboResult<HomePage>, failureMessage: String = result.message()): HomeState = when (result) {
+    is YamiboResult.Success -> HomeState.Success(result.value)
+    else -> if (this is HomeState.Success) this else HomeState.Error(i18n(failureMessage))
 }
 
 /** Main Entry */
@@ -70,6 +76,7 @@ private sealed interface HomeState {
 fun HomePageScreen(
     onNewMessageStatusChange: (Boolean) -> Unit = {},
 ) {
+    val errorMessages = LocalForumErrorMessageResolver.current
     val colors = YamiboTheme.colors
     val forumRepository = LocalForumRepository.current
     val navigator = LocalNavigator.current
@@ -84,7 +91,7 @@ fun HomePageScreen(
         state =
             when (result) {
                 is YamiboResult.Success -> HomeState.Success(result.value)
-                else -> HomeState.Error(i18n(result.message()))
+                else -> HomeState.Error(i18n(errorMessages.resolve(result)))
             }
     }
 
@@ -107,11 +114,18 @@ fun HomePageScreen(
         AppEventBus.events.collect { event ->
             if (event == LoginSuccessEvent) {
                 isRefreshing = true
-                val result = forumRepository.fetchHomePage()
-                if (result is YamiboResult.Success) {
-                    state = HomeState.Success(result.value)
+                try {
+                    val result = forumRepository.fetchHomePage()
+                    state = state.afterRefresh(result, errorMessages.resolve(result))
+                    if (result !is YamiboResult.Success && state is HomeState.Success) {
+                        feedbackController.post(
+                            message = i18n(errorMessages.resolve(result)),
+                            duration = me.thenano.yamibo.yamibo_app.feedback.AppFeedbackDuration.Short,
+                        )
+                    }
+                } finally {
+                    isRefreshing = false
                 }
-                isRefreshing = false
             }
         }
     }
@@ -145,7 +159,7 @@ fun HomePageScreen(
 
                                 else -> {
                                     feedbackController.post(
-                                        message = i18n(result.message()),
+                                        message = i18n(errorMessages.resolve(result)),
                                         duration = me.thenano.yamibo.yamibo_app.feedback.AppFeedbackDuration.Short
                                     )
                                 }
@@ -168,7 +182,9 @@ private fun HomeContent(homePage: HomePage, onSearch: () -> Unit) {
     val appSettingsRepo = LocalAppSettingsRepository.current
     val showSwiperImages = appSettingsRepo.showHomeSwiperImages.state()
 
-    LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+    val topScrollState = androidx.compose.foundation.lazy.rememberLazyListState()
+    me.thenano.yamibo.yamibo_app.navigation.StatusBarScrollToTop { topScrollState.scrollToItem(0) }
+    LazyColumn(state = topScrollState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
         /** header banner */
         item { HomeHeader(onSearch = onSearch) }
 

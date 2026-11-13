@@ -48,6 +48,10 @@ internal object PortableDomainManifest {
         excluded("AppSyncRemoteBlog", "Remote transport cache"),
         excluded("authentication", "Credentials, cookies, and FormHash are device-local secrets"),
         excluded("platformPaths", "Folder URIs and platform paths are not portable"),
+        excluded("LocalNovel", "Device-local imported novel files and their metadata"),
+        excluded("LocalNovelChapter", "Chapter offsets only resolve against a device-local novel file"),
+        excluded("LocalNovelProgress", "Reading progress only resolves against a device-local novel file"),
+        excluded("ForumNovelShelf", "Offline novel packages live in device-local storage"),
     )
 
     val storageNames: Set<String> = declarations.mapTo(linkedSetOf()) { it.storageName }
